@@ -1,0 +1,53 @@
+---
+version: 1.5.0
+---
+
+# L0: Vibe-Spec Vision
+
+## VISION.SCOPE
+- **DEFINITION**: Vibe-Spec is a **specification management framework**, not a code generation engine itself.
+
+### In-Scope
+- **VAL**: Hierarchical spec validation (L0-L3).
+- **TRACE**: Traceability mapping (Layer dependency).
+- **DOCS**: Document compilation (Single authoritative `VIBE-SPECS.md`).
+- **COV**: Test-to-spec coverage tracking (`@verify_spec`).
+- **IDEAS**: "Ideas" ingestion pipeline (raw thought -> refined spec).
+- **REFL**: Conversation reflection (`vibe-spec reflect`).
+- **DEPS**: Zero third-party dependency operation.
+- **AUTO**: Script-first workflow automation.
+- **SKILL**: Agentic skill distribution (SKILL.md + skill-creator compliance).
+
+### Out-of-Scope
+* LLM: Integrated LLM code generation (delegated to external agents like Antigravity).
+* UI: UI design tools.
+* PM: Project management or ticketing systems.
+
+
+---
+
+## VISION.TRACEABILITY
+- **CHAIN**: The system must support full-chain traceability from vague user requests to verified code.
+- **WORKFLOW**: **Workflow**: Vague Request -> Requirement Breakdown -> Specs -> Implementation -> Verification.
+- **GRANULARITY**: Every statement in a specification must be atomically addressable (numbered lines).
+- **GOAL**: Ensure every line of code exists to satisfy a specific requirement.
+
+## VISION.VIBE_CODING
+- **TRUTH**: The system must enable "Vibe Coding", where specifications are the primary source of truth.
+- **PARADIGM**: **Paradigm**: Human defines Spec -> AI writes code -> Human & AI verify.
+- **SHIFT_LEFT**: **Shift-Left**: Errors should be caught at the Spec level, not implementation.
+## VISION.AUTOMATION
+- **SCRIPT_FIRST**: If a task CAN be formalized into a script, it MUST be.
+- **COGNITIVE_LOAD**: Minimize LLM/Human cognitive load by offloading mechanical work to deterministic scripts.
+- **EVOLUTION**: The system evolves by identifying patterns and rigidifying them into code.
+
+## VISION.PHILOSOPHY
+- **HUMAN_CENTRIC**: Specs must be atomic and readable to minimize human context switching.
+- **LLM_CENTRIC**: Prompts must be concise and deterministic to prevent reasoning drift.
+- **SYSTEM_CENTRIC**: Complexity is managed by scripts, not by memory.
+
+## VISION.COMPILATION_STRUCTURE
+- **LLM_FRIENDLY**: The compiled `VIBE-SPECS.md` must be optimized for Agent consumption.
+- **CONTEXT_ANCHORS**: Sections must have explicit HTML anchors for precise context retrieval.
+- **NAVIGATION**: A system preamble and table of contents are mandatory.
+- **NOISE_REDUCTION**: Individual file frontmatter must be stripped in the compilation.
