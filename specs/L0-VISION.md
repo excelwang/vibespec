@@ -1,5 +1,5 @@
 ---
-version: 1.6.0
+version: 2.0.0
 ---
 
 # L0: Vibe-Spec Vision

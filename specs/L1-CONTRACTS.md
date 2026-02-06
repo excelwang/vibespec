@@ -1,5 +1,5 @@
 ---
-version: 1.9.0
+version: 2.1.0
 invariants:
   - id: INV_UNIQUE_IDS
     statement: "Every Spec ID and Export ID must be unique within the project."
@@ -41,6 +41,12 @@ invariants:
   (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
 - **FALLBACK_RATIONALE**: PROMPT_FALLBACK items SHOULD include brief rationale for not scripting.
   > Rationale: Prevents lazy fallback to LLM; documents automation barriers.
+- **PROMPT_BATCHING**: Adjacent PROMPT_NATIVE items SHOULD be grouped into a single unified prompt.
+  > Rationale: Reduces LLM call overhead; LLM is command center, scripts are tools it invokes.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+- **SCRIPT_NO_LLM**: Items typed [Type: SCRIPT] MUST NOT invoke LLM operations.
+  > Rationale: Scripts are tools called by LLM; We have no api for script to call LLM.
+  (Ref: VISION.AUTOMATION)
 
 ## CONTRACTS.TRACEABILITY
 - **SEMANTIC_IDS**: Every statement MUST start with a bold semantic key (e.g., `- **KEY**: ...`). Sequential numbering IS FORBIDDEN.

@@ -1,12 +1,12 @@
 ---
-version: 1.8.0
+version: 2.0.0
 ---
 
 # L3: Vibe-Spec Implementation
 
 ## COMPILER.CLI_INTERFACE
 CLI entry point for spec management commands.
-- **COMMANDS**: Distinct subcommands for each lifecycle phase.
+- **COMMANDS**: Distinct subcommands for each lifecycle phase. [PROMPT_FALLBACK]
   - **VALIDATE**: `vibe-spec validate <path>` triggers comprehensive validation.
     ```pseudocode
     function validate(path: string) -> ExitCode:
@@ -43,41 +43,37 @@ CLI entry point for spec management commands.
         cursor_manager.update(messages.last.timestamp)
     ```
     (Ref: ARCHITECTURE.REFLECTOR)
-- **FEEDBACK**: Compiler-grade error messages with file paths, line numbers, contract IDs.
+- **FEEDBACK**: Compiler-grade error messages with file paths, line numbers, contract IDs. [Type: SCRIPT]
   (Ref: ARCHITECTURE.VALIDATOR_CORE)
 
 ## COMPILER.IDEAS_IMPL
 Implementation of Ideas Processor pipeline.
-- **ENTRY**: Triggered by `vibe-spec` skill trigger or `ideas` subcommand. No arguments required.
-  (Ref: ARCHITECTURE.IDEAS_PROCESSOR)
-- **STEPS**: Strict sequential execution model.
+- **PROCESS_SESSION**: Unified ideas processing session. [PROMPT_NATIVE]
   ```pseudocode
-  function process_ideas() -> void:
+  function run_process_session() -> void:
     files = glob("specs/ideas/*.md")
-    ideas = files.sort(by=timestamp).map(parse_idea)
-    for idea in ideas:
-      layer = detect_layer(idea)  // L0..L3 via keyword heuristics
-      if idea.spans_multiple_layers():
-        chunks = idea.decompose()
-        for chunk in chunks: process_single(chunk)
-      else:
-        process_single(idea)
-      archive(idea)
-    if ideas.empty():
-      prompt("Run compile.py to sync artifacts")
-  
-  function process_single(idea: Idea) -> void:
-    spec = load_spec(idea.target_layer)
-    parent = load_spec(idea.target_layer - 1)
-    diff = spec.apply_changes(idea, parent_context=parent)
-    violations = validator.check(diff)
-    if violations: raise ValidationError(violations)
-    presenter.show_diff(diff)
-    if not user.approve(): revert(diff); return
-    spec.save()
+    if files.empty(): prompt("Run compile.py due to empty queue"); return
+    
+    sorted_ideas = files.sort(by=timestamp).map(parse_idea)
+    
+    for idea in sorted_ideas:
+      // Decompose if needed (LLM)
+      chunks = detect_layer(idea).spans_multiple ? idea.decompose() : [idea]
+      
+      for chunk in chunks:
+        spec = load_spec(chunk.target_layer)
+        diff = spec.apply_changes(chunk) // LLM Logic
+        
+        // Validate & Present
+        if validator.check(diff): raise ValidationError
+        presenter.show_diff(diff)
+        
+        // Approval Interaction
+        if user.approve(): spec.save(); archive(idea)
+        else: revert(diff)
   ```
   (Ref: ARCHITECTURE.IDEAS_PROCESSOR)
-- **TEST_FIXTURES**:
+- **TEST_FIXTURES**: [Type: SCRIPT]
   ```yaml
   - name: single_l1_idea
     input:
@@ -106,27 +102,24 @@ Implementation of Ideas Processor pipeline.
 
 ## COMPILER.REFLECT_IMPL
 Implementation of Reflector based on current context.
-- **ENTRY**: Triggered via `vibe-spec reflect` command. Explicit invocation only.
-  (Ref: ARCHITECTURE.REFLECTOR)
-- **STEPS**: Direct distillation from current conversation context.
+- **REFLECT_SESSION**: Unified reflection session. [PROMPT_NATIVE]
   ```pseudocode
-  function reflect() -> void:
-    context = get_current_conversation_context()
+  function run_reflect_session() -> void:
+    // 1. Gather Context
+    context = log_api.fetch_after(cursor_manager.read())
+    if context.empty(): return
     
-    ideas = distiller.extract(context)  // Structured output: decisions, changes, requirements
+    // 2. Distill (LLM)
+    ideas = distiller.extract(context) // LLM extraction
     
-    summary = format_summary(ideas)
-    presenter.show(summary)
-    
-    if not user.approve():
-      print("Discarded")
-      return
-    
-    filename = f"specs/ideas/{timestamp()}-reflection.md"
-    write_file(filename, ideas.to_markdown())
+    // 3. Review & Save
+    presenter.show(ideas)
+    if user.approve():
+      write_file(f"specs/ideas/{timestamp()}-reflection.md", ideas)
+      cursor_manager.update(context.last.timestamp)
   ```
-  (Ref: ARCHITECTURE.REFLECTOR.DISTILLER)
-- **TEST_FIXTURES**:
+  (Ref: ARCHITECTURE.REFLECTOR), (Ref: ARCHITECTURE.REFLECTOR.DISTILLER)
+- **TEST_FIXTURES**: [Type: SCRIPT]
   ```yaml
   - name: extract_from_context
     input:
@@ -152,7 +145,7 @@ Implementation of Reflector based on current context.
 
 ## COMPILER.SCRIPTS_IMPL
 Standalone scripts (zero third-party dependencies).
-- **VALIDATE_PY**: `scripts/validate.py` - Primary enforcement mechanism.
+- **VALIDATE_PY**: `scripts/validate.py` - Primary enforcement mechanism. [Type: SCRIPT]
   ```pseudocode
   function main(specs_path: string) -> ExitCode:
     files = glob(f"{specs_path}/L*.md")
@@ -198,7 +191,7 @@ Standalone scripts (zero third-party dependencies).
     return 0
   ```
   (Ref: ARCHITECTURE.SCRIPTS.VALIDATE)
-- **COMPILE_PY**: `scripts/compile.py` - Artifact generation.
+- **COMPILE_PY**: `scripts/compile.py` - Artifact generation. [Type: SCRIPT]
   ```pseudocode
   function main(specs_path: string, output_path: string) -> void:
     files = glob(f"{specs_path}/L*.md")
@@ -215,7 +208,7 @@ Standalone scripts (zero third-party dependencies).
     write_file(output_path, output.to_string())
   ```
   (Ref: ARCHITECTURE.SCRIPTS.COMPILE)
-- **ARCHIVE_SH**: `scripts/archive_ideas.sh` - Simple bash utility.
+- **ARCHIVE_SH**: `scripts/archive_ideas.sh` - Simple bash utility. [Type: SCRIPT]
   ```bash
   #!/bin/bash
   set -euo pipefail
@@ -228,9 +221,9 @@ Standalone scripts (zero third-party dependencies).
   done
   ```
   (Ref: ARCHITECTURE.SCRIPTS.ARCHIVE_IDEAS)
-- **CONSTRAINT**: All scripts use vanilla Python 3 or Bash. No pip dependencies.
+- **CONSTRAINT**: All scripts use vanilla Python 3 or Bash. No pip dependencies. [Type: SCRIPT]
   (Ref: ARCHITECTURE.SCRIPTS)
-- **TEST_FIXTURES**:
+- **TEST_FIXTURES**: [Type: SCRIPT]
   ```yaml
   - name: validate_missing_frontmatter
     input:
@@ -261,7 +254,7 @@ Implementation of skill distribution.
   - Inside `src/` to travel with source code
   - Single source of truth; no secondary definitions permitted
   (Ref: ARCHITECTURE.SKILL_DISTRIBUTION.LOCATION)
-- **CREATOR**: Updates via `skill-creator` toolchain.
+- **CREATOR**: Updates via `skill-creator` toolchain. [Type: PROMPT_FALLBACK] (skill schema evolves frequently)
   ```pseudocode
   function update_skill(changes: SkillChanges) -> void:
     current = load("src/vibe-spec/SKILL.md")
@@ -272,7 +265,7 @@ Implementation of skill distribution.
     write("src/vibe-spec/SKILL.md", merged)
   ```
   (Ref: ARCHITECTURE.SKILL_DISTRIBUTION.COMPLIANCE)
-- **TEST_FIXTURES**:
+- **TEST_FIXTURES**: [Type: SCRIPT]
   ```yaml
   - name: skill_md_exists
     input:
@@ -291,38 +284,34 @@ Implementation of skill distribution.
 
 ## COMPILER.BOOTSTRAP_IMPL
 Implementation of bootstrap processor for first-time setup.
-- **DETECTOR_LOGIC**: Checks filesystem for specs directory presence.
+- **DETECTOR_LOGIC**: Checks filesystem for specs directory presence. [Type: SCRIPT]
   ```pseudocode
   function detect_bootstrap_needed(root: string) -> bool:
     return not path.exists(root + "/specs") or dir_empty(root + "/specs")
   ```
   (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.DETECTOR)
-- **SCOPE_DIALOGUE**: Interactive collection of project scope.
+- **BOOTSTRAP_SESSION**: Unified interactive session for project initialization. [PROMPT_NATIVE]
   ```pseudocode
-  function collect_scope() -> string:
-    return prompt("Describe your project in a few sentences:")
+  function run_bootstrap_session() -> void:
+    // 1. Collect Scope
+    raw_scope = prompt("Describe your project in a few sentences:")
+    
+    // 2. Reformulate (LLM)
+    scope_result = {
+      in_scope: llm.extract_shall_statements(raw_scope),
+      out_scope: llm.extract_shall_not_statements(raw_scope)
+    }
+    
+    // 3. Initialize
+    if user.approve(scope_result):
+      mkdir("specs/ideas")
+      write("specs/L0-VISION.md", format_vision(scope_result))
   ```
-  (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_COLLECTOR)
-- **REFORMULATION**: Transform raw input to structured scope.
-  ```pseudocode
-  function reform_scope(raw: string) -> ScopeResult:
-    in_scope = llm.extract_shall_statements(raw)
-    out_scope = llm.extract_shall_not_statements(raw)
-    return {in_scope, out_scope}
-  ```
-  (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_REFORMER)
-- **INITIALIZATION**: Creates initial spec structure.
-  ```pseudocode
-  function initialize(scope: ScopeResult) -> void:
-    if not user.approve(scope): return
-    mkdir("specs/ideas")
-    write("specs/L0-VISION.md", format_vision(scope))
-  ```
-  (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.INITIALIZER)
+  (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_COLLECTOR), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_REFORMER), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.INITIALIZER)
 
 ## COMPILER.ROUTER_IMPL
 Implementation of trigger routing logic.
-- **PARSE_INVOCATION**: Lexical analysis of trigger string.
+- **PARSE_INVOCATION**: Lexical analysis of trigger string. [Type: SCRIPT]
   ```pseudocode
   function parse(input: string) -> ParsedCommand:
     normalized = input.lower().replace("-", "").replace(" ", "")
@@ -332,7 +321,7 @@ Implementation of trigger routing logic.
     return null
   ```
   (Ref: ARCHITECTURE.TRIGGER_ROUTER.PARSER)
-- **DISPATCH_LOGIC**: Decision tree for handler selection.
+- **DISPATCH_LOGIC**: Decision tree for handler selection. [PROMPT_NATIVE] (LLM routing decision)
   ```pseudocode
   function dispatch(cmd: ParsedCommand) -> Handler:
     if cmd.args: return IdeaCaptureHandler
@@ -344,14 +333,14 @@ Implementation of trigger routing logic.
 
 ## COMPILER.VALIDATION_RUNNER_IMPL
 Implementation of validation execution during idle state.
-- **EXECUTOR_LOGIC**: Spawns validation subprocess and captures output.
+- **EXECUTOR_LOGIC**: Spawns validation subprocess and captures output. [Type: SCRIPT]
   ```pseudocode
   function execute_validation(specs_path: string) -> ValidationResult:
     result = subprocess.run(["python3", "scripts/validate.py", specs_path])
     return parse_validation_output(result.stdout, result.stderr)
   ```
   (Ref: ARCHITECTURE.VALIDATION_RUNNER.EXECUTOR)
-- **REPORTER_LOGIC**: Formats validation findings for display.
+- **REPORTER_LOGIC**: Formats validation findings for display. [Type: SCRIPT]
   ```pseudocode
   function format_report(result: ValidationResult) -> string:
     sections = []
@@ -360,7 +349,7 @@ Implementation of validation execution during idle state.
     return sections.join("\n")
   ```
   (Ref: ARCHITECTURE.VALIDATION_RUNNER.REPORTER)
-- **FIX_PROPOSER_LOGIC**: Generates idea files from errors.
+- **FIX_PROPOSER_LOGIC**: Generates idea files from errors. [Type: PROMPT_NATIVE] (requires semantic understanding)
   ```pseudocode
   function propose_fixes(errors: Error[]) -> Idea[]:
     ideas = []
@@ -373,28 +362,27 @@ Implementation of validation execution during idle state.
 
 ## COMPILER.OPTIMIZER_IMPL
 Implementation of self-optimization pattern detection.
-- **PATTERN_DETECTION**: Monitors agent actions for repetition.
+- **OPTIMIZER_SESSION**: Unified optimization session. [PROMPT_NATIVE]
   ```pseudocode
-  function detect_patterns(actions: Action[]) -> Pattern[]:
-    sequences = extract_subsequences(actions, min_len=3)
-    repeated = sequences.filter(seq => seq.count >= 2)
-    return repeated.map(seq => {actions: seq, frequency: seq.count})
+  function run_optimizer_session(actions: Action[]) -> void:
+    // 1. Detect Patterns
+    patterns = llm.analyze_patterns(actions, min_len=3, min_count=2)
+    
+    // 2. Propose Scripts
+    for pattern in patterns:
+      idea = {
+        title: "Automate: " + pattern.description,
+        content: "Create script for: " + pattern.actions.join(" -> "),
+        layer: "L3"
+      }
+      presenter.propose(idea)
   ```
-  (Ref: ARCHITECTURE.SELF_OPTIMIZER.PATTERN_DETECTOR)
-- **SCRIPT_PROPOSAL**: Generates automation ideas.
-  ```pseudocode
-  function propose_script(pattern: Pattern) -> Idea:
-    return {
-      title: "Automate: " + pattern.description,
-      content: "Create script for: " + pattern.actions.join(" -> "),
-      layer: "L3"
-    }
-  ```
-  (Ref: ARCHITECTURE.SELF_OPTIMIZER.SCRIPT_PROPOSER)
+  (Ref: ARCHITECTURE.SELF_OPTIMIZER.PATTERN_DETECTOR), (Ref: ARCHITECTURE.SELF_OPTIMIZER.SCRIPT_PROPOSER)
+
 
 ## COMPILER.TRACEABILITY_IMPL
 Implementation of traceability engine.
-- **REGISTRY_LOGIC**: Maintains ID registry.
+- **REGISTRY_LOGIC**: Maintains ID registry. [Type: SCRIPT]
   ```pseudocode
   function register(id: string, definition: string) -> void:
     if registry.has(id) and registry[id].hash != hash(definition):
@@ -402,7 +390,7 @@ Implementation of traceability engine.
     registry[id] = {definition, timestamp: now()}
   ```
   (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.ID_REGISTRY)
-- **DRIFT_LOGIC**: Detects semantic drift.
+- **DRIFT_LOGIC**: Detects semantic drift. [Type: SCRIPT]
   ```pseudocode
   function detect_drift(parent_id: string, child_ids: string[]) -> DriftResult:
     parent_mtime = get_mtime(parent_id)
@@ -413,7 +401,7 @@ Implementation of traceability engine.
 
 ## COMPILER.TESTABILITY_IMPL
 Implementation of testability enforcement.
-- **ASSERTION_SCANNING**: Scans for RFC2119 keywords.
+- **ASSERTION_SCANNING**: Scans for RFC2119 keywords. [Type: SCRIPT]
   ```pseudocode
   function scan_assertions(spec: Spec) -> AssertionResult:
     keywords = ["MUST", "SHOULD", "MAY", "SHALL"]
@@ -421,7 +409,7 @@ Implementation of testability enforcement.
     return {keyword_count: matches, is_testable: matches > 0}
   ```
   (Ref: ARCHITECTURE.TESTABILITY_ENFORCER.ASSERTION_SCANNER)
-- **FORMAT_VALIDATION**: Validates layer formatting.
+- **FORMAT_VALIDATION**: Validates layer formatting. [Type: SCRIPT]
   ```pseudocode
   function validate_format(spec: Spec) -> FormatResult:
     if spec.layer == 0: return check_natural_language(spec)
@@ -433,7 +421,7 @@ Implementation of testability enforcement.
 
 ## COMPILER.COMPILATION_IMPL
 Implementation of compilation engine.
-- **ANCHOR_LOGIC**: Generates HTML anchors.
+- **ANCHOR_LOGIC**: Generates HTML anchors. [Type: SCRIPT]
   ```pseudocode
   function generate_anchors(doc: Document) -> Document:
     for section in doc.sections:
@@ -442,7 +430,7 @@ Implementation of compilation engine.
     return doc
   ```
   (Ref: ARCHITECTURE.COMPILATION_ENGINE.ANCHOR_GENERATOR)
-- **TOC_LOGIC**: Builds table of contents.
+- **TOC_LOGIC**: Builds table of contents. [Type: SCRIPT]
   ```pseudocode
   function build_toc(doc: Document) -> Document:
     toc = doc.sections.map(s => "- [" + s.name + "](#source-" + s.name.lower() + ")")
@@ -451,7 +439,7 @@ Implementation of compilation engine.
     return doc
   ```
   (Ref: ARCHITECTURE.COMPILATION_ENGINE.TOC_BUILDER)
-- **NOISE_LOGIC**: Strips frontmatter.
+- **NOISE_LOGIC**: Strips frontmatter. [Type: SCRIPT]
   ```pseudocode
   function strip_noise(doc: Document) -> Document:
     for section in doc.sections:
@@ -462,7 +450,7 @@ Implementation of compilation engine.
 
 ## COMPILER.TERMINOLOGY_IMPL
 Implementation of terminology enforcement.
-- **VOCAB_MATCHING**: Checks controlled vocabulary.
+- **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: SCRIPT]
   ```pseudocode
   function check_vocabulary(content: string) -> VocabResult:
     violations = []
@@ -475,7 +463,7 @@ Implementation of terminology enforcement.
 
 ## COMPILER.FORMALISM_IMPL
 Implementation of formal notation enforcement.
-- **FORMALISM_SCORING**: Counts formal blocks.
+- **FORMALISM_SCORING**: Counts formal blocks. [Type: SCRIPT]
   ```pseudocode
   function score_formalism(spec: Spec) -> FormalismScore:
     mermaid_count = spec.content.count("```mermaid")
@@ -488,14 +476,14 @@ Implementation of formal notation enforcement.
 
 ## COMPILER.SCRIPT_AUTOMATION_IMPL
 Implementation of script automation tracking.
-- **GOAL_TRACKING**: Monitors for scriptable tasks.
+- **GOAL_TRACKING**: Monitors for scriptable tasks. [Type: PROMPT_FALLBACK] (pattern recognition)
   ```pseudocode
   function track_goals(operations: Operation[]) -> GoalResult:
     mechanical = operations.filter(op => op.is_deterministic and op.count >= 3)
     return {candidates: mechanical, automation_potential: mechanical.length}
   ```
   (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.GOAL_TRACKER)
-- **DETERMINISM_CHECK**: Validates script determinism.
+- **DETERMINISM_CHECK**: Validates script determinism. [Type: SCRIPT]
   ```pseudocode
   function validate_determinism(script: Script) -> DeterminismResult:
     has_random = script.uses("random") or script.uses("time.now")
@@ -506,7 +494,7 @@ Implementation of script automation tracking.
 
 ## COMPILER.LAYER_MANAGER_IMPL
 Implementation of layer management logic.
-- **REGISTRY_IMPL**: Layer definitions lookup.
+- **REGISTRY_IMPL**: Layer definitions lookup. [Type: SCRIPT]
   ```pseudocode
   LAYER_DEFS = {
     0: {name: "VISION", focus: "Why/What", forbidden: ["class", "function", "script"]},
@@ -518,14 +506,14 @@ Implementation of layer management logic.
     return LAYER_DEFS[layer]
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.LAYER_REGISTRY)
-- **FOCUS_IMPL**: Focus rules enforcement.
+- **FOCUS_IMPL**: Focus rules enforcement. [Type: SCRIPT]
   ```pseudocode
   function get_focus_rules(layer: int) -> FocusRules:
     def = get_layer_def(layer)
     return {whitelist: def.focus_keywords, blacklist: def.forbidden}
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.FOCUS_RULES)
-- **CLASSIFY_IMPL**: Content layer classification.
+- **CLASSIFY_IMPL**: Content layer classification. [Type: SCRIPT]
   ```pseudocode
   function classify_content(content: string) -> LayerClassification:
     if contains(content, ["vision", "scope", "goal"]): return {layer: 0, confidence: 0.8}
@@ -535,7 +523,7 @@ Implementation of layer management logic.
     return {layer: -1, confidence: 0.0}
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.CONTENT_CLASSIFIER)
-- **DEPTH_IMPL**: Nesting depth validation.
+- **DEPTH_IMPL**: Nesting depth validation. [Type: SCRIPT]
   ```pseudocode
   function check_depth(spec: Spec) -> DepthResult:
     max_depth = 0
@@ -548,7 +536,7 @@ Implementation of layer management logic.
 
 ## COMPILER.COVERAGE_TRACKER_IMPL
 Implementation of coverage tracking.
-- **INDEXER_IMPL**: Spec indexing logic.
+- **INDEXER_IMPL**: Spec indexing logic. [Type: SCRIPT]
   ```pseudocode
   function index_specs(specs: Spec[]) -> SpecIndex:
     index = {}
@@ -560,7 +548,7 @@ Implementation of coverage tracking.
     return index
   ```
   (Ref: ARCHITECTURE.COVERAGE_TRACKER.SPEC_INDEXER)
-- **SCANNER_IMPL**: Test file scanning.
+- **SCANNER_IMPL**: Test file scanning. [Type: SCRIPT]
   ```pseudocode
   function scan_tests(test_dir: string) -> TestCoverageMap:
     coverage = {}
@@ -572,7 +560,7 @@ Implementation of coverage tracking.
     return coverage
   ```
   (Ref: ARCHITECTURE.COVERAGE_TRACKER.TEST_SCANNER)
-- **GAP_IMPL**: Coverage gap reporting.
+- **GAP_IMPL**: Coverage gap reporting. [Type: SCRIPT]
   ```pseudocode
   function report_gaps(specs: SpecIndex, tests: TestCoverageMap) -> GapReport:
     untested = []
@@ -582,7 +570,7 @@ Implementation of coverage tracking.
     return {untested, coverage_pct: 1 - len(untested) / len(specs)}
   ```
   (Ref: ARCHITECTURE.COVERAGE_TRACKER.GAP_REPORTER)
-- **CALC_IMPL**: Coverage calculation.
+- **CALC_IMPL**: Coverage calculation. [Type: SCRIPT]
   ```pseudocode
   function calculate_coverage(specs: SpecIndex, tests: TestCoverageMap) -> CoverageMetrics:
     total = len(specs)
@@ -594,7 +582,7 @@ Implementation of coverage tracking.
 
 ## COMPILER.REPORT_GENERATOR_IMPL
 Implementation of report generation.
-- **FORMAT_IMPL**: Error formatting logic.
+- **FORMAT_IMPL**: Error formatting logic. [Type: SCRIPT]
   ```pseudocode
   function format_errors(errors: Error[]) -> string:
     lines = []
@@ -603,7 +591,7 @@ Implementation of report generation.
     return lines.join("\n")
   ```
   (Ref: ARCHITECTURE.REPORT_GENERATOR.ERROR_FORMATTER)
-- **SUMMARY_IMPL**: Summary building.
+- **SUMMARY_IMPL**: Summary building. [Type: SCRIPT]
   ```pseudocode
   function build_summary(result: ValidationResult) -> Summary:
     return {
@@ -614,14 +602,14 @@ Implementation of report generation.
     }
   ```
   (Ref: ARCHITECTURE.REPORT_GENERATOR.SUMMARY_BUILDER)
-- **DIFF_IMPL**: Diff rendering.
+- **DIFF_IMPL**: Diff rendering. [Type: SCRIPT]
   ```pseudocode
   function render_diff(before: Spec, after: Spec) -> string:
     diff = compute_diff(before.content, after.content)
     return diff.map(line => (line.type == "+" ? "+" : "-") + line.text).join("\n")
   ```
   (Ref: ARCHITECTURE.REPORT_GENERATOR.DIFF_RENDERER)
-- **DASHBOARD_IMPL**: Metrics dashboard.
+- **DASHBOARD_IMPL**: Metrics dashboard. [Type: SCRIPT]
   ```pseudocode
   function render_dashboard(metrics: Metrics) -> Dashboard:
     return {
@@ -634,7 +622,7 @@ Implementation of report generation.
 
 ## COMPILER.METRICS_COLLECTOR_IMPL
 Implementation of metrics collection.
-- **COUNT_IMPL**: Item counting.
+- **COUNT_IMPL**: Item counting. [Type: SCRIPT]
   ```pseudocode
   function count_items(specs: Spec[]) -> ItemCounts:
     counts = {L0: 0, L1: 0, L2: 0, L3: 0}
@@ -644,7 +632,7 @@ Implementation of metrics collection.
     return counts
   ```
   (Ref: ARCHITECTURE.METRICS_COLLECTOR.ITEM_COUNTER)
-- **RATIO_IMPL**: Ratio calculation.
+- **RATIO_IMPL**: Ratio calculation. [Type: SCRIPT]
   ```pseudocode
   function calculate_ratios(counts: ItemCounts) -> RatioResult:
     ratios = []
@@ -654,7 +642,7 @@ Implementation of metrics collection.
     return ratios
   ```
   (Ref: ARCHITECTURE.METRICS_COLLECTOR.RATIO_CALCULATOR)
-- **FANOUT_IMPL**: Fanout analysis.
+- **FANOUT_IMPL**: Fanout analysis. [Type: SCRIPT]
   ```pseudocode
   function analyze_fanout(graph: SpecGraph) -> FanoutResult:
     violations = []
@@ -664,7 +652,7 @@ Implementation of metrics collection.
     return {violations, max_fanout: max(graph.fanouts())}
   ```
   (Ref: ARCHITECTURE.METRICS_COLLECTOR.FANOUT_ANALYZER)
-- **WORD_IMPL**: Word counting.
+- **WORD_IMPL**: Word counting. [Type: SCRIPT]
   ```pseudocode
   function count_words(spec: Spec) -> WordCountResult:
     violations = []
@@ -674,7 +662,7 @@ Implementation of metrics collection.
     return {violations, avg_words: spec.avg_word_count()}
   ```
   (Ref: ARCHITECTURE.METRICS_COLLECTOR.WORD_COUNTER)
-- **DENSITY_IMPL**: Keyword density measurement.
+- **DENSITY_IMPL**: Keyword density measurement. [Type: SCRIPT]
   ```pseudocode
   function measure_density(spec: Spec) -> DensityResult:
     keywords = ["MUST", "SHOULD", "MAY", "SHALL"]
@@ -686,7 +674,7 @@ Implementation of metrics collection.
 
 ## COMPILER.CONFLICT_RESOLVER_IMPL
 Implementation of conflict resolution.
-- **DETECT_IMPL**: Conflict detection.
+- **DETECT_IMPL**: Conflict detection. [Type: SCRIPT]
   ```pseudocode
   function detect_conflicts(ideas: Idea[]) -> Conflict[]:
     conflicts = []
@@ -697,7 +685,7 @@ Implementation of conflict resolution.
     return conflicts
   ```
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.CONFLICT_DETECTOR)
-- **PRIORITY_IMPL**: Priority resolution.
+- **PRIORITY_IMPL**: Priority resolution. [Type: SCRIPT]
   ```pseudocode
   function resolve(conflict: Conflict) -> Resolution:
     winner = conflict.left.timestamp > conflict.right.timestamp ? conflict.left : conflict.right
@@ -706,7 +694,7 @@ Implementation of conflict resolution.
     return {winner, loser_archived: true}
   ```
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.PRIORITY_RESOLVER)
-- **MERGE_IMPL**: Automatic merge attempt.
+- **MERGE_IMPL**: Automatic merge attempt. [Type: PROMPT_FALLBACK] (semantic merging complex)
   ```pseudocode
   function merge(ideas: Idea[]) -> MergeResult:
     merged = {}
@@ -718,7 +706,7 @@ Implementation of conflict resolution.
     return {merged_ideas: values(merged), conflicts_resolved: len(ideas) - len(merged)}
   ```
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.MERGE_ENGINE)
-- **AUDIT_IMPL**: Audit logging.
+- **AUDIT_IMPL**: Audit logging. [Type: SCRIPT]
   ```pseudocode
   function log_resolution(conflict: Conflict, resolution: Resolution) -> void:
     entry = {timestamp: now(), conflict, resolution, reason: "timestamp_priority"}
@@ -728,42 +716,36 @@ Implementation of conflict resolution.
 
 ## COMPILER.APPROVAL_WORKFLOW_IMPL
 Implementation of approval workflow.
-- **PROMPT_IMPL**: Approval prompting.
+- **APPROVAL_SESSION**: Unified approval workflow. [PROMPT_NATIVE]
   ```pseudocode
-  function prompt_approval(changes: Change[]) -> ApprovalResult:
-    display_changes(changes)
-    response = wait_for_user_input(timeout=300)
-    if response == null: return {approved: false, reason: "timeout"}
-    return {approved: response == "approve", reason: response}
+  function run_approval_session(changes: Change[]) -> void:
+    // 1. Contextualize
+    context = present_context(changes)
+    
+    // 2. Prompt User
+    display(context)
+    result = prompt("Approve changes? (y/n)")
+    
+    // 3. Act & Track
+    if result.approved:
+      track_approval(changes.id, "APPROVED")
+    else:
+      track_approval(changes.id, "REJECTED")
+      revert(changes.transaction_id)
+      log("Rejection reason: " + result.reason)
   ```
-  (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_PROMPTER)
-- **REJECT_IMPL**: Rejection handling.
-  ```pseudocode
-  function handle_rejection(reason: string) -> void:
-    log("Rejection: " + reason)
-    revert(current_transaction_id())
-    notify_user("Changes reverted due to rejection")
-  ```
-  (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.REJECTION_HANDLER)
-- **TRACK_IMPL**: Approval state tracking.
+  (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_PROMPTER), (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.REJECTION_HANDLER), (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.CONTEXT_PRESENTER)
+- **TRACK_IMPL**: Approval state tracking. [Type: SCRIPT]
   ```pseudocode
   function track_approval(id: string, status: ApprovalStatus) -> void:
     state[id] = {status, updated: now()}
     persist_state(state)
   ```
   (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_TRACKER)
-- **CONTEXT_IMPL**: Context presentation.
-  ```pseudocode
-  function present_context(changes: Change[]) -> ContextPresentation:
-    parents = changes.map(c => load_parent(c.target_id))
-    downstream = changes.map(c => find_downstream(c.target_id))
-    return {changes, parents, downstream, impact_summary: summarize(downstream)}
-  ```
-  (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.CONTEXT_PRESENTER)
 
 ## COMPILER.SEMANTIC_ANALYZER_IMPL
 Implementation of semantic analysis.
-- **KEYWORD_IMPL**: Keyword extraction.
+- **KEYWORD_IMPL**: Keyword extraction. [Type: SCRIPT]
   ```pseudocode
   function extract_keywords(content: string) -> Keyword[]:
     words = content.split()
@@ -771,7 +753,7 @@ Implementation of semantic analysis.
     return keywords.map(k => {text: k, frequency: count(content, k)})
   ```
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.KEYWORD_EXTRACTOR)
-- **REFERENCE_IMPL**: Reference parsing.
+- **REFERENCE_IMPL**: Reference parsing. [Type: SCRIPT]
   ```pseudocode
   function parse_references(content: string) -> Reference[]:
     pattern = r"\(Ref: ([A-Z._]+)\)"
@@ -779,7 +761,7 @@ Implementation of semantic analysis.
     return matches.map(m => {id: m, valid: id_exists(m)})
   ```
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.REFERENCE_PARSER)
-- **SEMANTIC_IMPL**: Semantic matching.
+- **SEMANTIC_IMPL**: Semantic matching. [PROMPT_NATIVE] (requires semantic understanding)
   ```pseudocode
   function match_semantics(parent: Spec, child: Spec) -> SemanticMatch:
     parent_keywords = extract_keywords(parent.content)
@@ -788,7 +770,7 @@ Implementation of semantic analysis.
     return {coverage: len(covered) / len(parent_keywords), gaps: parent_keywords - child_keywords}
   ```
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.SEMANTIC_MATCHER)
-- **IDEA_CLASS_IMPL**: Idea classification.
+- **IDEA_CLASS_IMPL**: Idea classification. [PROMPT_NATIVE] (requires semantic layer detection)
   ```pseudocode
   function classify_idea(idea: Idea) -> Classification:
     layer = classify_content(idea.content).layer
