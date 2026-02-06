@@ -1,5 +1,5 @@
 ---
-version: 1.5.0
+version: 1.6.0
 ---
 
 # L0: Vibe-Spec Vision
@@ -35,11 +35,14 @@ version: 1.5.0
 ## VISION.VIBE_CODING
 - **TRUTH**: The system must enable "Vibe Coding", where specifications are the primary source of truth.
 - **PARADIGM**: **Paradigm**: Human defines Spec -> AI writes code -> Human & AI verify.
+- **HUMAN_GATE**: Human approval is required before any specification change is persisted.
+- **AI_ASSIST**: AI agents assist in code generation, validation, and refinement.
 - **SHIFT_LEFT**: **Shift-Left**: Errors should be caught at the Spec level, not implementation.
 ## VISION.AUTOMATION
 - **SCRIPT_FIRST**: If a task CAN be formalized into a script, it MUST be.
 - **COGNITIVE_LOAD**: Minimize LLM/Human cognitive load by offloading mechanical work to deterministic scripts.
 - **EVOLUTION**: The system evolves by identifying patterns and rigidifying them into code.
+- **ITEM_CLASSIFICATION**: L3 items MUST be tagged with execution type: PROMPT_NATIVE (LLM), SCRIPT (automation), or PROMPT_FALLBACK (LLM when scripting too complex).
 
 ## VISION.PHILOSOPHY
 - **HUMAN_CENTRIC**: Specs must be atomic and readable to minimize human context switching.

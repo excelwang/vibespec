@@ -1,5 +1,5 @@
 ---
-version: 1.6.0
+version: 1.8.0
 ---
 
 # L3: Vibe-Spec Implementation
@@ -288,3 +288,513 @@ Implementation of skill distribution.
     expected:
       error_type: SchemaError
   ```
+
+## COMPILER.BOOTSTRAP_IMPL
+Implementation of bootstrap processor for first-time setup.
+- **DETECTOR_LOGIC**: Checks filesystem for specs directory presence.
+  ```pseudocode
+  function detect_bootstrap_needed(root: string) -> bool:
+    return not path.exists(root + "/specs") or dir_empty(root + "/specs")
+  ```
+  (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.DETECTOR)
+- **SCOPE_DIALOGUE**: Interactive collection of project scope.
+  ```pseudocode
+  function collect_scope() -> string:
+    return prompt("Describe your project in a few sentences:")
+  ```
+  (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_COLLECTOR)
+- **REFORMULATION**: Transform raw input to structured scope.
+  ```pseudocode
+  function reform_scope(raw: string) -> ScopeResult:
+    in_scope = llm.extract_shall_statements(raw)
+    out_scope = llm.extract_shall_not_statements(raw)
+    return {in_scope, out_scope}
+  ```
+  (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_REFORMER)
+- **INITIALIZATION**: Creates initial spec structure.
+  ```pseudocode
+  function initialize(scope: ScopeResult) -> void:
+    if not user.approve(scope): return
+    mkdir("specs/ideas")
+    write("specs/L0-VISION.md", format_vision(scope))
+  ```
+  (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.INITIALIZER)
+
+## COMPILER.ROUTER_IMPL
+Implementation of trigger routing logic.
+- **PARSE_INVOCATION**: Lexical analysis of trigger string.
+  ```pseudocode
+  function parse(input: string) -> ParsedCommand:
+    normalized = input.lower().replace("-", "").replace(" ", "")
+    if "vibespec" in normalized:
+      args = input.split(maxsplit=1)[1] if " " in input else null
+      return {command: "vibespec", args}
+    return null
+  ```
+  (Ref: ARCHITECTURE.TRIGGER_ROUTER.PARSER)
+- **DISPATCH_LOGIC**: Decision tree for handler selection.
+  ```pseudocode
+  function dispatch(cmd: ParsedCommand) -> Handler:
+    if cmd.args: return IdeaCaptureHandler
+    if glob("specs/ideas/*.md").non_empty(): return IdeasProcessorHandler
+    if path.exists("src/SKILL.md"): return ValidationRunnerHandler
+    return BootstrapHandler
+  ```
+  (Ref: ARCHITECTURE.TRIGGER_ROUTER.DISPATCHER)
+
+## COMPILER.VALIDATION_RUNNER_IMPL
+Implementation of validation execution during idle state.
+- **EXECUTOR_LOGIC**: Spawns validation subprocess and captures output.
+  ```pseudocode
+  function execute_validation(specs_path: string) -> ValidationResult:
+    result = subprocess.run(["python3", "scripts/validate.py", specs_path])
+    return parse_validation_output(result.stdout, result.stderr)
+  ```
+  (Ref: ARCHITECTURE.VALIDATION_RUNNER.EXECUTOR)
+- **REPORTER_LOGIC**: Formats validation findings for display.
+  ```pseudocode
+  function format_report(result: ValidationResult) -> string:
+    sections = []
+    if result.orphans: sections.push("Orphan IDs: " + result.orphans.join(", "))
+    if result.expansion_warnings: sections.push("Expansion warnings: " + ...)
+    return sections.join("\n")
+  ```
+  (Ref: ARCHITECTURE.VALIDATION_RUNNER.REPORTER)
+- **FIX_PROPOSER_LOGIC**: Generates idea files from errors.
+  ```pseudocode
+  function propose_fixes(errors: Error[]) -> Idea[]:
+    ideas = []
+    for error in errors:
+      idea = generate_fix_idea(error)
+      ideas.push(idea)
+    return ideas
+  ```
+  (Ref: ARCHITECTURE.VALIDATION_RUNNER.FIX_PROPOSER)
+
+## COMPILER.OPTIMIZER_IMPL
+Implementation of self-optimization pattern detection.
+- **PATTERN_DETECTION**: Monitors agent actions for repetition.
+  ```pseudocode
+  function detect_patterns(actions: Action[]) -> Pattern[]:
+    sequences = extract_subsequences(actions, min_len=3)
+    repeated = sequences.filter(seq => seq.count >= 2)
+    return repeated.map(seq => {actions: seq, frequency: seq.count})
+  ```
+  (Ref: ARCHITECTURE.SELF_OPTIMIZER.PATTERN_DETECTOR)
+- **SCRIPT_PROPOSAL**: Generates automation ideas.
+  ```pseudocode
+  function propose_script(pattern: Pattern) -> Idea:
+    return {
+      title: "Automate: " + pattern.description,
+      content: "Create script for: " + pattern.actions.join(" -> "),
+      layer: "L3"
+    }
+  ```
+  (Ref: ARCHITECTURE.SELF_OPTIMIZER.SCRIPT_PROPOSER)
+
+## COMPILER.TRACEABILITY_IMPL
+Implementation of traceability engine.
+- **REGISTRY_LOGIC**: Maintains ID registry.
+  ```pseudocode
+  function register(id: string, definition: string) -> void:
+    if registry.has(id) and registry[id].hash != hash(definition):
+      raise IdConflictError(id)
+    registry[id] = {definition, timestamp: now()}
+  ```
+  (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.ID_REGISTRY)
+- **DRIFT_LOGIC**: Detects semantic drift.
+  ```pseudocode
+  function detect_drift(parent_id: string, child_ids: string[]) -> DriftResult:
+    parent_mtime = get_mtime(parent_id)
+    stale = child_ids.filter(c => get_mtime(c) < parent_mtime)
+    return {stale_children: stale, recommend_review: stale.length > 0}
+  ```
+  (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.DRIFT_DETECTOR)
+
+## COMPILER.TESTABILITY_IMPL
+Implementation of testability enforcement.
+- **ASSERTION_SCANNING**: Scans for RFC2119 keywords.
+  ```pseudocode
+  function scan_assertions(spec: Spec) -> AssertionResult:
+    keywords = ["MUST", "SHOULD", "MAY", "SHALL"]
+    matches = spec.content.count_matches(keywords)
+    return {keyword_count: matches, is_testable: matches > 0}
+  ```
+  (Ref: ARCHITECTURE.TESTABILITY_ENFORCER.ASSERTION_SCANNER)
+- **FORMAT_VALIDATION**: Validates layer formatting.
+  ```pseudocode
+  function validate_format(spec: Spec) -> FormatResult:
+    if spec.layer == 0: return check_natural_language(spec)
+    if spec.layer == 1: return check_rfc2119(spec)
+    if spec.layer == 2: return check_intent_guarantees(spec)
+    if spec.layer == 3: return check_pseudocode(spec)
+  ```
+  (Ref: ARCHITECTURE.TESTABILITY_ENFORCER.FORMAT_VALIDATOR)
+
+## COMPILER.COMPILATION_IMPL
+Implementation of compilation engine.
+- **ANCHOR_LOGIC**: Generates HTML anchors.
+  ```pseudocode
+  function generate_anchors(doc: Document) -> Document:
+    for section in doc.sections:
+      anchor_id = "source-" + section.name.lower()
+      section.prepend("<a id='" + anchor_id + "'></a>")
+    return doc
+  ```
+  (Ref: ARCHITECTURE.COMPILATION_ENGINE.ANCHOR_GENERATOR)
+- **TOC_LOGIC**: Builds table of contents.
+  ```pseudocode
+  function build_toc(doc: Document) -> Document:
+    toc = doc.sections.map(s => "- [" + s.name + "](#source-" + s.name.lower() + ")")
+    doc.prepend("## INDEX\n" + toc.join("\n"))
+    doc.prepend("# VIBE-SPECS SYSTEM CONTEXT\n> Instructions...")
+    return doc
+  ```
+  (Ref: ARCHITECTURE.COMPILATION_ENGINE.TOC_BUILDER)
+- **NOISE_LOGIC**: Strips frontmatter.
+  ```pseudocode
+  function strip_noise(doc: Document) -> Document:
+    for section in doc.sections:
+      section.content = section.content.replace(/^---.*?---/s, "")
+    return doc
+  ```
+  (Ref: ARCHITECTURE.COMPILATION_ENGINE.NOISE_STRIPPER)
+
+## COMPILER.TERMINOLOGY_IMPL
+Implementation of terminology enforcement.
+- **VOCAB_MATCHING**: Checks controlled vocabulary.
+  ```pseudocode
+  function check_vocabulary(content: string) -> VocabResult:
+    violations = []
+    if content.contains("check ") and not content.contains("validate"):
+      violations.push("Use 'validate' instead of 'check'")
+    // ... more vocabulary rules
+    return {violations, clean: violations.length == 0}
+  ```
+  (Ref: ARCHITECTURE.TERMINOLOGY_CHECKER.VOCAB_MATCHER)
+
+## COMPILER.FORMALISM_IMPL
+Implementation of formal notation enforcement.
+- **FORMALISM_SCORING**: Counts formal blocks.
+  ```pseudocode
+  function score_formalism(spec: Spec) -> FormalismScore:
+    mermaid_count = spec.content.count("```mermaid")
+    pseudocode_count = spec.content.count("```pseudocode")
+    yaml_count = spec.content.count("```yaml")
+    total = mermaid_count + pseudocode_count + yaml_count
+    return {score: total, recommendation: total < 2 ? "Add more formal blocks" : "Good"}
+  ```
+  (Ref: ARCHITECTURE.FORMAL_NOTATION_ENFORCER.FORMALISM_SCORER)
+
+## COMPILER.SCRIPT_AUTOMATION_IMPL
+Implementation of script automation tracking.
+- **GOAL_TRACKING**: Monitors for scriptable tasks.
+  ```pseudocode
+  function track_goals(operations: Operation[]) -> GoalResult:
+    mechanical = operations.filter(op => op.is_deterministic and op.count >= 3)
+    return {candidates: mechanical, automation_potential: mechanical.length}
+  ```
+  (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.GOAL_TRACKER)
+- **DETERMINISM_CHECK**: Validates script determinism.
+  ```pseudocode
+  function validate_determinism(script: Script) -> DeterminismResult:
+    has_random = script.uses("random") or script.uses("time.now")
+    has_external = script.uses("http") or script.uses("network")
+    return {is_deterministic: not has_random and not has_external}
+  ```
+  (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.DETERMINISM_VALIDATOR)
+
+## COMPILER.LAYER_MANAGER_IMPL
+Implementation of layer management logic.
+- **REGISTRY_IMPL**: Layer definitions lookup.
+  ```pseudocode
+  LAYER_DEFS = {
+    0: {name: "VISION", focus: "Why/What", forbidden: ["class", "function", "script"]},
+    1: {name: "CONTRACTS", focus: "Rules", forbidden: ["class", "method", "variable"]},
+    2: {name: "ARCHITECTURE", focus: "Components", forbidden: ["variable", "line_number"]},
+    3: {name: "COMPILER", focus: "How", forbidden: ["vague", "vision"]}
+  }
+  function get_layer_def(layer: int) -> LayerDefinition:
+    return LAYER_DEFS[layer]
+  ```
+  (Ref: ARCHITECTURE.LAYER_MANAGER.LAYER_REGISTRY)
+- **FOCUS_IMPL**: Focus rules enforcement.
+  ```pseudocode
+  function get_focus_rules(layer: int) -> FocusRules:
+    def = get_layer_def(layer)
+    return {whitelist: def.focus_keywords, blacklist: def.forbidden}
+  ```
+  (Ref: ARCHITECTURE.LAYER_MANAGER.FOCUS_RULES)
+- **CLASSIFY_IMPL**: Content layer classification.
+  ```pseudocode
+  function classify_content(content: string) -> LayerClassification:
+    if contains(content, ["vision", "scope", "goal"]): return {layer: 0, confidence: 0.8}
+    if contains(content, ["MUST", "SHOULD", "MAY"]): return {layer: 1, confidence: 0.9}
+    if contains(content, ["Intent:", "Guarantees:", "Interface:"]): return {layer: 2, confidence: 0.9}
+    if contains(content, ["```pseudocode", "function"]): return {layer: 3, confidence: 0.9}
+    return {layer: -1, confidence: 0.0}
+  ```
+  (Ref: ARCHITECTURE.LAYER_MANAGER.CONTENT_CLASSIFIER)
+- **DEPTH_IMPL**: Nesting depth validation.
+  ```pseudocode
+  function check_depth(spec: Spec) -> DepthResult:
+    max_depth = 0
+    for line in spec.lines:
+      depth = count_leading_spaces(line) / 2
+      max_depth = max(max_depth, depth)
+    return {max_depth, valid: max_depth <= 2}
+  ```
+  (Ref: ARCHITECTURE.LAYER_MANAGER.DEPTH_CHECKER)
+
+## COMPILER.COVERAGE_TRACKER_IMPL
+Implementation of coverage tracking.
+- **INDEXER_IMPL**: Spec indexing logic.
+  ```pseudocode
+  function index_specs(specs: Spec[]) -> SpecIndex:
+    index = {}
+    for spec in specs:
+      for statement in spec.statements:
+        if has_rfc2119_keyword(statement):
+          id = generate_id(spec, statement)
+          index[id] = {spec: spec.id, text: statement}
+    return index
+  ```
+  (Ref: ARCHITECTURE.COVERAGE_TRACKER.SPEC_INDEXER)
+- **SCANNER_IMPL**: Test file scanning.
+  ```pseudocode
+  function scan_tests(test_dir: string) -> TestCoverageMap:
+    coverage = {}
+    for file in glob(test_dir + "/**/*.py"):
+      for line in file.lines:
+        if "@verify_spec" in line:
+          spec_id = extract_spec_id(line)
+          coverage[spec_id] = file.path
+    return coverage
+  ```
+  (Ref: ARCHITECTURE.COVERAGE_TRACKER.TEST_SCANNER)
+- **GAP_IMPL**: Coverage gap reporting.
+  ```pseudocode
+  function report_gaps(specs: SpecIndex, tests: TestCoverageMap) -> GapReport:
+    untested = []
+    for spec_id in specs.keys():
+      if spec_id not in tests:
+        untested.push(spec_id)
+    return {untested, coverage_pct: 1 - len(untested) / len(specs)}
+  ```
+  (Ref: ARCHITECTURE.COVERAGE_TRACKER.GAP_REPORTER)
+- **CALC_IMPL**: Coverage calculation.
+  ```pseudocode
+  function calculate_coverage(specs: SpecIndex, tests: TestCoverageMap) -> CoverageMetrics:
+    total = len(specs)
+    covered = len(tests.keys().intersection(specs.keys()))
+    return {total, covered, percentage: covered / total * 100}
+  ```
+  (Ref: ARCHITECTURE.COVERAGE_TRACKER.COVERAGE_CALCULATOR)
+
+
+## COMPILER.REPORT_GENERATOR_IMPL
+Implementation of report generation.
+- **FORMAT_IMPL**: Error formatting logic.
+  ```pseudocode
+  function format_errors(errors: Error[]) -> string:
+    lines = []
+    for e in errors:
+      lines.push(e.file + ":" + e.line + ": " + e.type + " - " + e.message)
+    return lines.join("\n")
+  ```
+  (Ref: ARCHITECTURE.REPORT_GENERATOR.ERROR_FORMATTER)
+- **SUMMARY_IMPL**: Summary building.
+  ```pseudocode
+  function build_summary(result: ValidationResult) -> Summary:
+    return {
+      total_errors: len(result.errors),
+      total_warnings: len(result.warnings),
+      blocking: result.errors.filter(e => e.blocking),
+      passed: len(result.errors) == 0
+    }
+  ```
+  (Ref: ARCHITECTURE.REPORT_GENERATOR.SUMMARY_BUILDER)
+- **DIFF_IMPL**: Diff rendering.
+  ```pseudocode
+  function render_diff(before: Spec, after: Spec) -> string:
+    diff = compute_diff(before.content, after.content)
+    return diff.map(line => (line.type == "+" ? "+" : "-") + line.text).join("\n")
+  ```
+  (Ref: ARCHITECTURE.REPORT_GENERATOR.DIFF_RENDERER)
+- **DASHBOARD_IMPL**: Metrics dashboard.
+  ```pseudocode
+  function render_dashboard(metrics: Metrics) -> Dashboard:
+    return {
+      item_counts: format_table(metrics.counts),
+      ratios: format_table(metrics.ratios),
+      coverage: format_percentage(metrics.coverage)
+    }
+  ```
+  (Ref: ARCHITECTURE.REPORT_GENERATOR.METRICS_DASHBOARD)
+
+## COMPILER.METRICS_COLLECTOR_IMPL
+Implementation of metrics collection.
+- **COUNT_IMPL**: Item counting.
+  ```pseudocode
+  function count_items(specs: Spec[]) -> ItemCounts:
+    counts = {L0: 0, L1: 0, L2: 0, L3: 0}
+    for spec in specs:
+      layer = spec.layer
+      counts[layer] += spec.count_headers() + spec.count_keys()
+    return counts
+  ```
+  (Ref: ARCHITECTURE.METRICS_COLLECTOR.ITEM_COUNTER)
+- **RATIO_IMPL**: Ratio calculation.
+  ```pseudocode
+  function calculate_ratios(counts: ItemCounts) -> RatioResult:
+    ratios = []
+    for (prev, curr) in [(L0, L1), (L1, L2), (L2, L3)]:
+      ratio = counts[curr] / counts[prev]
+      ratios.push({layers: curr + "/" + prev, ratio, valid: 1.0 <= ratio <= 10.0})
+    return ratios
+  ```
+  (Ref: ARCHITECTURE.METRICS_COLLECTOR.RATIO_CALCULATOR)
+- **FANOUT_IMPL**: Fanout analysis.
+  ```pseudocode
+  function analyze_fanout(graph: SpecGraph) -> FanoutResult:
+    violations = []
+    for node in graph.nodes:
+      refs = graph.count_downstream(node)
+      if refs > 7: violations.push({id: node.id, count: refs})
+    return {violations, max_fanout: max(graph.fanouts())}
+  ```
+  (Ref: ARCHITECTURE.METRICS_COLLECTOR.FANOUT_ANALYZER)
+- **WORD_IMPL**: Word counting.
+  ```pseudocode
+  function count_words(spec: Spec) -> WordCountResult:
+    violations = []
+    for statement in spec.statements:
+      words = len(statement.split())
+      if words > 50: violations.push({text: statement[:50] + "...", count: words})
+    return {violations, avg_words: spec.avg_word_count()}
+  ```
+  (Ref: ARCHITECTURE.METRICS_COLLECTOR.WORD_COUNTER)
+- **DENSITY_IMPL**: Keyword density measurement.
+  ```pseudocode
+  function measure_density(spec: Spec) -> DensityResult:
+    keywords = ["MUST", "SHOULD", "MAY", "SHALL"]
+    total = len(spec.statements)
+    with_keyword = spec.statements.filter(s => any(k in s for k in keywords)).length
+    return {density: with_keyword / total, threshold: 0.5, valid: density >= 0.5}
+  ```
+  (Ref: ARCHITECTURE.METRICS_COLLECTOR.KEYWORD_DENSITY)
+
+## COMPILER.CONFLICT_RESOLVER_IMPL
+Implementation of conflict resolution.
+- **DETECT_IMPL**: Conflict detection.
+  ```pseudocode
+  function detect_conflicts(ideas: Idea[]) -> Conflict[]:
+    conflicts = []
+    for i, idea1 in enumerate(ideas):
+      for idea2 in ideas[i+1:]:
+        if idea1.target_id == idea2.target_id:
+          conflicts.push({left: idea1, right: idea2})
+    return conflicts
+  ```
+  (Ref: ARCHITECTURE.CONFLICT_RESOLVER.CONFLICT_DETECTOR)
+- **PRIORITY_IMPL**: Priority resolution.
+  ```pseudocode
+  function resolve(conflict: Conflict) -> Resolution:
+    winner = conflict.left.timestamp > conflict.right.timestamp ? conflict.left : conflict.right
+    loser = conflict.left.timestamp > conflict.right.timestamp ? conflict.right : conflict.left
+    archive(loser)
+    return {winner, loser_archived: true}
+  ```
+  (Ref: ARCHITECTURE.CONFLICT_RESOLVER.PRIORITY_RESOLVER)
+- **MERGE_IMPL**: Automatic merge attempt.
+  ```pseudocode
+  function merge(ideas: Idea[]) -> MergeResult:
+    merged = {}
+    for idea in ideas:
+      if idea.target_id in merged:
+        merged[idea.target_id] = combine(merged[idea.target_id], idea)
+      else:
+        merged[idea.target_id] = idea
+    return {merged_ideas: values(merged), conflicts_resolved: len(ideas) - len(merged)}
+  ```
+  (Ref: ARCHITECTURE.CONFLICT_RESOLVER.MERGE_ENGINE)
+- **AUDIT_IMPL**: Audit logging.
+  ```pseudocode
+  function log_resolution(conflict: Conflict, resolution: Resolution) -> void:
+    entry = {timestamp: now(), conflict, resolution, reason: "timestamp_priority"}
+    append_log("conflict_audit.log", entry)
+  ```
+  (Ref: ARCHITECTURE.CONFLICT_RESOLVER.AUDIT_LOGGER)
+
+## COMPILER.APPROVAL_WORKFLOW_IMPL
+Implementation of approval workflow.
+- **PROMPT_IMPL**: Approval prompting.
+  ```pseudocode
+  function prompt_approval(changes: Change[]) -> ApprovalResult:
+    display_changes(changes)
+    response = wait_for_user_input(timeout=300)
+    if response == null: return {approved: false, reason: "timeout"}
+    return {approved: response == "approve", reason: response}
+  ```
+  (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_PROMPTER)
+- **REJECT_IMPL**: Rejection handling.
+  ```pseudocode
+  function handle_rejection(reason: string) -> void:
+    log("Rejection: " + reason)
+    revert(current_transaction_id())
+    notify_user("Changes reverted due to rejection")
+  ```
+  (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.REJECTION_HANDLER)
+- **TRACK_IMPL**: Approval state tracking.
+  ```pseudocode
+  function track_approval(id: string, status: ApprovalStatus) -> void:
+    state[id] = {status, updated: now()}
+    persist_state(state)
+  ```
+  (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_TRACKER)
+- **CONTEXT_IMPL**: Context presentation.
+  ```pseudocode
+  function present_context(changes: Change[]) -> ContextPresentation:
+    parents = changes.map(c => load_parent(c.target_id))
+    downstream = changes.map(c => find_downstream(c.target_id))
+    return {changes, parents, downstream, impact_summary: summarize(downstream)}
+  ```
+  (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.CONTEXT_PRESENTER)
+
+## COMPILER.SEMANTIC_ANALYZER_IMPL
+Implementation of semantic analysis.
+- **KEYWORD_IMPL**: Keyword extraction.
+  ```pseudocode
+  function extract_keywords(content: string) -> Keyword[]:
+    words = content.split()
+    keywords = words.filter(w => w.upper() == w and len(w) > 2)
+    return keywords.map(k => {text: k, frequency: count(content, k)})
+  ```
+  (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.KEYWORD_EXTRACTOR)
+- **REFERENCE_IMPL**: Reference parsing.
+  ```pseudocode
+  function parse_references(content: string) -> Reference[]:
+    pattern = r"\(Ref: ([A-Z._]+)\)"
+    matches = regex.findall(pattern, content)
+    return matches.map(m => {id: m, valid: id_exists(m)})
+  ```
+  (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.REFERENCE_PARSER)
+- **SEMANTIC_IMPL**: Semantic matching.
+  ```pseudocode
+  function match_semantics(parent: Spec, child: Spec) -> SemanticMatch:
+    parent_keywords = extract_keywords(parent.content)
+    child_keywords = extract_keywords(child.content)
+    covered = parent_keywords.filter(k => k in child_keywords)
+    return {coverage: len(covered) / len(parent_keywords), gaps: parent_keywords - child_keywords}
+  ```
+  (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.SEMANTIC_MATCHER)
+- **IDEA_CLASS_IMPL**: Idea classification.
+  ```pseudocode
+  function classify_idea(idea: Idea) -> Classification:
+    layer = classify_content(idea.content).layer
+    action = detect_action(idea.content)  // "add", "modify", "delete"
+    return {layer, action, targets: extract_target_ids(idea.content)}
+  ```
+  (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.IDEA_CLASSIFIER)
+
+

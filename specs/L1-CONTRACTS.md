@@ -1,5 +1,5 @@
 ---
-version: 1.8.0
+version: 1.9.0
 invariants:
   - id: INV_UNIQUE_IDS
     statement: "Every Spec ID and Export ID must be unique within the project."
@@ -33,6 +33,14 @@ invariants:
 - **L3_COMPILER**: L3 MUST focus on "How" (Implementation Specs, Classes, Functions, CLI Commands). Vague "visions" and redundant high-level explanations MUST NOT appear.
   > Rationale: Provides precise implementation guidance.
   (Ref: VISION.TRACEABILITY)
+- **L3_TYPE_ANNOTATION**: Each L3 item MUST include `[Type: X]` where X is PROMPT_NATIVE, SCRIPT, or PROMPT_FALLBACK.
+  > Rationale: Enables skill-creator to route items to appropriate execution mechanism.
+  (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION)
+- **SCRIPT_THRESHOLD**: Items SHOULD be typed SCRIPT if deterministic and implementable in <100 LOC.
+  > Rationale: Balances automation benefits against development complexity.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
+- **FALLBACK_RATIONALE**: PROMPT_FALLBACK items SHOULD include brief rationale for not scripting.
+  > Rationale: Prevents lazy fallback to LLM; documents automation barriers.
 
 ## CONTRACTS.TRACEABILITY
 - **SEMANTIC_IDS**: Every statement MUST start with a bold semantic key (e.g., `- **KEY**: ...`). Sequential numbering IS FORBIDDEN.
@@ -60,7 +68,7 @@ invariants:
   (Ref: VISION.TRACEABILITY.GOAL)
 - **SEMANTIC_DRIFT**: If a Parent requirement's intent changes, the Agent MUST prompt: "Do you wish to preserve backward compatibility?"
   > Rationale: Allows explicit choice between compatibility and clean breaks.
-  (Ref: VISION.VIBE_CODING.PARADIGM)
+  (Ref: VISION.VIBE_CODING.AI_ASSIST)
 - **STALENESS_WARNING**: If `mtime(Parent) > mtime(Child)`, the validator SHOULD warn that the child MAY be stale.
   > Rationale: Heuristic catches forgotten updates when parent specs evolve.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
@@ -80,7 +88,7 @@ invariants:
   (Ref: VISION.UBIQUITOUS_LANGUAGE.CONTROLLED_VOCABULARY)
 - **HUMAN_REVIEW**: Distilled summary MUST be approved before saving.
   > Rationale: Human-in-the-Loop gate prevents AI hallucination of requirements.
-  (Ref: VISION.VIBE_CODING.PARADIGM)
+  (Ref: VISION.VIBE_CODING.HUMAN_GATE)
 - **RFC2119**: L1 Contracts MUST use uppercase keywords (MUST, SHOULD, MAY) in at least 50% of statements.
   > Rationale: Ensures unambiguous authority for implementers and validators.
   (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
@@ -120,7 +128,7 @@ invariants:
   (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
 - **APPROVAL_REQUIRED**: Agents MUST pause and request human review immediately after creating a new Idea file.
   > Rationale: Critical feedback loop prevents drift from user intent.
-  (Ref: VISION.VIBE_CODING.PARADIGM)
+  (Ref: VISION.VIBE_CODING.HUMAN_GATE)
 - **COMPILE_PROMPT**: Upon completion of idea processing, IF `specs/ideas/` is empty, the user MUST be prompted to run compilation.
   > Rationale: Keeps compiled artifact in sync with source.
   (Ref: VISION.AUTOMATION.EVOLUTION)
@@ -180,7 +188,7 @@ invariants:
   (Ref: VISION.SCOPE.REFL)
 - **HUMAN_REVIEW**: Distilled summary MUST be approved before saving.
   > Rationale: Prevents AI-generated insights from committing without verification.
-  (Ref: VISION.VIBE_CODING.PARADIGM)
+  (Ref: VISION.VIBE_CODING.HUMAN_GATE)
 
 ## CONTRACTS.SCRIPT_FIRST
 - **TARGET**: File I/O, structural validation, archival, and formatting MUST be handled by scripts.
@@ -216,7 +224,7 @@ invariants:
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
 - **APPROVAL_GATE**: Reformed scope MUST be presented for human approval BEFORE creating files.
   > Rationale: Prevents misdirected initialization.
-  (Ref: VISION.VIBE_CODING.PARADIGM)
+  (Ref: VISION.VIBE_CODING.HUMAN_GATE)
 - **INITIALIZATION**: Upon approval, agent MUST create `specs/L0-VISION.md` and `specs/ideas/` directory.
   > Rationale: Establishes minimum viable structure for spec management.
   (Ref: VISION.SCOPE.VAL)
@@ -268,3 +276,39 @@ invariants:
 - **RFC2119_ENFORCEMENT**: L1 items MUST contain at least one RFC2119 keyword.
   > Rationale: Ensures every contract is machine-scannable for assertion extraction.
   (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
+
+## CONTRACTS.COMPILATION
+- **LLM_OPTIMIZED**: Compiled output MUST be optimized for agent consumption with clear structure.
+  > Rationale: Agents are primary consumers; optimized format reduces parsing overhead.
+  (Ref: VISION.COMPILATION_STRUCTURE.LLM_FRIENDLY)
+- **ANCHORING**: Compiled output MUST include HTML anchors for each major section.
+  > Rationale: Enables precise context retrieval without full document parsing.
+  (Ref: VISION.COMPILATION_STRUCTURE.CONTEXT_ANCHORS)
+- **NAVIGATION**: Compiled output MUST include a system preamble and table of contents.
+  > Rationale: Provides immediate orientation for agents loading the spec.
+  (Ref: VISION.COMPILATION_STRUCTURE.NAVIGATION)
+- **NOISE_REDUCTION**: Individual file frontmatter MUST be stripped during compilation.
+  > Rationale: Removes metadata redundancy; compiled doc is self-contained.
+  (Ref: VISION.COMPILATION_STRUCTURE.NOISE_REDUCTION)
+
+## CONTRACTS.TERMINOLOGY_ENFORCEMENT
+- **CONTROLLED_VOCABULARY**: Agents MUST use terminology from VISION.UBIQUITOUS_LANGUAGE.
+  > Rationale: Eliminates ambiguity; same term always means same thing.
+  (Ref: VISION.UBIQUITOUS_LANGUAGE.CONTROLLED_VOCABULARY)
+- **VALIDATE_VS_VERIFY**: "Validate" MUST mean static checks; "Verify" MUST mean dynamic checks.
+  > Rationale: Critical distinction for test classification.
+  (Ref: VISION.UBIQUITOUS_LANGUAGE.VALIDATE), (Ref: VISION.UBIQUITOUS_LANGUAGE.VERIFY)
+- **ASSERT_VS_ERROR**: "Assert" MUST mean hard blocking; "Error" MUST mean runtime exception.
+  > Rationale: Guides error handling strategy.
+  (Ref: VISION.UBIQUITOUS_LANGUAGE.ASSERT), (Ref: VISION.UBIQUITOUS_LANGUAGE.ERROR)
+- **PIPELINE_VS_FLOW**: "Pipeline" MUST mean linear steps; "Flow" MUST mean branching logic.
+  > Rationale: Clarifies architecture discussions.
+  (Ref: VISION.UBIQUITOUS_LANGUAGE.PIPELINE), (Ref: VISION.UBIQUITOUS_LANGUAGE.FLOW)
+- **VIOLATION_VS_ERROR**: "Violation" MUST mean spec rule breach; "Error" MUST mean code crash.
+  > Rationale: Distinguishes spec failures from runtime failures.
+  (Ref: VISION.UBIQUITOUS_LANGUAGE.VIOLATION), (Ref: VISION.UBIQUITOUS_LANGUAGE.ERROR)
+
+## CONTRACTS.FORMAL_NOTATION
+- **PREFER_FORMALISMS**: Agents SHOULD prefer Mermaid diagrams, JSON schemas, and pseudocode over prose.
+  > Rationale: Formal notations are more precise and machine-parseable.
+  (Ref: VISION.FORMAL_SYNTAX.FORMALISMS)
