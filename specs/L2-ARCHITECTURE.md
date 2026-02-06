@@ -187,7 +187,7 @@ Enforces controlled vocabulary compliance across specifications.
 **Guarantees**: Terminology violations are caught during validation.
 - **VOCAB_MATCHER**: Scans content for controlled vocabulary terms. Flags incorrect usage of validate/verify, assert/error, pipeline/flow, violation/error. Provides remediation suggestions.
   **Interface**: `check_vocabulary(content: string) -> VocabResult`
-  (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.CONTROLLED_VOCABULARY), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VALIDATE_VS_VERIFY), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.ASSERT_VS_ERROR), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.PIPELINE_VS_FLOW), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VIOLATION_VS_ERROR)
+  (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.DATA_DRIVEN_VOCAB), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VALIDATE_VS_VERIFY), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.ASSERT_VS_ERROR), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.PIPELINE_VS_FLOW), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VIOLATION_VS_ERROR)
 
 ## ARCHITECTURE.FORMAL_NOTATION_ENFORCER
 Promotes formal notation over prose in specifications.

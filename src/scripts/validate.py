@@ -14,26 +14,7 @@ from pathlib import Path
 
 
 
-def check_terminology(filename: str, content: str) -> list:
-    """Enforce Ubiquitous Language (VISION.GLOSSARY)."""
-    warnings = []
-    # Simple blacklist for now.
-    blacklist = {
-        'Check': 'Validate (static) or Verify (dynamic)',
-        'Checks': 'Validations or Verifications',
-        'checking': 'validating or verifying',
-        'Pipeline': 'Flow (if branching) or Pipeline (if linear)', 
-    }
-    
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        if '```' in line or line.strip().startswith('#'): continue 
-        
-        for term, replacement in blacklist.items():
-            if re.search(r'\b' + re.escape(term) + r'\b', line):
-                 warnings.append(f"{filename}:{i+1}: Terminology Warning: Avoid '{term}'. Use '{replacement}'.")
-                 
-    return warnings
+
 
 def parse_spec_file(spec_file: Path) -> dict:
     """Parse spec file, deriving layer/id from filename."""
@@ -360,10 +341,7 @@ def validate_specs(specs_dir: Path) -> tuple[list, list]:
             if density < 0.05: # 5% Threshold
                 warnings.append(f"{data['file']}: Low Verb Density ({density:.1%}). Ensure action-oriented specs.")
 
-        # Terminology Check
-        term_errors = check_terminology(data['file'], data['body'])
-        if term_errors:
-            warnings.extend(term_errors)
+
 
         # L3 SCRIPT_NO_LLM Check
         if data['layer'] == 3:

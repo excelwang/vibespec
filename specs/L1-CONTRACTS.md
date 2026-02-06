@@ -301,9 +301,19 @@ invariants:
   (Ref: VISION.COMPILATION_STRUCTURE.NOISE_REDUCTION)
 
 ## CONTRACTS.TERMINOLOGY_ENFORCEMENT
-- **CONTROLLED_VOCABULARY**: Agents MUST use terminology from VISION.UBIQUITOUS_LANGUAGE.
-  > Rationale: Eliminates ambiguity; same term always means same thing.
+- **DATA_DRIVEN_VOCAB**: Terminology rules MUST be defined in standard YAML format embedded in this contract.
+  > Rationale: Allows AI Reviewers to propose and enforce terminology updates dynamically.
   (Ref: VISION.UBIQUITOUS_LANGUAGE.CONTROLLED_VOCABULARY)
+  ```yaml
+  standard_terms:
+    Validate: Static checks (linting, compilation, structure)
+    Verify: Dynamic checks (runtime tests, behavior)
+    Pipeline: Linear, non-branching sequence of steps
+    Flow: Branching, conditional logic paths
+    Assert: Hard blocking failure condition
+    Error: Runtime exception or crash
+    Violation: Specification compliance failure
+  ```
 - **VALIDATE_VS_VERIFY**: "Validate" MUST mean static checks; "Verify" MUST mean dynamic checks.
   > Rationale: Critical distinction for test classification.
   (Ref: VISION.UBIQUITOUS_LANGUAGE.VALIDATE), (Ref: VISION.UBIQUITOUS_LANGUAGE.VERIFY)
