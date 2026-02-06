@@ -4,6 +4,12 @@ version: 2.0.0
 
 # L2: Vibe-Spec Architecture
 
+---
+
+# (SKILL INTERNAL) 技能内部组件
+
+> Components that form the **internal implementation** of the vibe-spec skill.
+
 ## ARCHITECTURE.COMPILER_PIPELINE
 Multi-stage compilation pipeline that transforms source specs into a unified document.
 **Intent**: Compile fragmented specification files into single authoritative output.
@@ -81,6 +87,12 @@ Standalone dependency-free automation tools for mechanical workflows.
   **Interface**: `compile.py <specs_path> <output_path>`
   (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
 
+---
+
+# (PACKAGING) skill-creator 集成
+
+> How this skill is packaged for consumption by **skill-creator**.
+
 ## ARCHITECTURE.SKILL_DISTRIBUTION
 Distributes vibe-spec as an agentic skill for AI agent consumption.
 **Intent**: Package skill for discoverable, version-controlled deployment.
@@ -91,6 +103,10 @@ Distributes vibe-spec as an agentic skill for AI agent consumption.
 - **COMPLIANCE**: Updates validated against skill-creator schema. Integrates with CI pipeline for schema verification. Enforces compatibility with agent ecosystem. Rejects deviations from established protocol.
   **Interface**: `skill-creator validate <path>`
   (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE)
+
+---
+
+# (SKILL INTERNAL) 技能内部组件 (续)
 
 ## ARCHITECTURE.BOOTSTRAP_PROCESSOR
 Handles first-time project initialization when specification infrastructure does not exist.
@@ -127,7 +143,7 @@ Executes specification health validations when system is idle (no pending ideas)
 - **EXECUTOR**: Invokes `validate.py` script as subprocess. Captures stdout/stderr streams. Parses output to extract failures, warnings, metrics. Converts to typed ValidationResult for downstream processing.
   **Interface**: `execute_validation(specs_path: string) -> ValidationResult`
   (Ref: CONTRACTS.VALIDATION_MODE.FULL_SCAN), (Ref: CONTRACTS.VALIDATION_MODE.TRIGGER)
-- **REPORTER**: Transforms validation results into human-readable summary by severity and category. Groups: Orphan IDs, INFO_GAIN violations, terminology warnings, algebraic constraints. Includes source locations and remediation guidance.
+- **REPORTER**: Transforms validation results into human-readable summary by severity and category. Groups: Orphan IDs, expansion ratio warnings, terminology warnings, algebraic constraints. Includes source locations and remediation guidance.
   **Interface**: `format_report(result: ValidationResult) -> string`
   (Ref: CONTRACTS.VALIDATION_MODE.REPORT)
 - **FIX_PROPOSER**: Analyzes errors and generates idea files with remediation instructions. Creates timestamped ideas in `specs/ideas/` for automatic processing in next cycle. Closes detection-to-resolution feedback loop.
@@ -180,6 +196,12 @@ Produces optimized compilation output for agent consumption.
 - **NOISE_STRIPPER**: Removes individual file frontmatter during assembly. Strips redundant metadata preserving only compiled document structure.
   **Interface**: `strip_noise(doc: Document) -> Document`
   (Ref: CONTRACTS.COMPILATION.NOISE_REDUCTION)
+
+---
+
+# (USER SPEC MANAGEMENT) 用户规范管理
+
+> Components that **manage and validate user project specs**.
 
 ## ARCHITECTURE.TERMINOLOGY_CHECKER
 Enforces controlled vocabulary compliance across specifications.

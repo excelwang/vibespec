@@ -92,7 +92,6 @@ Process the specific layer L(N) identified in Phase 2:
 │ 1. LLM Decompose: Analyze L(N) changes          │
 │ 2. LLM Revise: Draft updates for L(N+1)         │
 │ 3. Validate: Run `python3 scripts/validate.py`  │
-│ 3. Validate: Run `python3 scripts/validate.py`  │
 │    ├─ FAIL (<3x) → Return to step 2 (Self-fix)  │
 │    ├─ FAIL (>3x) → **REVERT** changes & STOP    │
 │    └─ PASS → Continue to step 4                 │
