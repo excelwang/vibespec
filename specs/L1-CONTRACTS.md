@@ -13,6 +13,22 @@ invariants:
 > 关于用户 specs 格式规范，请参见 `schema/USER_SPEC_FORMAT.md`。
 > 关于 skill-creator 打包，请参见 `manifest.md`。
 
+## CONTRACTS.L3_TYPE_ANNOTATION
+- **TYPE_REQUIRED**: Each L3 item MUST include `[Type: X]` where X is PROMPT_NATIVE, SCRIPT, or PROMPT_FALLBACK.
+  > Rationale: Enables skill-creator to route items to appropriate execution mechanism.
+  (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION)
+- **SCRIPT_THRESHOLD**: Items SHOULD be typed SCRIPT if deterministic and implementable in <100 LOC.
+  > Rationale: Balances automation benefits against development complexity.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
+- **FALLBACK_RATIONALE**: PROMPT_FALLBACK items SHOULD include brief rationale for not scripting.
+  > Rationale: Prevents lazy fallback to LLM; documents automation barriers.
+- **PROMPT_BATCHING**: Adjacent PROMPT_NATIVE items SHOULD be grouped into a single unified prompt.
+  > Rationale: Reduces LLM call overhead; LLM is command center, scripts are tools it invokes.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+- **SCRIPT_NO_LLM**: Items typed [Type: SCRIPT] MUST NOT invoke LLM operations.
+  > Rationale: Scripts are tools called by LLM; We have no api for script to call LLM.
+  (Ref: VISION.AUTOMATION)
+
 ## CONTRACTS.IDEAS_PIPELINE
 - **BATCH_READ**: All idea files MUST be read before analysis begins.
   > Rationale: Complete picture enables prioritization and merging.
