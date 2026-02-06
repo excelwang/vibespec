@@ -1,5 +1,5 @@
 ---
-version: 1.5.0
+version: 1.8.0
 invariants:
   - id: INV_UNIQUE_IDS
     statement: "Every Spec ID and Export ID must be unique within the project."
@@ -16,93 +16,255 @@ invariants:
 # L1: Vibe-Spec Contracts
 
 ## CONTRACTS.METADATA_INTEGRITY
-Every specification file must have valid YAML frontmatter containing `layer`, `id`, and `version`.
-- **VALIDATION**: The validator MUST fail if required fields are missing or wrongly typed. (Ref: VISION.SCOPE.VAL)
+- **VALIDATION**: Every specification file MUST have valid YAML frontmatter containing `layer`, `id`, and `version`. The validator MUST fail if required fields are missing or wrongly typed.
+  > Rationale: Enables machine-parseable metadata for automation pipelines.
+  (Ref: VISION.SCOPE.VAL)
 
 ## CONTRACTS.LAYER_DEFINITIONS
-Each layer has a strict focus to ensuring separation of concerns. This stratification allows for localized reasoning and prevents the system from degenerating into a monolithic "Big Ball of Mud" where high-level vision and low-level details are inextricably partial. (Ref: VISION.TRACEABILITY.GRANULARITY)
-- **L0_VISION**: Focus on "Why" and "What" (High-level goals, Pillars, Scope Boundaries, Success Metrics). Blacklist: Implementation details, specific tool names, file paths. (Ref: VISION.SCOPE)
-- **L1_CONTRACTS**: Focus on "Rules" and "Invariants" (System behaviors effectively codified as "Law", validation rules). Blacklist: Architectural components, script logic, specific algorithms, strict implementation details. (Ref: VISION.TRACEABILITY)
-- **L2_ARCHITECTURE**: Focus on "Components" and "Data Flow" (System breakdown, Block diagrams, Responsibilities). Blacklist: Class methods, variable names, CLI arguments, error strings. (Ref: VISION.TRACEABILITY)
-- **L3_COMPILER**: Focus on "How" (Implementation Specs, Classes, Functions, CLI Commands, precise logic). Blacklist: Vague "visions", redundant high-level "why" explanations. (Ref: VISION.TRACEABILITY)
+- **L0_VISION**: L0 MUST focus on "Why" and "What" (High-level goals, Pillars, Scope Boundaries). Implementation details, specific tool names, file paths MUST NOT appear.
+  > Rationale: Keeps vision layer conceptual and tool-agnostic.
+  (Ref: VISION.SCOPE)
+- **L1_CONTRACTS**: L1 MUST focus on "Rules" and "Invariants" (System behaviors codified as "Law"). Architectural components, script logic, specific algorithms MUST NOT appear.
+  > Rationale: Separates behavioral contracts from implementation choices.
+  (Ref: VISION.TRACEABILITY)
+- **L2_ARCHITECTURE**: L2 MUST focus on "Components" and "Data Flow" (System breakdown, Block diagrams). Class methods, variable names, CLI arguments MUST NOT appear.
+  > Rationale: Defines structure without implementation binding.
+  (Ref: VISION.TRACEABILITY)
+- **L3_COMPILER**: L3 MUST focus on "How" (Implementation Specs, Classes, Functions, CLI Commands). Vague "visions" and redundant high-level explanations MUST NOT appear.
+  > Rationale: Provides precise implementation guidance.
+  (Ref: VISION.TRACEABILITY)
 
 ## CONTRACTS.TRACEABILITY
-Requirements must be resolvable from existing exports. (Ref: VISION.SCOPE), (Ref: VISION.COMPILATION_STRUCTURE), (Ref: VISION.TRACEABILITY)
-- **SEMANTIC_IDS**: Every statement MUST start with a bold semantic key (e.g., `- **KEY**: ...`). Sequential numbering IS FORBIDDEN. This ensures that identifiers remain stable across refactors and insertions, prohibiting the "fragile base class" problem of numbered lists. (Ref: VISION.TRACEABILITY.GRANULARITY)
-- **IN_PLACE_REFS**: Downstream items MUST explicitly reference their Parent ID using `(Ref: PARENT_ID)`. This "local context" rule ensures that every requirement carries its justification with it, making the specification self-documenting and audit-ready at a glance. (Ref: VISION.TRACEABILITY.CHAIN)
-- **DRIFT_DETECTION**: If a referenced Parent ID does not exist, it is a BLOCKING ERROR (Dangling Reference). This immediate feedback loop prevents "zombie requirements" that claim to implement deleted features, maintaining the graph's integrity. (Ref: VISION.TRACEABILITY.CHAIN)
-- **COMPLETENESS**: Every Upstream ID MUST be referenced by at least one Downstream item (Coverage >= 100%). This guarantee ensures that no requirement is left behind, enforcing a "no child left offline" policy for the specification graph. (Ref: VISION.TRACEABILITY.GOAL)
+- **SEMANTIC_IDS**: Every statement MUST start with a bold semantic key (e.g., `- **KEY**: ...`). Sequential numbering IS FORBIDDEN.
+  > Rationale: Identifiers remain stable across refactors and insertions.
+  (Ref: VISION.TRACEABILITY.GRANULARITY)
+- **IN_PLACE_REFS**: Downstream items MUST explicitly reference their Parent ID using `(Ref: PARENT_ID)`.
+  > Rationale: Every requirement carries its justification, making specs self-documenting.
+  (Ref: VISION.TRACEABILITY.CHAIN)
+- **DRIFT_DETECTION**: If a referenced Parent ID does not exist, it MUST be a BLOCKING ERROR (Dangling Reference).
+  > Rationale: Prevents "zombie requirements" that claim to implement deleted features.
+  (Ref: VISION.TRACEABILITY.CHAIN)
+- **COMPLETENESS**: Every Upstream ID MUST be referenced by at least one Downstream item (Coverage >= 100%).
+  > Rationale: No requirement is left behind; enforces "no child left offline" policy.
+  (Ref: VISION.TRACEABILITY.GOAL)
 - **ANCHORING**: Every Downstream item (Layer > 0) MUST reference at least one Valid Parent.
-This fundamental graph integrity rule ensures that no specification exists in a vacuum. If a requirement cannot trace its lineage back to the Vision layer, it is by definition out of scope and must be removed.
-(Ref: VISION.TRACEABILITY.CHAIN)
-- **REDUNDANCY**: Upstream keys with 0% downstream coverage are "Orphans" and must be flagged. This cleanup rule ensures that the system does not accumulate "dead code" in the specification, keeping the cognitive load low for maintainers. (Ref: VISION.TRACEABILITY.GOAL)
+  > Rationale: No specification exists in a vacuum; unanchored specs are out of scope.
+  (Ref: VISION.TRACEABILITY.CHAIN)
+- **REDUNDANCY**: Upstream keys with 0% downstream coverage MUST be flagged as "Orphans".
+  > Rationale: Prevents accumulation of "dead code" in specifications.
+  (Ref: VISION.TRACEABILITY.GOAL)
+
+## CONTRACTS.TRACEABILITY_MAINTENANCE
+- **IMMUTABLE_IDS**: Once an ID is published, its semantic meaning MUST NOT change without explicit versioning (e.g., `AUTH.LOGIN` → `AUTH.LOGIN_V2`).
+  > Rationale: Changing meaning while preserving downstream references leads to silent contract violations.
+  (Ref: VISION.TRACEABILITY.GOAL)
+- **SEMANTIC_DRIFT**: If a Parent requirement's intent changes, the Agent MUST prompt: "Do you wish to preserve backward compatibility?"
+  > Rationale: Allows explicit choice between compatibility and clean breaks.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
+- **STALENESS_WARNING**: If `mtime(Parent) > mtime(Child)`, the validator SHOULD warn that the child MAY be stale.
+  > Rationale: Heuristic catches forgotten updates when parent specs evolve.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
 
 ## CONTRACTS.QUANTIFIED_VALIDATION
-Specs must satisfy measurable health metrics, not just structure.
-- **ATOMICITY**: (L0 Only) Individual Vision statements MUST NOT exceed 50 words to ensure easy addressability. This constraint forces decomposition of complex thoughts into discrete, manageable units that can be individually referenced, verified, and debated without ambiguity. (Ref: VISION.TRACEABILITY.GRANULARITY)
-- **DEPTH**: Specification nesting MUST NOT exceed 2 levels (e.g., `## ID` -> `- **KEY**` -> `    - **POINT**`). This constraint prevents deep nesting that hides complexity and makes referencing difficult. (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
-
-...
-
-- **HUMAN_REVIEW**: Distilled summary MUST be approved before saving. This "Human-in-the-Loop" gate ensures that the AI's interpretation of events aligns with the user's actual intent, preventing the system from hallucinating prerequisites or capturing noise. (Ref: VISION.VIBE_CODING.PARADIGM)
-- **RFC2119**: L1 Contracts MUST use uppercase keywords (MUST, SHOULD, MAY) in at least 50% of statements. This requirement ensures that the specification carries the weight of authority and is unambiguous to both human implementers and validatiors. (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
-- **INFO_GAIN**: The content length of a Downstream item (excluding Refs) MUST be >= 1.5x the content length of its Parent. (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
+- **ATOMICITY**: (L0 Only) Individual Vision statements MUST NOT exceed 50 words.
+  > Rationale: Forces decomposition into discrete, addressable units.
+  (Ref: VISION.TRACEABILITY.GRANULARITY)
+- **DEPTH**: Specification nesting MUST NOT exceed 2 levels (e.g., `## ID` → `- **KEY**` → `- **POINT**`).
+  > Rationale: Prevents deep nesting that hides complexity.
+  (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+- **FORMAL_NOTATION**: Formal blocks (Mermaid, JSON, code fences) SHOULD be preferred over prose.
+  > Rationale: Formal notation carries higher information density.
+  (Ref: VISION.FORMAL_SYNTAX.MULTIPLIER)
+- **TERMINOLOGY**: Specifications MUST use controlled vocabulary from VISION.UBIQUITOUS_LANGUAGE. Synonyms SHOULD be flagged as warnings.
+  > Rationale: Ensures unambiguous machine-parseable language.
+  (Ref: VISION.UBIQUITOUS_LANGUAGE.CONTROLLED_VOCABULARY)
+- **HUMAN_REVIEW**: Distilled summary MUST be approved before saving.
+  > Rationale: Human-in-the-Loop gate prevents AI hallucination of requirements.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
+- **RFC2119**: L1 Contracts MUST use uppercase keywords (MUST, SHOULD, MAY) in at least 50% of statements.
+  > Rationale: Ensures unambiguous authority for implementers and validators.
+  (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
+- **SEMANTIC_COVERAGE**: Downstream items SHOULD mention or expand upon all key concepts from their Parent. (L1→L2, L2→L3 only)
+  > Rationale: Ensures semantic completeness without arbitrary length requirements.
+  (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
 
 ## CONTRACTS.ALGEBRAIC_VALIDATION
-Mathematical invariants must hold true for the spec graph.
-- **MILLERS_LAW**: A single Upstream Requirement MUST NOT have more than 7 Downstream References (Fan-Out <= 7). This constraint ensures that the cognitive load of understanding the impact of any single requirement remains manageable for both human reviewers and LLM agents. (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
-- **CONSERVATION**: The sum of coverage weights MUST always be >= 100%. This mathematically guarantees that the entirety of the parent requirement is accounted for by the implementing children, preventing subtle feature loss during decomposition. (Ref: VISION.TRACEABILITY.GOAL)
-- **EXPANSION_RATIO**: The Item Count Ratio between L(N) and L(N-1) MUST be between 1.0 and 10.0 per file/component scope. (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
-- **VERB_DENSITY**: Specification statements MUST maintain a Verb Density (Unique Verbs / Total Words) >= 10% to ensure action-oriented design. (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
-- **COMPLETENESS**: Every Leaf Node (L3 items with no downstream refs) MUST be referenced by at least one Verification Case (Tag: `@verify_spec(ID)`). (Ref: VISION.SCOPE.COV)
+- **MILLERS_LAW**: A single Upstream Requirement MUST NOT have more than 7 Downstream References (Fan-Out <= 7).
+  > Rationale: Keeps cognitive load manageable for reviewers.
+  (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+- **CONSERVATION**: The sum of coverage weights MUST always be >= 100%.
+  > Rationale: Mathematically guarantees entirety of parent requirement is accounted for.
+  (Ref: VISION.TRACEABILITY.GOAL)
+- **EXPANSION_RATIO**: Item Count Ratio between L(N) and L(N-1) MUST be between 1.0 and 10.0.
+  > Rationale: Prevents over-fragmentation or under-decomposition.
+  (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
+- **VERB_DENSITY**: Specification statements MUST maintain Verb Density >= 10%.
+  > Rationale: Ensures action-oriented design.
+  (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
+- **COMPLETENESS**: Every Leaf Node (L3 items with no downstream refs) MUST be referenced by at least one `@verify_spec(ID)` tag.
+  > Rationale: Ensures every implementation detail is testable.
+  (Ref: VISION.SCOPE.COV)
 
 ## CONTRACTS.IDEAS_PIPELINE
-Ideas in `specs/ideas/` are processed as a batch with recursive level-seeking.
-- **BATCH_READ**: All idea files MUST be read before analysis begins. This ensures that the agent has a complete picture of the pending work and can prioritize or merge related ideas before initiating any partial updates. (Ref: VISION.SCOPE.IDEAS)
-- **TIMESTAMP_ORDER**: Files named `YYYY-MM-DDTHHMM-<desc>.md` MUST be sorted chronologically. This invariant guarantees that the evolution of the system follows the user's sequential intent, preserving the narrative arc of decision making over time. (Ref: VISION.SCOPE.IDEAS)
-- **LEVEL_SEEKING**: Processors MUST identify the highest appropriate layer (L0-L3) for each idea segment. This "Shift-Left" approach ensures that changes are applied at the correct abstraction level, preventing implementation details from polluting high-level vision documents. (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
-- **DECOMPOSITION**: Mixed-level ideas MUST be split and processed sequentially (Highest Layer -> Approval -> Lower Layer). This enforced serialization prevents the "Big Ball of Mud" problem by ensuring that high-level architectural changes are approved before low-level details are implemented. (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
-- **APPROVAL_REQUIRED**: Agents MUST pause and request human review immediately after creating a new Idea file. This critical feedback loop ensures that the system does not drift from user intent and allows for early correction of misunderstandings. (Ref: VISION.VIBE_CODING.PARADIGM)
-- **COMPILE_PROMPT**: Upon completion of idea processing, IF `specs/ideas/` is empty, the user MUST be prompted to run `scripts/compile.py`. This ensures that the compiled artifact is always kept in sync with the latest approved specifications. (Ref: VISION.AUTOMATION.EVOLUTION)
-- **CONFLICT_RES**: Later ideas SHALL supersede earlier conflicting ones. This rule provides a clear deterministic mechanism for resolving contradictions in the idea stream, prioritizing the most recent user intent as the current source of truth. (Ref: VISION.SCOPE.IDEAS)
+- **BATCH_READ**: All idea files MUST be read before analysis begins.
+  > Rationale: Complete picture enables prioritization and merging.
+  (Ref: VISION.SCOPE.IDEAS)
+- **TIMESTAMP_ORDER**: Files named `YYYY-MM-DDTHHMM-<desc>.md` MUST be sorted chronologically.
+  > Rationale: Preserves user's sequential intent and narrative arc.
+  (Ref: VISION.SCOPE.IDEAS)
+- **LEVEL_SEEKING**: Processors MUST identify the highest appropriate layer (L0-L3) for each idea segment.
+  > Rationale: Shift-Left prevents implementation details polluting high-level docs.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+- **DECOMPOSITION**: Mixed-level ideas MUST be split and processed sequentially (Highest Layer → Approval → Lower Layer).
+  > Rationale: Prevents "Big Ball of Mud" by serializing architectural changes.
+  (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
+- **APPROVAL_REQUIRED**: Agents MUST pause and request human review immediately after creating a new Idea file.
+  > Rationale: Critical feedback loop prevents drift from user intent.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
+- **COMPILE_PROMPT**: Upon completion of idea processing, IF `specs/ideas/` is empty, the user MUST be prompted to run compilation.
+  > Rationale: Keeps compiled artifact in sync with source.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
+- **CONFLICT_RES**: Later ideas SHALL supersede earlier conflicting ones.
+  > Rationale: Most recent user intent is current source of truth.
+  (Ref: VISION.SCOPE.IDEAS)
 
 ## CONTRACTS.REVIEW_PROTOCOL
-Agents must review their own work before asking for human approval.
-- **SELF_AUDIT**: After revising a layer, the agent MUST read the full new content to check for internal consistency. This self-verification step catches obvious errors and contradictions before they waste human review time, improving the overall efficiency of the loop. (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
-- **HIERARCHY_CHECK**: The agent MUST load and read the Parent Layer (L_N-1) to ensure L(N) fully implements parent requirements without contradiction. This vertical consistency check is the backbone of the traceability system, preventing "drift" where implementation diverges from requirements. (Ref: VISION.TRACEABILITY.CHAIN)
-- **OMISSION_CHECK**: The agent MUST verify that every key/requirement in L(N-1) is represented in L(N). Missing parent requirements is a BLOCKING FAILURE. This explicit completeness check forces the agent to account for every aspect of the parent specification. (Ref: VISION.TRACEABILITY.GOAL)
-- **REDUNDANCY**: The agent MUST flag redundant keys or sections. This focus on minimalism ensures that the specification remains a lean source of truth, avoiding the maintenance burden of duplicated information. (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
-- **CONTRADICTION**: The agent MUST flag logic that conflicts with preserved sections. Any discovered conflict indicates a potential breakage in the system's axioms and must be resolved before proceeding. (Ref: VISION.VIBE_CODING.TRUTH)
-- **NOTIFICATION**: Findings MUST be presented to the user during the approval phase. This transparency empowers the user to make informed decisions about whether to accept, reject, or request modifications to the proposed changes. (Ref: VISION.VIBE_CODING.PARADIGM)
-- **SEQUENTIAL_ONLY**: Agents MUST NOT revise more than one specification layer in a single turn/task cycle. This strict serialization prevents the "cascading failure" effect where a mistake in one layer propagates instantly to others before it can be caught. (Ref: VISION.TRACEABILITY.CHAIN)
-- **FOCUS_CHECK**: The agent MUST verify that the content of L(N) aligns with `CONTRACTS.LAYER_DEFINITIONS[L(N)]`. Violations (e.g., implementation details in L1) MUST be flagged and corrected before approval. (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+- **SELF_AUDIT**: After revising a layer, the agent MUST read the full new content to verify internal consistency.
+  > Rationale: Catches errors before wasting human review time.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+- **QUALITY_ALIGNMENT**: Agent SHOULD verify implementations align with TARGET_PROJECT pillars. Violations are warnings.
+  > Rationale: Ensures maintainability, observability, determinism, modularity.
+  (Ref: VISION.TARGET_PROJECT)
+- **HIERARCHY_CHECK**: Agent MUST load Parent Layer (L_N-1) to ensure L(N) fully implements parent requirements.
+  > Rationale: Backbone of traceability; prevents implementation drift.
+  (Ref: VISION.TRACEABILITY.CHAIN)
+- **OMISSION_CHECK**: Agent MUST verify every key in L(N-1) is represented in L(N). Missing requirements are BLOCKING.
+  > Rationale: Forces agent to account for every parent specification.
+  (Ref: VISION.TRACEABILITY.GOAL)
+- **REDUNDANCY**: Agent MUST flag redundant keys or sections.
+  > Rationale: Keeps specification lean; avoids maintenance burden.
+  (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
+- **CONTRADICTION**: Agent MUST flag logic that conflicts with preserved sections.
+  > Rationale: Conflicts indicate potential axiom breakage.
+  (Ref: VISION.VIBE_CODING.TRUTH)
+- **NOTIFICATION**: Findings MUST be presented to user during approval phase.
+  > Rationale: Transparency empowers informed decisions.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
+- **SEQUENTIAL_ONLY**: Agents MUST NOT revise more than one specification layer in a single turn.
+  > Rationale: Prevents cascading failures across layers.
+  (Ref: VISION.TRACEABILITY.CHAIN)
+- **FOCUS_CHECK**: Agent MUST verify L(N) content aligns with CONTRACTS.LAYER_DEFINITIONS[L(N)]. Violations are BLOCKING.
+  > Rationale: Prevents implementation details leaking to wrong layers.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+- **SKILL_TRACEABILITY**: Agents MUST NOT edit SKILL.md directly without first updating corresponding spec layer.
+  > Rationale: SKILL.md is L3-level artifact; changes must trace through hierarchy.
+  (Ref: VISION.TRACEABILITY.CHAIN)
 
 ## CONTRACTS.REJECTION_HANDLING
-Protocols for when validation or approval fails.
-- **AUTOMATED_RETRY**: Agents MAY attempt self-correction up to 3 times for Validator errors. This tolerance allows the system to recover from minor syntax errors or formatting issues without requiring human intervention for every trivial mistake. (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
-- **AUTOMATED_GIVEUP**: If self-correction fails >3 times, the agent MUST **REVERT** changes to the clean state and halt. This prevents the agent from entering infinite loops or producing increasingly garbage outputs in a desperate attempt to pass validation. (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
-- **HUMAN_REJECTION**: If the user rejects the approach (not just minor fixes), the agent MUST **REVERT** to the pre-task state before planning a new approach. (Ref: VISION.VIBE_CODING.PARADIGM)
-- **NO_PARTIAL_COMMITS**: A Spec Layer is either fully approved and committed, or fully reverted. No in-between states. This transactional integrity ensures that the specification base is always in a coherent, valid state, preventing "broken builds" from propagating. (Ref: VISION.VIBE_CODING.TRUTH)
+- **AUTOMATED_RETRY**: Agents MAY attempt self-correction up to 3 times for Validator errors.
+  > Rationale: Recovers from minor syntax/formatting issues without human intervention.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+- **AUTOMATED_GIVEUP**: If self-correction fails >3 times, Agent MUST REVERT changes and halt.
+  > Rationale: Prevents infinite loops or garbage outputs.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+- **HUMAN_REJECTION**: If user rejects approach (not just minor fixes), Agent MUST REVERT to pre-task state.
+  > Rationale: Allows clean restart with new approach.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
+- **NO_PARTIAL_COMMITS**: A Spec Layer is either fully approved and committed, or fully reverted.
+  > Rationale: Transactional integrity; no broken builds propagate.
+  (Ref: VISION.VIBE_CODING.TRUTH)
 
 ## CONTRACTS.REFLECT
-`vibe-spec reflect` distills conversation history into formal ideas.
-- **INTUITIVE**: The agent SHOULD rely on its immediate context and intuition to identify key ideas, rather than mechanically processing full logs. (Ref: VISION.SCOPE.REFL)
-- **HUMAN_REVIEW**: Distilled summary MUST be approved before saving. This "Human-in-the-Loop" gate ensures that the AI's interpretation of events aligns with the user's actual intent, preventing the system from hallucinating prerequisites or capturing noise. (Ref: VISION.VIBE_CODING.PARADIGM)
+- **CONTEXT_BASED**: Agent SHOULD rely on current conversation context to identify key ideas.
+  > Rationale: LLM already has access to current context; external log access is unnecessary.
+  (Ref: VISION.SCOPE.REFL)
+- **HUMAN_REVIEW**: Distilled summary MUST be approved before saving.
+  > Rationale: Prevents AI-generated insights from committing without verification.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
 
 ## CONTRACTS.SCRIPT_FIRST
-Mechanical operations are delegated to scripts, not LLM output.
-- **TARGET**: File I/O, structural validation, archival, and formatting MUST be handled by scripts. This ensures 100% reliability for critical operations that are prone to hallucination or formatting errors when performed by LLMs. (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
-- **GOAL**: The goal is to improve stability and reduce token consumption. By offloading mechanical tasks to Python, we free up the LLM's limited context window and attention for high-level reasoning and creative problem solving. (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
-- **PROACTIVE**: Agents MUST actively identify repetitive workflows and propose new scripts to automate them. This evolutionary principle drives the system towards increasing autonomy and efficiency by converting manual patterns into code. (Ref: VISION.AUTOMATION.EVOLUTION)
-- **DETERMINISM**: We MUST prefer 100% deterministic code over probabilistic LLM reasoning. In generic validation or file manipulation scenarios, the randomness of AI generation is a liability, not an asset. (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
-
+- **TARGET**: File I/O, structural validation, archival, and formatting MUST be handled by scripts.
+  > Rationale: Ensures 100% reliability for operations prone to LLM hallucination.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
+- **GOAL**: Script delegation improves stability and reduces token consumption.
+  > Rationale: Frees LLM context for high-level reasoning.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+- **PROACTIVE**: Agents MUST actively identify repetitive workflows and propose new scripts.
+  > Rationale: Drives system towards increasing autonomy.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
+- **DETERMINISM**: Deterministic code MUST be preferred over probabilistic LLM reasoning for mechanical tasks.
+  > Rationale: Randomness is liability, not asset, in validation/manipulation.
+  (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
 
 ## CONTRACTS.SKILL_DISTRIBUTION
-Vibe-Spec is distributed as an agentic skill.
-- **SKILL_MD**: The primary definition file `SKILL.md` MUST be the single source of truth.
-It serves as the definitive reference for the agent's capabilities. It ensures that all behavior is version-controlled and auditable. It prevents configuration drift between the definition and the implementation. It explicitly documents every available tool, workflow, and protocol, acting as the complete user manual for the agent instance.
-(Ref: VISION.SCOPE.SKILL)
-- **COMPLIANCE**: Updates MUST follow the `skill-creator` standard.
-This strict adherence ensures that the skill remains compatible with the broader ecosystem. It prevents the introduction of ad-hoc patterns that could break the agent's ability to discover or execute the skill. It mandates the use of automated validation tools to verify that the skill's structure, metadata, and interface definitions conform to the rigid schema required by the central registry.
-(Ref: VISION.SCOPE.SKILL)
+- **SKILL_MD**: `SKILL.md` MUST be the single source of truth for agent capabilities.
+  > Rationale: Version-controlled, auditable; prevents configuration drift.
+  (Ref: VISION.SCOPE.SKILL)
+- **COMPLIANCE**: Updates MUST follow `skill-creator` standard.
+  > Rationale: Ensures ecosystem compatibility and prevents discovery regressions.
+  (Ref: VISION.SCOPE.SKILL)
 
+## CONTRACTS.BOOTSTRAP
+- **DETECTION**: Agent MUST detect missing `specs/` directory and trigger Bootstrap Phase.
+  > Rationale: Prevents accidental operation on uninitialized projects.
+  (Ref: VISION.SCOPE.IDEAS)
+- **SCOPE_INQUIRY**: Agent MUST prompt user to describe the project in natural language.
+  > Rationale: Captures raw user intent before formalization.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
+- **SCOPE_REFORM**: Agent MUST reformulate user input into In-Scope (SHALL) and Out-of-Scope (SHALL NOT) statements.
+  > Rationale: Transforms vague intent into machine-verifiable boundaries.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+- **APPROVAL_GATE**: Reformed scope MUST be presented for human approval BEFORE creating files.
+  > Rationale: Prevents misdirected initialization.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
+- **INITIALIZATION**: Upon approval, agent MUST create `specs/L0-VISION.md` and `specs/ideas/` directory.
+  > Rationale: Establishes minimum viable structure for spec management.
+  (Ref: VISION.SCOPE.VAL)
+
+## CONTRACTS.TRIGGERS
+- **TRIGGER_SCAN**: `vibe-spec` (no arguments) MUST scan `specs/ideas/` and begin refinement workflow.
+  > Rationale: Default action is to process pending ideas.
+  (Ref: VISION.SCOPE.IDEAS)
+- **TRIGGER_CAPTURE**: `vibe-spec <content>` MUST save content as timestamped idea file and halt for approval.
+  > Rationale: Captures raw thoughts without immediate processing.
+  (Ref: VISION.VIBE_CODING.PARADIGM)
+- **TRIGGER_ALIASES**: System MUST recognize aliases: `vibe-spec`, `vibespec`, `vibe spec`.
+  > Rationale: Reduces friction in natural language invocation.
+  (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+- **IDLE_BEHAVIOR**: When no ideas exist AND SKILL.md exists, MUST enter Validation Mode.
+  > Rationale: Self-hosting mode enables continuous spec health monitoring.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
+- **EMPTY_PROMPT**: When no ideas exist AND no SKILL.md, MUST invite user to brainstorm.
+  > Rationale: Friendly onboarding for new empty projects.
+  (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+
+## CONTRACTS.VALIDATION_MODE
+- **TRIGGER**: Validation Mode MUST be triggered when `specs/ideas/` is empty AND `SKILL.md` exists.
+  > Rationale: Enables continuous health monitoring in self-hosting mode.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
+- **FULL_SCAN**: Agent MUST run `validate.py` across all spec layers.
+  > Rationale: Catches accumulated drift and orphans.
+  (Ref: VISION.SCOPE.VAL)
+- **REPORT**: Agent MUST summarize findings: Orphan IDs, INFO_GAIN violations, terminology warnings.
+  > Rationale: Provides actionable feedback for spec maintenance.
+  (Ref: VISION.VIBE_CODING.TRUTH)
+- **FIX_PROPOSAL**: If errors found, agent MUST generate ideas to resolve them.
+  > Rationale: Closes the loop by converting issues into actionable work items.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
+- **COMPILE_PROMPT**: If validation passes, agent MUST prompt for compilation.
+  > Rationale: Keeps compiled artifact in sync with source.
+  (Ref: VISION.SCOPE.DOCS)
+
+## CONTRACTS.STRICT_TESTABILITY
+- **DEFAULT_TESTABLE**: Every L1/L2/L3 item (bold key with MUST/SHOULD/MAY) MUST be considered testable.
+  > Rationale: "Untestable spec = useless spec" - eliminates need for `[testable]` markers.
+  (Ref: VISION.SCOPE.COV)
+- **RATIONALE_SEPARATION**: Explanatory text MUST be separated using `> Rationale:` block.
+  > Rationale: Cleanly distinguishes assertions from justifications.
+  (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+- **PROGRESSIVE_FORMAT**: Each layer SHOULD use format appropriate to its abstraction level: L0 (Pure natural language), L1 (RFC2119), L2 (Intent/Guarantees + Interface), L3 (Pseudocode + test fixtures).
+  > Rationale: Matches formality to abstraction level.
+  (Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE)
+- **RFC2119_ENFORCEMENT**: L1 items MUST contain at least one RFC2119 keyword.
+  > Rationale: Ensures every contract is machine-scannable for assertion extraction.
+  (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)

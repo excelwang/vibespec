@@ -4,6 +4,8 @@ Standalone Spec Validator
 
 Zero third-party dependencies - uses Python stdlib only.
 Validates spec files for structural correctness and traceability.
+
+Version: 1.1.0 - Removed INFO_GAIN, simplified content checks
 """
 import re
 import sys
@@ -145,10 +147,10 @@ def parse_spec_file(spec_file: Path) -> dict:
                 weight = int(weight_str) if weight_str else 100
                 references.append({'id': ref_id, 'weight': weight, 'line': i+1, 'source_id': current_statement_id})
 
-    # Calculate Effective Lengths
+    # Calculate content lengths (for potential future use)
     for sid, counts in raw_lengths.items():
-        effective = counts['text'] + (counts['formal'] * 50)
-        export_lengths[sid] = effective
+        # Simple text length without INFO_GAIN multiplier
+        export_lengths[sid] = counts['text'] + counts['formal']
 
     return {
         'layer': layer,
@@ -223,20 +225,26 @@ def check_spec_health(filename: str, content: str) -> list:
     return errors
 
 
-def check_statement_numbering(content: str) -> list:
-    """Enforce numbered lists (1.) over bullet points (- ) in spec sections.
+def check_statement_numbering(content: str, filename: str = '') -> list:
+    """Enforce semantic ID format in spec sections.
+    - L0, L1, L2: Require '- **KEY**:' format
+    - L3: More flexible, allows plain bullets for pseudocode/fixtures
     Ignores content inside code blocks (``` ... ```).
-    Returns lists of error messages.
+    Returns list of error messages.
     """
     errors = []
     lines = content.split('\n')
     in_spec_block = False
     in_code_block = False
+    is_l3 = 'L3' in filename
+    current_indent = 0
+    in_semantic_key = False
     
     for i, line in enumerate(lines):
         stripped = line.strip()
+        indent = len(line) - len(line.lstrip())
         
-        if stripped.startswith('```'):
+        if stripped.startswith('```') or stripped.startswith('~~~'):
             in_code_block = not in_code_block
             continue
         if in_code_block:
@@ -244,23 +252,40 @@ def check_statement_numbering(content: str) -> list:
         
         if stripped.startswith('## '):
             in_spec_block = True
+            in_semantic_key = False
             continue
         if stripped.startswith('# '):
             in_spec_block = False
+            in_semantic_key = False
             continue
+        
+        # Track if we're inside a semantic key's content
+        if stripped.startswith('- **') and '**:' in stripped:
+            in_semantic_key = True
+            current_indent = indent
+            continue
+        
+        # Allow indented content under a semantic key
+        if in_semantic_key and indent > current_indent:
+            continue
+        elif indent <= current_indent:
+            in_semantic_key = False
             
         if in_spec_block and stripped:
-             # Check for Semantic ID: "- **KEY**:"
-             # Allow indentation
-             if stripped.startswith('- **'):
-                 if not re.match(r'^- \*\*[A-Z0-9_]+\*\*:', stripped):
-                     errors.append(f"Line {i+1}: Invalid Semantic ID format. Expected '- **KEY**:'")
-             # Forbidden: Numbered lists
-             elif stripped[0].isdigit() and stripped[1] == '.':
-                 errors.append(f"Line {i+1}: Forbidden sequential numbering. Use Semantic IDs ('- **KEY**:').")
-             # Forbidden: Plain bullets
-             elif stripped.startswith('- ') and not stripped.startswith('- **'):
-                 errors.append(f"Line {i+1}: Forbidden plain bullet. Use Semantic IDs ('- **KEY**:').")
+            # L3 is more flexible - allows various formatting for pseudocode
+            if is_l3:
+                continue
+            
+            # Check for Semantic ID: "- **KEY**:"
+            if stripped.startswith('- **'):
+                if not re.match(r'^- \*\*[A-Z0-9_]+\*\*:', stripped):
+                    errors.append(f"Line {i+1}: Invalid Semantic ID format. Expected '- **KEY**:'")
+            # Forbidden: Numbered lists at top level
+            elif len(stripped) > 1 and stripped[0].isdigit() and stripped[1] == '.':
+                errors.append(f"Line {i+1}: Forbidden sequential numbering. Use Semantic IDs ('- **KEY**:').")
+            # Forbidden: Plain bullets at top level (but only in L0/L1/L2)
+            elif stripped.startswith('- ') and not stripped.startswith('- **'):
+                errors.append(f"Line {i+1}: Forbidden plain bullet. Use Semantic IDs ('- **KEY**:').")
             
     return errors
 
@@ -279,8 +304,8 @@ def validate_specs(specs_dir: Path) -> tuple[list, list]:
             errors.append(f'{spec_file.name}: Invalid filename (expected L{{N}}-{{ID}}.md)')
             continue
             
-        # Check for numbering violations
-        num_errors = check_statement_numbering(spec_file.read_text())
+        # Check for numbering violations (pass filename for layer-specific rules)
+        num_errors = check_statement_numbering(spec_file.read_text(), spec_file.name)
         if num_errors:
             for err in num_errors:
                 errors.append(f'{spec_file.name}: {err}')
@@ -354,17 +379,6 @@ def validate_specs(specs_dir: Path) -> tuple[list, list]:
             # Accumulate weight & Fan-Out
             coverage[target_id] += ref['weight']
             fan_out[target_id] += 1
-            
-            # Information Gain Rule (INFO_GAIN)
-            # Child.Len >= 1.5 * Parent.Len
-            if source_id and target_id in global_lengths and source_id in global_lengths:
-                l_child = global_lengths[source_id]
-                l_parent = global_lengths[target_id]
-                # Avoid div by zero, though lengths shouldn't be 0
-                if l_parent > 0:
-                    ratio = l_child / l_parent
-                    if ratio < 1.5:
-                         errors.append(f"{data['file']}:{ref['line']}: INFO_GAIN Violation. Child `{source_id}` length ({l_child}) is < 1.5x Parent `{target_id}` length ({l_parent}). Ratio: {ratio:.2f}")
             
     # 4. Global Invariants
     # Miller's Law (Fan-Out <= 7)

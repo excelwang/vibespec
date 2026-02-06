@@ -1,73 +1,110 @@
-# Philosophy: Vibe Coding & Spec-Driven Development
+# Vibe-Spec 设计理念
 
-Vibe-Specs is built on a specific philosophy of software engineering that prioritizes **Specification** and **Verification** over manual Implementation. In the era of LLMs, writing code is cheap; ensuring that code does the *right thing* is value.
+## 核心哲学
 
-## 1. The "Vibe Coding" Paradigm
+### 1. 渐进式精化 (Progressive Formalization)
 
-"Vibe Coding" is the practice of developing software where the human developer operates primarily at the level of **Intent** and **Verification**, delegating the **Implementation** to AI.
+规范从抽象到具体，每层使用适合其抽象级别的格式：
 
-- **Traditional Dev**: Human thinks -> Human writes code -> Human tests.
-- **Vibe Dev**: Human defines Spec -> AI writes code -> Human & AI verify.
+| 层级 | 内容类型 | 格式风格 | 验证方式 |
+|------|---------|---------|---------|
+| L0-VISION | 战略愿景 | 纯自然语言 | 人工审查 |
+| L1-CONTRACTS | 行为合约 | 自然语言 + RFC2119 | Contract Tests |
+| L2-ARCHITECTURE | 组件设计 | Intent/Guarantees + 接口 | Integration Tests |
+| L3-COMPILER | 实现细节 | 伪代码 + test fixtures | Unit Tests |
 
-In this model, the **Specification** becomes the primary artifact. It is the "prompt" for the coding agent. If the spec is ambiguous, the code will be buggy. Vibe-Specs provides the structure to make specs rigorous, unambiguous, and machine-verifiable.
+### 2. 严格可测试 (Strict Testability)
 
-## 2. Specification as the Source of Truth
+**原则**: 不可测试的规范 = 无用的规范
 
-In many projects, specs (if they exist) are stale documents on a wiki. In Vibe-Specs, **Specs are Code**.
+- L1/L2/L3 的每个 item 都是**断言** (assertion)
+- 每个断言都可以被一个或多个测试覆盖
+- 解释性内容（Rationale）与断言分离
 
-- They live in the repo (`specs/`).
-- They are versioned.
-- They are compiled.
-- They are enforced via automated tests.
+**格式约定**:
+```markdown
+- **ITEM_ID**: Assertion using MUST/SHOULD/MAY keywords.
+  > Rationale: Explanation of why this assertion exists...
+```
 
-If the implementation behavior deviates from the Spec, it is a bug in the implementation, not the spec.
+### 3. 断言与解释分离
 
-## 3. Shift-Left Verification
+| 内容类型 | 格式 | 是否可测试 |
+|---------|------|-----------|
+| 断言 (Assertion) | `- **ID**: Statement with MUST/SHOULD/MAY` | ✅ 是 |
+| 解释 (Rationale) | `> Rationale: Why this matters...` | ❌ 否 |
 
-We believe errors are cheapest to fix when they are just text in a markdown file.
+### 4. 测试分层策略
 
-1.  **L0/L1 Verification**: We write "Black-Box Contracts" (L1) and "Mock Tests" before a single line of production code is written. If the logic is flawed (e.g., "Deleting a file should prevent its resurrection"), we catch it in the Mock implementation immediately.
-2.  **L2 Architecture**: We define component topology.
-3.  **L3 Implementation**: Only then do we generate the actual code.
+测试类型与规范层级对应：
 
-## 4. Layered Abstraction (L0-L3)
+```
+L1-CONTRACTS    ──→  Contract Tests (Black-Box)
+                     验证行为正确性，不关心实现
+                     
+L2-ARCHITECTURE ──→  Integration Tests
+                     验证组件交互，接口兼容性
+                     
+L3-COMPILER     ──→  Unit Tests
+                     验证实现细节，边界条件
+```
 
-Complex systems cannot be described in a flat document. We use a strict 4-layer hierarchy:
+### 5. 外部工具职责分离
 
-- **L0: Vision (The "Why")**: High-level goals, user value, and non-goals.
-- **L1: Contracts (The "What")**: Architecture-agnostic behaviors. "If I do X, Y must happen." Uses Invariants and Scenarios.
-- **L2: Architecture (The "Where")**: Component topology, data flow, responsibilities.
-- **L3: Specs (The "How")**: Detailed API definitions, algorithm steps, and runtime behaviors.
+Vibe-Spec 核心职责：
+- 管理 L0 → L1 → L2 → L3 层级规范
+- 确保每个 item 有可追溯的 ID
+- 验证层级间的引用完整性
+- 编译生成 spec-full.md
 
-This separation allows us to change the "How" (L3) without breaking the "What" (L1).
+测试生成职责（交给外部工具）：
+- 扫描 spec-full.md 的 ID
+- 生成测试骨架
+- 验证 `@verify_spec(ID)` 覆盖率
 
-## 5. Full-Chain Traceability: From Vibe to Implementation
+## 规范格式规则
 
-The ultimate goal of Vibe-Specs is **traceability**, ensuring that every line of code exists to satisfy a specific requirement.
+### L0-VISION 格式
+```markdown
+## VISION.SCOPE
+- **IN**: The system SHALL manage specifications...
+- **OUT**: The system SHALL NOT provide deployment automation...
+```
 
-**The Workflow**:
-1.  **Ideation (Capture)**: Raw thoughts are captured as timestamped "Ideas" in `specs/ideas/`.
-2.  **Synthesis (Refinement)**: Currently processed ideas are synthesized into formal specifications.
-3.  **Strict Gating**: 
-    - Specifications are refined layer-by-layer (L0 -> L1 -> L2 -> L3).
-    - **Each layer must be approved by a human** before the next layer is attempted.
-    - This prevents "Hallucination Cascades" where a flawed Vision spawns a flawless but wrong Implementation.
-4.  **Implementation**: The LLM implements code to satisfy these specs.
-5.  **Verification**: 
-    - Traceability Matrix: Ensures every Requirement is covered by a Spec.
-    - Test Coverage: Ensures every Spec is covered by a Test (`@verify_spec`).
-    - Observability: Runtime metrics prove the system adheres to specs.
+### L1-CONTRACTS 格式
+```markdown
+## CONTRACTS.METADATA
+- **FRONTMATTER**: Files MUST contain valid YAML frontmatter.
+  > Rationale: Ensures machine-parseable metadata for automation.
+```
 
-## 6. Self-Hosting (Bootstrap) Philosophy
+### L2-ARCHITECTURE 格式
+```markdown
+## ARCHITECTURE.PARSER
+- **SCANNER**:
+  **Intent**: Recursively traverse directory to find spec files.
+  **Guarantees**: All L*.md files are discovered.
+  **Interface**: `scan(path: string) -> File[]`
+```
 
-Vibe-Spec is a **self-hosting** tool. We use Vibe-Spec to define Vibe-Spec.
+### L3-COMPILER 格式
+```markdown
+## COMPILER.IMPL
+- **VALIDATE_STRUCTURE**:
+  ```python
+  def validate(file):
+      if not has_frontmatter(file):
+          return Error("E001: Missing frontmatter")
+  ```
+  **Test Cases**:
+  - valid.md → PASS
+  - empty.md → FAIL: E001
+```
 
-- The repository's [specs/](specs/) directory contains the bootstrap specifications.
-- Every release is verified against its own L0-L3 specs.
-- **Agentic Skill**: Vibe-Spec is distributed as a "Skill" (folder of instructions + scripts) that can be installed into any Agentic IDE, enabling the agent to understand and enforce the spec workflow autonomously.
+## 设计决策记录
 
-## 7. Minimize Cognitive Load
-We recognize that both Human attention and LLM Context Windows are scarce resources.
-- **For Humans**: We reject "Wall of Text" specs. We mandate **Atomicity** (numbered lines, small files) so reviews can focus on diffs, not context.
-- **For LLMs**: We reject "Reason yourself into the right answer" prompting for mechanical tasks. We use **Determinism** (scripts) for validation, compilation, and formatting.
-- **For System**: We do not rely on implicit knowledge. If it's not in the Spec, it doesn't exist.
+| 日期 | 决策 | 理由 |
+|------|------|------|
+| 2026-02-06 | 采用渐进式精化 | 平衡可读性与机器可解析性 |
+| 2026-02-06 | 采用严格可测试 | 确保规范质量，便于自动化验证 |
+| 2026-02-06 | 测试生成交给外部工具 | 职责分离，核心专注于规范管理 |

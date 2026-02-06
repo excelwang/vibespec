@@ -1,89 +1,145 @@
 ---
-version: 1.4.0
+version: 1.7.0
 ---
 
 # L2: Vibe-Spec Architecture
 
 ## ARCHITECTURE.COMPILER_PIPELINE
-The compiler follows a multi-stage pipeline:
-- **SCANNER**: The Scanner component is responsible for recursively traversing the source directory to identify all specification files matching the `L*.md` pattern, ensuring that no relevant metadata is overlooked during the compilation process. (Ref: CONTRACTS.METADATA_INTEGRITY)
-- **PARSER**: The Parser component extracts and strictly validates the YAML frontmatter from each file while separating the Markdown body content, providing a structured representation for downstream processing layers. (Ref: CONTRACTS.METADATA_INTEGRITY)
-- **VALIDATOR**: The Validator component executes a comprehensive suite of structural and semantic checks, ensuring layer dependencies are respected, all IDs are unique across the project, and no blocking errors exist before compilation proceeds. (Ref: CONTRACTS.TRACEABILITY)
-- **ASSEMBLER**: The Assembler component merges all verified and validated specification fragments into a single, authoritative `VIBE-SPECS.md` document, strictly preserving the hierarchical order defined by the layer metadata and semantic relationships. (Ref: CONTRACTS.TRACEABILITY)
+Multi-stage compilation pipeline that transforms source specs into a unified document.
+**Intent**: Compile fragmented specification files into single authoritative output.
+**Guarantees**: Only validated content reaches compilation; output is deterministically ordered.
+- **SCANNER**: Recursively traverses source directory to identify all specification files matching the `L*.md` pattern. Ensures no relevant metadata is overlooked during compilation discovery phase as the foundation of the pipeline's input collection mechanism.
+  **Interface**: `scan(path: string) -> File[]`
+  (Ref: CONTRACTS.METADATA_INTEGRITY.VALIDATION)
+- **PARSER**: Extracts and validates YAML frontmatter from each file while separating Markdown body content. Provides structured representation with typed metadata for downstream consumption, enabling consistent access patterns across all processing layers.
+  **Interface**: `parse(file: File) -> {metadata: Frontmatter, body: string}`
+  (Ref: CONTRACTS.METADATA_INTEGRITY.VALIDATION)
+- **VALIDATOR**: Executes comprehensive suite of structural and semantic checks before compilation. Ensures layer dependencies are respected, all IDs are unique across the project, and no blocking errors exist. Acts as the quality gate preventing invalid content from propagating.
+  **Interface**: `validate(specs: ParsedSpec[]) -> ValidationResult`
+  (Ref: CONTRACTS.TRACEABILITY), (Ref: CONTRACTS.QUANTIFIED_VALIDATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION)
+- **ASSEMBLER**: Merges all verified specification fragments into single authoritative `spec-full.md` document. Strictly preserves hierarchical order defined by layer metadata, generates table of contents and cross-reference anchors.
+  **Interface**: `assemble(specs: ParsedSpec[]) -> Document`
+  (Ref: CONTRACTS.TRACEABILITY)
 
 ## ARCHITECTURE.VALIDATOR_CORE
-The validator is a rule-based engine that enforces the contracts defined in L1.
-- **RULE_ENGINE**: The Rule Engine is architecturally decoupled from the core parser.
-It allows for the dynamic injection and execution of extensible validation rules. This ensures that new quality metrics can be added without modifying the ingestion logic.
-(Ref: CONTRACTS.QUANTIFIED_VALIDATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION)
-- **RESPONSIVENESS_CHECKER**: The Responsiveness Checker algorithmically validates the completeness of the specification.
-It verifies that every upstream requirement has aggregate downstream coverage of at least 100%. It flags any gaps as critical blocking errors. This ensures that no requirement is dropped during the decomposition process. It performs a comprehensive graph traversal to ensure that all nodes are fully connected and that no dead-ends exist in the requirement structure. It explicitly calculates the sum of all responsiveness weights assigned to child requirements and asserts they meet the conservation threshold.
-(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS)
-- **FOCUS_ENFORCER**: The Focus Enforcer scans the content of each layer for strict focus.
-It ensures that the content adheres to the whitelist/blacklist definitions. This prevents implementation details from leaking into high-level specs. It ensures that the architecture remains clean and stratified. It systematically checks every statement against the defined layer boundaries, flagging any violation as a critical architectural breach. It acts as a semantic guardian, using keyword analysis to detect forbidden terms or concepts that violate the abstraction level of the document.
-(Ref: CONTRACTS.LAYER_DEFINITIONS.L0_VISION), (Ref: CONTRACTS.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: CONTRACTS.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: CONTRACTS.LAYER_DEFINITIONS.L3_COMPILER)
+Rule-based validation engine that enforces L1 contracts.
+**Intent**: Systematically verify specification health against quantified metrics.
+**Guarantees**: All violations are reported with actionable locations.
+- **RULE_ENGINE**: Architecturally decoupled validation rule system that allows dynamic injection of extensible rules. Enables new quality metrics without modifying core parsing logic. Executes rules in parallel where dependencies permit.
+  **Interface**: `execute(rules: Rule[], input: Spec[]) -> Violation[]`
+  (Ref: CONTRACTS.QUANTIFIED_VALIDATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION)
+- **RESPONSIVENESS_CHECKER**: Validates specification completeness through graph traversal. Verifies every upstream requirement has aggregate downstream coverage of at least 100%. Flags gaps as blocking errors. Calculates coverage sums and asserts conservation threshold.
+  **Interface**: `check_responsiveness(graph: SpecGraph) -> CoverageResult`
+  (Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION)
+- **FOCUS_ENFORCER**: Scans layer content for strict focus adherence to whitelist/blacklist definitions. Uses keyword analysis to detect forbidden terms or concepts. Prevents implementation details leaking into high-level specs. Flags violations as architectural breaches.
+  **Interface**: `check_focus(spec: Spec) -> FocusViolation[]`
+  (Ref: CONTRACTS.LAYER_DEFINITIONS.L0_VISION), (Ref: CONTRACTS.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: CONTRACTS.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: CONTRACTS.LAYER_DEFINITIONS.L3_COMPILER)
 
 ## ARCHITECTURE.IDEAS_PROCESSOR
-Processes raw ideas into formal specs.
-- **BATCH_READER**: The Batch Reader initiates the pipeline by ingesting all raw markdown files.
-It locates them in the `specs/ideas/` directory. It ensures that the entire backlog of pending thoughts is available for holistic analysis before any processing begins. This holistic view prevents local optimization and allows for intelligent merging of related ideas.
-(Ref: CONTRACTS.IDEAS_PIPELINE.BATCH_READ)
-- **SORTER**: The Sorter component strictly arranges all ingested idea files chronologically.
-It uses their timestamped filenames. It ensures that the idea processing order respects the temporal sequence of user intent. It resolves conflicts in favor of later ideas. This strict ordering is crucial for maintaining a coherent narrative of the system's evolution.
-(Ref: CONTRACTS.IDEAS_PIPELINE.TIMESTAMP_ORDER)
-- **SCOPE_FILTER**: The Scope Filter evaluates each idea against the core `VISION.SCOPE` definition.
-It automatically rejects or flags content that does not align with the project's defined boundaries. This prevents scope creep affecting the formal specifications. This automatic gating mechanism acts as the first line of defense against feature bloat. It rigidly enforces the project's constraints, ensuring that only ideas that provide genuine value within the defined scope are allowed to proceed. It analyzes the semantic intent of the idea and compares it against the pillars of the Vision, rejecting anything that contradicts the established mission.
-(Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING)
-- **SYNTHESIZER**: The Synthesizer is the core logic engine.
-It merges deduplicated ideas and resolves conflicts by prioritizing newer definitions. It also handles the complex task of decomposing multi-layer ideas into granular, layer-specific specification updates. It acts as the intelligent agent that translates raw human intent into structured system changes. It is the central intelligence of the pipeline, capable of understanding complex user requests and translating them into precise, atomic specification modifications. It ensures that the transition from raw idea to formal contract is seamless, preserving the original intent while adhering to strict structural rules.
-(Ref: CONTRACTS.IDEAS_PIPELINE.CONFLICT_RES), (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION), (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED)
-    * Implements Review Protocol: (Ref: CONTRACTS.REVIEW_PROTOCOL).
-    * Implements Rejection Handling: (Ref: CONTRACTS.REJECTION_HANDLING).
-- **ARCHIVER**: The Archiver component moves items to the archive.
-It is responsible for moving successfully processed idea files into the `specs/ideas/archived/` directory. It maintains a clean workspace and provides a clear audit trail of which ideas have been incorporated into the system. This housekeeping step ensures that the `specs/ideas/` directory always represents the pending "to-do" list.
-(Ref: CONTRACTS.IDEAS_PIPELINE.COMPILE_PROMPT)
+Transforms raw ideas into formal specifications through layered refinement.
+**Intent**: Convert unstructured thoughts into validated specification changes.
+**Guarantees**: All changes approved before persistence; temporal order preserved.
+- **BATCH_READER**: Ingests all raw markdown files from `specs/ideas/` directory before processing begins. Provides complete picture for prioritization and merge decisions. Holistic view prevents local optimization by enabling cross-idea analysis.
+  **Interface**: `read_batch(path: string) -> Idea[]`
+  (Ref: CONTRACTS.IDEAS_PIPELINE.BATCH_READ)
+- **SORTER**: Arranges ingested idea files by timestamp extracted from filenames. Ensures processing order respects user's sequential intent. Provides deterministic handling of conflicts by sequence priority.
+  **Interface**: `sort(ideas: Idea[]) -> Idea[]`
+  (Ref: CONTRACTS.IDEAS_PIPELINE.TIMESTAMP_ORDER)
+- **SCOPE_FILTER**: Evaluates each idea against VISION.SCOPE definition. Rejects or flags content that contradicts established boundaries. First-line defense against scope creep. Semantic analysis compares idea intent against vision pillars.
+  **Interface**: `filter(ideas: Idea[]) -> {accepted: Idea[], rejected: Idea[]}`
+  (Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING)
+- **SYNTHESIZER**: Core logic engine that merges ideas, resolves conflicts, and decomposes multi-layer content. Prioritizes newer definitions per timestamp order. Translates raw intent into atomic specification modifications. Implements review protocol and handles rejections.
+  **Interface**: `synthesize(ideas: Idea[]) -> SpecChange[]`
+  (Ref: CONTRACTS.IDEAS_PIPELINE.CONFLICT_RES), (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION), (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED), (Ref: CONTRACTS.REVIEW_PROTOCOL), (Ref: CONTRACTS.REJECTION_HANDLING)
+- **ARCHIVER**: Moves successfully processed idea files to `specs/ideas/archived/` directory. Maintains clean workspace; provides audit trail. Ensures active directory always represents pending work items only.
+  **Interface**: `archive(ideas: Idea[]) -> void`
+  (Ref: CONTRACTS.IDEAS_PIPELINE.COMPILE_PROMPT)
 
 ## ARCHITECTURE.REFLECTOR
-Distills conversation history into ideas.
-- **COLLECTOR**: The Collector component interfaces with the conversation logs to read history.
-It provides the raw material needed for the reflection process. It identifies potential improvements or missing requirements without manual user input. It scans the interaction logs for implicit signals of unmet needs or recurring patterns that indicate a gap in the current capability set. It acts as a passive observer, constantly gathering data to fuel the system's evolution.
-(Ref: CONTRACTS.REFLECT.INTUITIVE)
-- **FILTER**: The Filter component intelligently parses the raw conversation log.
-It excludes irrelevant debug outputs, execution noises, and ephemeral errors. It ensures that only substantive interactions are considered for distillation into formal ideas. It employs heuristic algorithms to distinguish between transient operational noise and meaningful semantic exchange, ensuring that the signal-to-noise ratio of the reflection input is maximized.
-(Ref: CONTRACTS.REFLECT.INTUITIVE)
-- **DISTILLER**: The Distiller acts as the cognitive core of the reflection process.
-It analyzes filtered conversation segments. It extracts and formalizes key decisions, architectural shifts, and new requirements into structured L0-L3 ideas. It transforms the raw narrative of a conversation into a set of formal, actionable specifications. It is responsible for the intellectual leap from "what happened" to "what should be", synthesizing disparate points into coherent architectural proposals.
-(Ref: CONTRACTS.REFLECT.INTUITIVE)
-- **PRESENTER**: The Presenter component formats the distilled ideas into a concise summary.
-It halts the process to request explicit human approval. This ensures that no AI-generated insights are committed to the specification base without user verification. It presents the synthesized proposals in a clear, human-readable format, highlighting the rationale and expected impact of each change. It acts as the final quality gate, ensuring that the user remains the ultimate arbiter of the system's direction.
-(Ref: CONTRACTS.REFLECT.HUMAN_REVIEW)
-- **CURSOR_MANAGER**: The Cursor Manager reads and writes the high-water mark of the log.
-It ensures that subsequent reflection cycles only process new messages. It avoids re-analyzing previously processed history. It maintains a persistent state token that tracks the exact point of the last successful reflection, ensuring precisely once processing semantics. This prevents the system from getting stuck in loops or wasting resources on redundant analysis.
-(Ref: CONTRACTS.REFLECT.INTUITIVE)
-
-## ARCHITECTURE.CURSOR_MANAGER
-Manages persistent state for incremental operations.
-- **STATE_FILE**: The State File serves as the persistent storage mechanism for the reflection cursor, saving the ID or timestamp of the last processed message to a dedicated file on disk to ensure continuity across sessions. (Ref: CONTRACTS.REFLECT.INTUITIVE)
-- **OPERATIONS**: The Operations layer defines the standard interface for interacting with the state file, providing atomic `read_cursor`, `update_cursor`, and `reset_cursor` methods to ensure data integrity during concurrent or repeated access, acting as the sole gateway for state mutations. (Ref: CONTRACTS.REFLECT.INTUITIVE)
+Distills conversation history into formal specification ideas.
+**Intent**: Extract insights from current conversation context.
+**Guarantees**: No distilled content saved without explicit human approval.
+- **DISTILLER**: Analyzes current conversation context to extract key decisions, architectural shifts, requirements. Transforms context into formal, actionable specifications. Synthesizes disparate points into coherent proposals.
+  **Interface**: `distill(context: ConversationContext) -> Idea[]`
+  (Ref: CONTRACTS.REFLECT.CONTEXT_BASED)
+- **PRESENTER**: Formats distilled ideas as concise summary for human review. Halts process to request explicit approval before any persistence. Final quality gate ensuring user arbitration of direction.
+  **Interface**: `present(ideas: Idea[]) -> ApprovalRequest`
+  (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW)
 
 ## ARCHITECTURE.SCRIPTS
-The Architecture Scripts layer provides a set of standalone, dependency-free automation tools that encapsulate mechanical workflows, ensuring that all deterministic file operations are handled by code rather than stochastic LLM generation, thereby reducing cognitive load and token costs. (Ref: CONTRACTS.SCRIPT_FIRST)
-- **ARCHIVE_IDEAS**: The `scripts/archive_ideas.sh` script automates the cleanup process.
-It moves processed markdown files from the active ideas folder to the archive. It ensures the workspace remains uncluttered and focused on pending work. This script is critical for the "Inbox Zero" workflow managed by the Archiver component. It executes a robust file operational transaction, verifying that the move was successful before updating any state, preventing data loss during the archival process.
-(Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
-- **VALIDATE**: The `scripts/validate.py` script performs rigorous structural validation of all files.
-It checks for syntax errors, broken links, expansion ratios, and contract violations. It ensures the health of the spec graph before any compilation occurs. This acts as the automated gatekeeper of quality. It provides detailed, actionable error messages that pinpoint the exact location and nature of the violation, enabling rapid remediation and ensuring that no invalid state ever propagates to the compilation phase.
-(Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
-- **COMPILE**: The `scripts/compile.py` script acts as the final build step.
-It assembles all valid individual specification files into a single, cohesive `VIBE-SPECS.md` document. This document serves as the authoritative source of truth for the project. This compilation step ensures that the fragmented source files are presented as a unified whole. It systematically concatenates the files in the strict strict topological order defined by the layer hierarchy, generating a table of contents and cross-reference links to create a navigable and professional-grade specification document.
-(Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
+Standalone dependency-free automation tools for mechanical workflows.
+**Intent**: Encapsulate deterministic operations in code rather than LLM generation.
+**Guarantees**: 100% reliable execution; no stochastic behavior.
+- **ARCHIVE_IDEAS**: Script `scripts/archive_ideas.sh` automates post-processing cleanup. Moves processed files from active to archived folder. Critical for "Inbox Zero" workflow. Executes robust file transaction with verification.
+  **Interface**: `archive_ideas.sh [path]`
+  (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
+- **VALIDATE**: Script `scripts/validate.py` performs comprehensive structural validation. Verifies syntax, links, expansion ratios, contract compliance. Automated quality gatekeeper. Provides detailed error messages with locations.
+  **Interface**: `validate.py <specs_path>`
+  (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
+- **COMPILE**: Script `scripts/compile.py` assembles specification files into unified document. Generates `spec-full.md` with table of contents and anchors. Concatenates in strict topological order. Creates professional-grade navigable output.
+  **Interface**: `compile.py <specs_path> <output_path>`
+  (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
 
 ## ARCHITECTURE.SKILL_DISTRIBUTION
-Distributes vibe-spec as an agentic skill.
-- **LOCATION**: The primary definition file `SKILL.md` is strictly maintained.
-It resides within the `src/vibe-spec/` source directory. It serves as the single source of truth for the agent's capabilities and ensuring version control integrity. It physically isolates the skill definition from the generated artifacts or temporary build files, ensuring that the repository structure remains clean and that the source of truth is unmistakable. It avoids the ambiguity of having multiple definition files scattered across the codebase, simplifying the audit process and ensuring that every agent instance is instantiated from the exact same certified blueprint. It acts as the immutable reference point for all downstream operations, preventing any "shadow configuration" from altering the agent's behavior unexpectedly.
-(Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD)
-- **COMPLIANCE**: All updates to the skill definition must be performed using official tooling.
-They must use official skill-creator tooling and standards. This constraint ensures compatibility with the broader agent ecosystem. It prevents regressions in skill discovery or execution. It integrates with the continuous integration pipeline to automatically verify that any changes to the skill definition meet the strict schema requirements before they can be merged. It enforcing a rigorous quality gate that rejects any deviation from the established protocol, protecting the integrity of the agent network and ensuring that all skills behave predictably in production environments. It mandates that every modification is validated against the master schema, ensuring forward and backward compatibility across all supported agent runtimes.
-(Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE)
+Distributes vibe-spec as an agentic skill for AI agent consumption.
+**Intent**: Package skill for discoverable, version-controlled deployment.
+**Guarantees**: Single source of truth; ecosystem-compatible format.
+- **LOCATION**: `SKILL.md` resides within `src/vibe-spec/` source directory. Physically isolates skill definition from generated artifacts. Unmistakable source of truth for agent instantiation. Immutable reference preventing shadow configuration.
+  **Interface**: `src/vibe-spec/SKILL.md`
+  (Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD)
+- **COMPLIANCE**: Updates validated against skill-creator schema. Integrates with CI pipeline for schema verification. Enforces compatibility with agent ecosystem. Rejects deviations from established protocol.
+  **Interface**: `skill-creator validate <path>`
+  (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE)
 
+## ARCHITECTURE.BOOTSTRAP_PROCESSOR
+Handles first-time project initialization when specification infrastructure does not exist.
+**Intent**: Guide user through scope definition and create minimal spec structure.
+**Guarantees**: No files created without explicit user approval.
+- **DETECTOR**: Traverses file system to determine if `specs/` directory exists at project root. Signals bootstrap requirement when absent or empty. Triggers full onboarding sequence for first-time users.
+  **Interface**: `detect_bootstrap_needed(path: string) -> bool`
+  (Ref: CONTRACTS.BOOTSTRAP.DETECTION)
+- **SCOPE_COLLECTOR**: Initiates interactive dialogue prompting user to describe project goals, constraints, boundaries in natural language. Captures raw, unstructured intent for subsequent formalization. Preserves original vision as primary input.
+  **Interface**: `collect_scope() -> string`
+  (Ref: CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY)
+- **SCOPE_REFORMER**: Applies heuristics to transform raw input into structured specification format. Identifies IN-SCOPE (SHALL) and OUT-OF-SCOPE (SHALL NOT) statements. Creates machine-verifiable boundary definition.
+  **Interface**: `reform_scope(raw: string) -> {in_scope: string[], out_scope: string[]}`
+  (Ref: CONTRACTS.BOOTSTRAP.SCOPE_REFORM)
+- **INITIALIZER**: Creates physical specification infrastructure: `specs/L0-VISION.md` with reformed scope content and `specs/ideas/` directory. Atomic operation transitioning project from uninitialized to bootstrapped state.
+  **Interface**: `initialize(scope: ScopeResult) -> void`
+  (Ref: CONTRACTS.BOOTSTRAP.INITIALIZATION), (Ref: CONTRACTS.BOOTSTRAP.APPROVAL_GATE)
+
+## ARCHITECTURE.TRIGGER_ROUTER
+Routes skill invocations to appropriate handlers based on context analysis.
+**Intent**: Parse invocation context and dispatch to correct workflow.
+**Guarantees**: Every invocation maps to exactly one handler; no ambiguity.
+- **PARSER**: Performs lexical analysis of invocation string. Extracts command verb and arguments. Normalizes alias forms (vibe-spec, vibespec, vibe spec) into canonical representation. Validates syntax patterns.
+  **Interface**: `parse(input: string) -> {command: string, args: string | null}`
+  (Ref: CONTRACTS.TRIGGERS.TRIGGER_ALIASES)
+- **DISPATCHER**: Evaluates parsed invocation against file system state to select handler. Priority decision tree: (1) Arguments present → Idea capture; (2) Ideas exist → IDEAS_PROCESSOR; (3) SKILL.md exists → VALIDATION_RUNNER; (4) Otherwise → BOOTSTRAP_PROCESSOR. Deterministic routing.
+  **Interface**: `dispatch(parsed: ParsedCommand) -> Handler`
+  (Ref: CONTRACTS.TRIGGERS.TRIGGER_SCAN), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE), (Ref: CONTRACTS.TRIGGERS.IDLE_BEHAVIOR), (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT)
+
+## ARCHITECTURE.VALIDATION_RUNNER
+Executes specification health validations when system is idle (no pending ideas).
+**Intent**: Continuously monitor spec integrity between active development sessions.
+**Guarantees**: All findings are actionable and traceable to source.
+- **EXECUTOR**: Invokes `validate.py` script as subprocess. Captures stdout/stderr streams. Parses output to extract failures, warnings, metrics. Converts to typed ValidationResult for downstream processing.
+  **Interface**: `execute_validation(specs_path: string) -> ValidationResult`
+  (Ref: CONTRACTS.VALIDATION_MODE.FULL_SCAN), (Ref: CONTRACTS.VALIDATION_MODE.TRIGGER)
+- **REPORTER**: Transforms validation results into human-readable summary by severity and category. Groups: Orphan IDs, INFO_GAIN violations, terminology warnings, algebraic constraints. Includes source locations and remediation guidance.
+  **Interface**: `format_report(result: ValidationResult) -> string`
+  (Ref: CONTRACTS.VALIDATION_MODE.REPORT)
+- **FIX_PROPOSER**: Analyzes errors and generates idea files with remediation instructions. Creates timestamped ideas in `specs/ideas/` for automatic processing in next cycle. Closes detection-to-resolution feedback loop.
+  **Interface**: `propose_fixes(errors: Error[]) -> Idea[]`
+  (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL), (Ref: CONTRACTS.VALIDATION_MODE.COMPILE_PROMPT)
+
+## ARCHITECTURE.SELF_OPTIMIZER
+Identifies repetitive patterns and proposes automation opportunities.
+**Intent**: Convert repeated manual tasks into deterministic scripts.
+**Guarantees**: No script created without idea approval through standard pipeline.
+- **PATTERN_DETECTOR**: Monitors agent action history for recurring operation sequences. Heuristic matching identifies mechanical workflows delegable to scripts. Ranks patterns by frequency and complexity.
+  **Interface**: `detect_patterns(actions: Action[]) -> Pattern[]`
+  (Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE)
+- **SCRIPT_PROPOSER**: Generates formal idea files describing proposed automation. Includes pattern description, script name, inputs/outputs, estimated savings. Ideas follow standard approval workflow.
+  **Interface**: `propose_script(pattern: Pattern) -> Idea`
+  (Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE)

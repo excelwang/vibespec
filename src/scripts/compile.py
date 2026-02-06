@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
+"""
+Spec Compiler - Assembles specification layers into a unified document.
+
+Zero third-party dependencies - uses Python stdlib only.
+Version: 1.1.0
+"""
 import sys
 from pathlib import Path
 
 def compile_specs(specs_dir: Path, output_file: Path):
-    """Concatenate all L*.md files into a single VIBE-SPECS.md with LLM-friendly structure."""
+    """Concatenate all L*.md files into a single compiled spec with LLM-friendly structure."""
     if not specs_dir.exists():
         print(f"Error: {specs_dir} does not exist.")
         sys.exit(1)
@@ -12,7 +18,7 @@ def compile_specs(specs_dir: Path, output_file: Path):
     files = sorted(specs_dir.glob("L*.md"))
 
     # 1. Preamble & System Context
-    content.append("# VIBE-SPECS SYSTEM CONTEXT (v1.5.0)\n")
+    content.append("# VIBE-SPECS SYSTEM CONTEXT (v1.6.0)\n")
     content.append("> 🚨 INSTRUCTION: You are an Agent reading the Project Bible.\n")
     content.append("> 1. Always check `L1: Contracts` before writing code.\n")
     content.append("> 2. `L0: Vision` defines the scope. Do not hallucinate features.\n")

@@ -70,7 +70,10 @@ Agent: I've reformulated your scope:
 ## Phase 1: Ingest
 
 1. List all `.md` files in `specs/ideas/`.
-2. If empty, notify user: "No pending ideas."
+2. If NOT empty → Proceed to Phase 2.
+3. If empty:
+   - IF `SKILL.md` exists (self-hosting mode) → Enter **Phase 6: Validation Mode**.
+   - ELSE → Phase 0 
 
 ## Phase 2: Analysis & Decomposition
 
@@ -113,7 +116,7 @@ Process the specific layer L(N) identified in Phase 2:
 3. **Compile Prompt**: 
    - IF (No pending ideas): Explicitly ask user: "Run compilation now?"
    - ELSE: Loop back to Phase 2.
-4. If yes: Run `python3 scripts/compile.py specs/ VIBE-SPECS.md`.
+4. If yes: Run `python3 scripts/compile.py specs/ specs/spec-full.md`.
 
 ---
 
@@ -125,11 +128,26 @@ Process the specific layer L(N) identified in Phase 2:
 
 ---
 
+## Phase 6: Validation Mode
+
+**Trigger**: No pending ideas AND `SKILL.md` exists (self-hosting mode).
+
+1. Run `python3 scripts/validate.py specs/`.
+2. **Report**: Summarize findings:
+   - Orphan IDs (L0/L1 items with no downstream refs)
+   - INFO_GAIN violations
+   - Terminology warnings
+   - Expansion ratio warnings
+3. **Propose Fixes**: If errors found, generate ideas to resolve them.
+4. **Compile**: If validation passes, prompt for compilation.
+
+---
+
 ## Tools
 
 Use standalone scripts (zero dependencies) for mechanical operations:
 - `python3 scripts/validate.py specs/` - Structural validation.
-- `python3 scripts/compile.py specs/ VIBE-SPECS.md` - Compile to single doc.
+- `python3 scripts/compile.py specs/ specs/spec-full.md` - Compile to single doc.
 - `bash scripts/archive_ideas.sh` - Archive processed ideas.
 
 **IMPORTANT**: Run `python3 scripts/validate.py specs/` IMMEDIATELY after each layer modification, BEFORE presenting to human for review.

@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Compiled Spec Verifier - Validates structural integrity of compiled output.
+
+Zero third-party dependencies - uses Python stdlib only.
+Checks: Structure, Navigation, Semantic Traceability.
+Version: 1.1.0
+"""
 import sys
 import re
 from pathlib import Path

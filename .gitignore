@@ -54,3 +54,4 @@ coverage.xml
 VIBE-SPECS.md
 .vibe-coverage.json
 .agent
+specs/spec-full.md

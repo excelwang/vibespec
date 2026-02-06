@@ -51,3 +51,24 @@ version: 1.5.0
 - **CONTEXT_ANCHORS**: Sections must have explicit HTML anchors for precise context retrieval.
 - **NAVIGATION**: A system preamble and table of contents are mandatory.
 - **NOISE_REDUCTION**: Individual file frontmatter must be stripped in the compilation.
+
+## VISION.FORMAL_SYNTAX
+- **PRECISION_OVER_PROSE**: Specifications SHALL prioritize formal notation over verbose text.
+- **FORMALISMS**: Preferred formats include Mermaid diagrams, JSON/TypeScript schemas, and pseudocode.
+- **MULTIPLIER**: Formal blocks (code fences, diagrams) carry higher information density than prose.
+
+## VISION.UBIQUITOUS_LANGUAGE
+- **CONTROLLED_VOCABULARY**: The system SHALL use precise, unambiguous terminology.
+- **VALIDATE**: Structural/static checks performed by scripts or linters.
+- **VERIFY**: Dynamic/runtime checks performed by tests or manual review.
+- **ASSERT**: A hard blocking condition expressed in code.
+- **PIPELINE**: A linear sequence of processing steps.
+- **FLOW**: A possibly branching logic path or user workflow.
+- **VIOLATION**: Breaking a specification rule.
+- **ERROR**: A runtime crash or exception.
+
+## VISION.TARGET_PROJECT
+- **MAINTAINABILITY**: Code is read more than written; clarity over cleverness.
+- **OBSERVABILITY**: If you cannot see it, assume it is broken.
+- **DETERMINISM**: Stochastic behavior is a bug unless explicitly required.
+- **MODULARITY**: High cohesion within modules, low coupling between them.

@@ -1,94 +1,290 @@
 ---
-version: 1.4.0
+version: 1.6.0
 ---
 
 # L3: Vibe-Spec Implementation
 
 ## COMPILER.CLI_INTERFACE
-The CLI provides the primary entry point for users.
-- **COMMANDS**: The CLI exposes distinct subcommands for each phase of the lifecycle.
-    - **VALIDATE**: `validate <path>`: This command triggers the comprehensive validation suite. It recursively scans the target directory, parses frontmatter, checks for broken links, calculates algebraic ratios, and asserts all L1 contracts. It returns a non-zero exit code if any violation is found, blocking the pipeline.
+CLI entry point for spec management commands.
+- **COMMANDS**: Distinct subcommands for each lifecycle phase.
+  - **VALIDATE**: `vibe-spec validate <path>` triggers comprehensive validation.
+    ```pseudocode
+    function validate(path: string) -> ExitCode:
+      files = scanner.scan(path)
+      specs = files.map(parser.parse)
+      result = validator.run(specs)
+      if result.has_errors():
+        printer.format_errors(result.errors)
+        return 1
+      return 0
+    ```
     (Ref: ARCHITECTURE.VALIDATOR_CORE)
-    - **COMPILE**: `compile <dir> <output>`: This command executes the final assembly of the specification. It reads all valid parts, resolves dependencies, sorts them topologically, and concatenates them into a single Markdown document with a generated table of contents and version header.
+  - **COMPILE**: `vibe-spec compile <dir> <output>` assembles final document.
+    ```pseudocode
+    function compile(dir: string, output: string) -> void:
+      specs = scanner.scan(dir).map(parser.parse)
+      sorted = topological_sort(specs, by=layer)
+      doc = assembler.build(sorted)
+      doc.inject_toc()
+      doc.write(output)
+    ```
     (Ref: ARCHITECTURE.COMPILER_PIPELINE)
-    - **REFLECT**: `reflect`: This command initiates the interactive reflection loop. It reads the conversation history from the log files, filters out noise, distills key insights, and interactively proposes new Idea files to the user for approval.
+  - **REFLECT**: `vibe-spec reflect` initiates interactive distillation.
+    ```pseudocode
+    function reflect() -> void:
+      cursor = cursor_manager.read()
+      messages = log_api.fetch_after(cursor)
+      if messages.empty(): print("Up to date"); return
+      filtered = filter.apply(messages)
+      ideas = distiller.extract(filtered)
+      presenter.show(ideas)
+      if user.approve():
+        writer.save_ideas(ideas)
+        cursor_manager.update(messages.last.timestamp)
+    ```
     (Ref: ARCHITECTURE.REFLECTOR)
-- **FEEDBACK**: The CLI ensures a developer-friendly experience by printing formatted error messages.
-It parses the raw exception data and presents it with file paths, line numbers, and specific contract IDs. This "compiler-grade" feedback allows the user to immediately jump to the offending line and correct the issue without guessing.
-(Ref: ARCHITECTURE.VALIDATOR_CORE)
+- **FEEDBACK**: Compiler-grade error messages with file paths, line numbers, contract IDs.
+  (Ref: ARCHITECTURE.VALIDATOR_CORE)
 
 ## COMPILER.IDEAS_IMPL
-Implementation of the Ideas Processor.
-- **ENTRY**: The process is triggered by the `vibe-spec` skill trigger or the `ideas` subcommand. It requires no arguments to start the batch processing of all pending files.
-(Ref: ARCHITECTURE.IDEAS_PROCESSOR)
-- **STEPS**: The pipeline follows a strict sequential execution model.
-    ```text
-    1. READ: Glob all `specs/ideas/*.md` files. Sort them by the timestamp in the filename to establish the canonical order of events.
-    2. ANALYZE: For each idea content, apply heuristics (regex keyword matching) to determine if it belongs to Vision (L0), Contracts (L1), Architecture (L2), or Implementation (L3).
-    3. DECOMPOSE: If an idea spans multiple layers, split it into constituent atomic changes.
-    4. REVISE:
-        - Load the target Specification File.
-        - Load the Parent Context (L_N-1).
-        - Apply the changes while checking for Redundancy (orphaned keys) and Contradiction (conflicting claims).
-        - Assert that all new content meets the Info Gain and Atomicity rules.
-    5. REVIEW: Pause execution and present the diff to the user. Wait for explicit "Y" confirmation.
-    6. ARCHIVE: Move the processed idea file to `specs/ideas/archived/` to mark it as done.
-    7. CHECK: If the queue is empty, propose running the compilation step to sync artifacts.
-    ```
-    (Ref: ARCHITECTURE.IDEAS_PROCESSOR)
+Implementation of Ideas Processor pipeline.
+- **ENTRY**: Triggered by `vibe-spec` skill trigger or `ideas` subcommand. No arguments required.
+  (Ref: ARCHITECTURE.IDEAS_PROCESSOR)
+- **STEPS**: Strict sequential execution model.
+  ```pseudocode
+  function process_ideas() -> void:
+    files = glob("specs/ideas/*.md")
+    ideas = files.sort(by=timestamp).map(parse_idea)
+    for idea in ideas:
+      layer = detect_layer(idea)  // L0..L3 via keyword heuristics
+      if idea.spans_multiple_layers():
+        chunks = idea.decompose()
+        for chunk in chunks: process_single(chunk)
+      else:
+        process_single(idea)
+      archive(idea)
+    if ideas.empty():
+      prompt("Run compile.py to sync artifacts")
+  
+  function process_single(idea: Idea) -> void:
+    spec = load_spec(idea.target_layer)
+    parent = load_spec(idea.target_layer - 1)
+    diff = spec.apply_changes(idea, parent_context=parent)
+    violations = validator.check(diff)
+    if violations: raise ValidationError(violations)
+    presenter.show_diff(diff)
+    if not user.approve(): revert(diff); return
+    spec.save()
+  ```
+  (Ref: ARCHITECTURE.IDEAS_PROCESSOR)
+- **TEST_FIXTURES**:
+  ```yaml
+  - name: single_l1_idea
+    input:
+      file: "2026-02-06T1200-new-contract.md"
+      content: "Add MUST rule for X"
+    expected:
+      layer: L1
+      action: append_to_section
+      approval_required: true
+  
+  - name: multi_layer_idea
+    input:
+      file: "2026-02-06T1300-feature.md"
+      content: "Vision: X, Contract: Y, Impl: Z"
+    expected:
+      decomposed_chunks: 3
+      processing_order: [L0, L1, L3]
+  
+  - name: conflict_resolution
+    input:
+      files: ["2026-02-06T1100-old.md", "2026-02-06T1200-new.md"]
+      conflict_on: "SCOPE.X"
+    expected:
+      winner: "2026-02-06T1200-new.md"
+  ```
 
 ## COMPILER.REFLECT_IMPL
-Implementation of the Reflector.
-- **ENTRY**: The reflection cycle is manually triggered via the `vibe-spec reflect` command.
-This explicit invocation ensures that reflection happens only when the user deems it necessary, preventing background processes from consuming token resources or interfering with active development.
-(Ref: ARCHITECTURE.REFLECTOR)
-- **STEPS**: The reflection logic executes a "observe-orient-decide" loop over the conversation history.
-    This process is designed to mimic the cognitive workflow of a human developer reviewing their own work. It starts by establishing a clear temporal boundary to avoid re-processing old data, effectively implementing an incremental build system for knowledge. It then performs a lossy compression of the conversation log, discarding channel noise to focus purely on signal. The distillation step is the most critical; it uses a specialized system prompt to coerce the LLM into a specific output format that separates "decisions" from "intent". Finally, the loop closes with a strict human-in-the-loop verification gate. This ensures that the AI's interpretation of the session is ratified by the user before it becomes part of the permanent record, preventing "hallucination drift" where the system's understanding diverges from reality over time.
-    ```text
-    1. LOAD STATE: Read the `.vibe-reflect-cursor` file to get the timestamp of the last processed message.
-    2. FETCH: Query the agent framework's log API to retrieve all messages timestamped after the cursor.
-    3. CHECK: If the message list is empty, print "Up to date" and exit immediately to save cycles.
-    4. FILTER: Discard messages tagged as 'debug', 'tool_output', or 'error' to reduce noise.
-    5. DISTILL: Feed the filtered conversation into the LLM with instructions to extract "Decisions", "Changes", and "New Requirements" mapped to L0-L3 layers.
-    6. PRESENT: format the extracted insights into a bulleted summary and display it to the user.
-    7. APPROVE: Wait for valid user confirmation. If rejected, discard and exit.
-    8. SAVE: Write the approved insights to a new `specs/ideas/YYYY-TIMESTAMP-reflection.md` file.
-    9. COMMIT: Overwrite `.vibe-reflect-cursor` with the timestamp of the most recent processed message.
-    ```
-    (Ref: ARCHITECTURE.REFLECTOR.DISTILLER)
+Implementation of Reflector based on current context.
+- **ENTRY**: Triggered via `vibe-spec reflect` command. Explicit invocation only.
+  (Ref: ARCHITECTURE.REFLECTOR)
+- **STEPS**: Direct distillation from current conversation context.
+  ```pseudocode
+  function reflect() -> void:
+    context = get_current_conversation_context()
+    
+    ideas = distiller.extract(context)  // Structured output: decisions, changes, requirements
+    
+    summary = format_summary(ideas)
+    presenter.show(summary)
+    
+    if not user.approve():
+      print("Discarded")
+      return
+    
+    filename = f"specs/ideas/{timestamp()}-reflection.md"
+    write_file(filename, ideas.to_markdown())
+  ```
+  (Ref: ARCHITECTURE.REFLECTOR.DISTILLER)
+- **TEST_FIXTURES**:
+  ```yaml
+  - name: extract_from_context
+    input:
+      context_contains: "User discussed adding auth feature"
+    expected:
+      ideas_extracted: 1
+      idea_layer: L1
+  
+  - name: approval_rejected
+    input:
+      user_approval: false
+    expected:
+      file_created: false
+  
+  - name: approval_accepted
+    input:
+      user_approval: true
+    expected:
+      file_created: true
+      file_path_pattern: "specs/ideas/*-reflection.md"
+  ```
 
-## COMPILER.CURSOR_IMPL
-Implicit state management.
-- **FILE**: The cursor state is stored in `.vibe-reflect-cursor` at the project root.
-This file is explicitly added to `.gitignore` to prevent local session state from polluting the shared repository history. It acts as a local checkpoint for the developer's personal reflection cycle. The usage of a hidden dotfile follows the standard unix convention for configuration provided by tools like git or ssh. It is placed at the root to ensure it is easily discoverable by the scripts without complex path resolution logic. It acts as a persistent semaphore, signaling the last known good state of the reflection process.
-(Ref: ARCHITECTURE.CURSOR_MANAGER.STATE_FILE)
-- **FORMAT**: The file contains a single line with an ISO 8601 formatted timestamp string.
-Example: `2026-02-05T23:55:00Z`. This standardized text format ensures that the state is human-readable and debuggable, while also being easily parsable by standard datetime libraries in any language. The choice of UTC (Z-suffix) is mandatory to avoid ambiguity across different developer timezones. This strict formatting contract prevents off-by-one errors in time-based queries, ensuring that we never miss a message or double-process an event due to timezone chaos.
-(Ref: ARCHITECTURE.CURSOR_MANAGER.STATE_FILE)
-- **RESET**: To reset the reflection history, the user simply deletes the file using `rm`.
-Deletion of the cursor file signals the system to treat the entire existing conversation log as "new", triggering a full re-scan of history from the beginning of time. This is the canonical mechanism for "hard resetting" the reflection context. It is a safe operation because the file creates no side effects other than advancing the read pointer. If deleted, the system gracefully defaults to a "genesis" state (timestamp 0), ensuring that the next reflection cycle serves as a complete audit of all available knowledge.
-(Ref: ARCHITECTURE.CURSOR_MANAGER.OPERATIONS)
 
 ## COMPILER.SCRIPTS_IMPL
-Standalone scripts (no third-party dependencies).
-- **VALIDATE_PY**: The `scripts/validate.py` script serves as the primary enforcement mechanism for the specification graph.
-    - **STRUCTURE**: It reads every file and verifies that the YAML frontmatter exists and contains valid `layer`, `id`, and `version` fields using standard library regex patterns, ensuring fast fail-fast checks before parsing. It treats the directory as a database, loading all files into memory to build a complete model of the system's state before running any logic. It implements a custom YAML parser using simple string splitting to avoid the heavy dependency of `PyYAML`, adhering to the zero-dependency constraint while maintaining robustness for the specific subset of YAML used by the Vibe-Spec format. It also checks for file encoding issues, enforcing UTF-8 to prevent Mojibake corruption in international environments. It validates that filenames match the layer hierarchy convention (e.g., `L1-*.md`), preventing misplaced files from confusing the build system. It enforces a strict timeout on file reads to prevent denial-of-service via infinite blocking on named pipes or special device files. (Ref: ARCHITECTURE.SCRIPTS.VALIDATE)
-    - **WEIGHTS**: It parses the text body to find all `(Ref: ID)` and `(Ref: ID, N%)` occurrences. It constructs a directed graph of dependencies and sums the coverage metadata for each requirement to calculate the total responsiveness score. It handles the specific edge cases of multi-parent inheritance and weighted distribution, ensuring that the arithmetic of the specification is sound. It builds an adjacency list in memory, allowing for O(V+E) traversal to detect cycles and unconnected components, ensuring the structural integrity of the graph. It performs topological sorting to ensure that the dependencies are resolved in the correct order, detecting circular dependencies that would break the compilation phase. (Ref: ARCHITECTURE.VALIDATOR_CORE)
-    - **ENFORCEMENT**: It iterates through the graph and asserts that every node with children has a cumulative coverage sum of >= 100%. If any node falls short, it prints a specific error detailing the missing percentage and the specific children involved. It also checks for algebraic invariants like expansion ratios and verb density, applying the `L1-CONTRACTS` logic to the raw text data. It aggregates multiple errors into a single report, allowing the user to fix multiple issues in a single pass rather than frustatingly fixing one error at a time. It provides suggested fixes for common errors, such as "Add more content to meet Info Gain" or "Split this sentence to meet Atomicity", acting as a linter that teaches the user how to write better specs. It exits with a non-zero status code (typically 1) upon any failure, which is detected by the CI/CD pipeline to block the merge of any pull request that violates the specification integrity. It also logs a machine-readable JSON report to `build/validation_report.json` to allow external dashboards to track spec health over time. (Ref: ARCHITECTURE.VALIDATOR_CORE.RESPONSIVENESS_CHECKER)
-- **COMPILE_PY**: The `scripts/compile.py` script handles the artifact generation.
-It scans the directory for all valid input files, sorts them by layer index (L0->L3) and semantic ID, and then concatenates them. It injects a generated Theory of Operation header and resolves all internal links to point to the correct anchors in the final document. It performs a final sanity check during assembly to ensure that no referenced files are missing from the build list, providing a guarantee that the generated artifact is complete and self-consistent. It uses a buffered I/O strategy to handle potentially large specification sets efficiently, minimizing memory footprint while maximizing throughput during the build process. It also generates a navigable Table of Contents with jump links, ensuring that the final document is easy to consume for human readers. (Ref: ARCHITECTURE.SCRIPTS.COMPILE)
-- **ARCHIVE_SH**: The `scripts/archive_ideas.sh` script is a simple bash utility.
-It takes a list of successfully processed idea files and moves them to the `specs/ideas/archived/` directory. It uses `mv` with error checking to ensuring the file is safely transferred before reporting success, maintaining the cleanliness of the inbox. It appends a timestamp to the filename if one is not already present, ensuring that the archive remains sorted and searchable by date. It checks for the existence of the archive directory and creates it if missing (`mkdir -p`), ensuring that the script is idempotent and self-repairing in a fresh checkout. It handles name collisions gracefully by appending a counter to the filename if a file with the same name already exists in the archive. (Ref: ARCHITECTURE.SCRIPTS.ARCHIVE_IDEAS)
-- **CONSTRAINT**: All scripts are written in strict vanilla Python 3 or Bash.
-They strictly avoid `pip install` dependencies to ensuring the framework remains portable and zero-setup. This allows the agent to execute these tools immediately in any environment without managing virtual environments or lockfiles. It forces the implementation to be efficient and simple, using only the robust and stable APIs provided by the core language runtimes. It eliminates the risk of "dependency hell" where conflicting versions of libraries break the build tools, ensuring that the critical path of the project remains open and functional at all times. It also reduces the surface area for supply chain attacks, as there are no external packages to be compromised. (Ref: ARCHITECTURE.SCRIPTS)
-
+Standalone scripts (zero third-party dependencies).
+- **VALIDATE_PY**: `scripts/validate.py` - Primary enforcement mechanism.
+  ```pseudocode
+  function main(specs_path: string) -> ExitCode:
+    files = glob(f"{specs_path}/L*.md")
+    specs = []
+    errors = []
+    
+    // Phase 1: Parse and verify structure
+    for file in files:
+      try:
+        frontmatter, body = parse_yaml_frontmatter(file)
+        assert frontmatter.has('version')
+        specs.append({file, frontmatter, body})
+      catch ParseError as e:
+        errors.append(StructureError(file, e))
+    
+    // Phase 2: Build dependency graph
+    graph = DirectedGraph()
+    for spec in specs:
+      refs = extract_refs(spec.body)  // Find all (Ref: ID) and (Ref: ID, N%)
+      for ref in refs:
+        graph.add_edge(spec.id, ref.target, weight=ref.percentage ?? 100)
+    
+    // Phase 3: Validate algebraic invariants
+    for node in graph.upstream_nodes():
+      coverage = sum(graph.outgoing_weights(node))
+      if coverage < 100:
+        errors.append(CoverageError(node, coverage))
+      if graph.fanout(node) > 7:
+        errors.append(MillersLawError(node, graph.fanout(node)))
+    
+    // Phase 4: Validate content rules
+    for spec in specs:
+      for item in spec.items:
+        if parent := graph.parent(item):
+          if len(item.content) < 1.5 * len(parent.content):
+            errors.append(InfoGainError(item, parent))
+    
+    // Output
+    if errors:
+      for e in errors: print(format_error(e))
+      return 1
+    print("✓ Validation passed")
+    return 0
+  ```
+  (Ref: ARCHITECTURE.SCRIPTS.VALIDATE)
+- **COMPILE_PY**: `scripts/compile.py` - Artifact generation.
+  ```pseudocode
+  function main(specs_path: string, output_path: string) -> void:
+    files = glob(f"{specs_path}/L*.md")
+    specs = files.sort(by=layer_index).map(parse)
+    
+    output = StringBuilder()
+    output.append(generate_header())
+    output.append(generate_toc(specs))
+    
+    for spec in specs:
+      output.append(strip_frontmatter(spec.content))
+      output.append(generate_anchors(spec.ids))
+    
+    write_file(output_path, output.to_string())
+  ```
+  (Ref: ARCHITECTURE.SCRIPTS.COMPILE)
+- **ARCHIVE_SH**: `scripts/archive_ideas.sh` - Simple bash utility.
+  ```bash
+  #!/bin/bash
+  set -euo pipefail
+  ARCHIVE_DIR="specs/ideas/archived"
+  mkdir -p "$ARCHIVE_DIR"
+  for file in "$@"; do
+    if [[ -f "$file" ]]; then
+      mv "$file" "$ARCHIVE_DIR/"
+    fi
+  done
+  ```
+  (Ref: ARCHITECTURE.SCRIPTS.ARCHIVE_IDEAS)
+- **CONSTRAINT**: All scripts use vanilla Python 3 or Bash. No pip dependencies.
+  (Ref: ARCHITECTURE.SCRIPTS)
+- **TEST_FIXTURES**:
+  ```yaml
+  - name: validate_missing_frontmatter
+    input:
+      file: "L1-BAD.md"
+      content: "# No frontmatter"
+    expected:
+      exit_code: 1
+      error_type: StructureError
+  
+  - name: validate_broken_ref
+    input:
+      content: "(Ref: NONEXISTENT.ID)"
+    expected:
+      error_type: DanglingRefError
+  
+  - name: compile_generates_toc
+    input:
+      specs: ["L0-VISION.md", "L1-CONTRACTS.md"]
+    expected:
+      output_contains: "Table of Contents"
+      section_order: ["L0", "L1"]
+  ```
 
 ## COMPILER.SKILL_DISTRIBUTION_IMPL
 Implementation of skill distribution.
-- **SKILL_MD_LOC**: The definition file is located at `src/vibe-spec/SKILL.md`.
-This path is hardcoded into the `vibe-spec` tooling and verify logic. By placing it inside `src`, we ensure that the skill definition travels with the source code it describes. It acts as the manifest for the package. The build system treats this file as a read-only source of truth during the artifact generation process. It explicitly prohibits the existence of any secondary definition files (like `skill.yaml` or `.agent/skill.md`) to prevent split-brain scenarios where the agent's behavior could diverge from its documentation. This centralization simplifies the mental model for the developer, who only needs to know one location to find the definitive capability list. It also facilitates automated auditing tools which can scan this known location to generate reports on agent capabilities across a fleet of deployments. It acts as a security boundary, preventing malicious actors from injecting unauthorized commands by modifying obscure configuration files hidden elsewhere in the repository. It creates a "hardened target" for security reviews, allowing auditors to focus their attention on a single file to verify the agent's permissible actions. It also supports better modularity by keeping the interface definition physically adjacent to the implementation logic in the source tree. This adjacency encourages developers to keep the documentation in sync with the code, as they are likely to see both files in the same directory listing. This adjacency encourages developers to keep the documentation in sync with the code, as they are likely to see both files in the same directory listing.
-(Ref: ARCHITECTURE.SKILL_DISTRIBUTION.LOCATION)
-- **CREATOR**: Updates are managed via the `skill-creator` toolchain.
-When the user requests an update to the skill interface, the agent does not edit `SKILL.md` directly with free-text. Instead, it invokes the structured `skill-creator` automation to validate the schema, check for conflict, and generate a compliant update. This ensures that the published skill always matches the rigorous JSON-schema expectations of the central agent registry, preventing runtime failures. It acts as a serialization layer, converting the agent's internal model of its capabilities into the strictly versioned format required by the external ecosystem. This abstraction layer protects the internal implementation details of the skill from the specific formatting requirements of different agent platforms, allowing the core logic to remain platform-agnostic while the creator tool handles the binding. It also enforces a strict separation of concerns, ensuring that the person defining the skill content relies on the tooling to handle the syntactic sugar, reducing the probability of human error during JSON encoding. This automated workflow acts as a "syntax firewall", ensuring that no invalid JSON ever enters the repository, which could otherwise crash the agent upon startup. It provides a consistent developer experience regardless of the underlying complexity of the skill being defined. It mitigates the risk of "configuration drift" where manual edits might introduce subtle inconsistencies that only manifest during runtime execution. It mitigates the risk of "configuration drift" where manual edits might introduce subtle inconsistencies that only manifest during runtime execution.
-(Ref: ARCHITECTURE.SKILL_DISTRIBUTION.COMPLIANCE)
-
+- **SKILL_MD_LOC**: `src/vibe-spec/SKILL.md`
+  - Hardcoded path in tooling
+  - Inside `src/` to travel with source code
+  - Single source of truth; no secondary definitions permitted
+  (Ref: ARCHITECTURE.SKILL_DISTRIBUTION.LOCATION)
+- **CREATOR**: Updates via `skill-creator` toolchain.
+  ```pseudocode
+  function update_skill(changes: SkillChanges) -> void:
+    current = load("src/vibe-spec/SKILL.md")
+    validated = skill_creator.validate(changes)
+    if validated.errors:
+      raise SchemaError(validated.errors)
+    merged = skill_creator.apply(current, changes)
+    write("src/vibe-spec/SKILL.md", merged)
+  ```
+  (Ref: ARCHITECTURE.SKILL_DISTRIBUTION.COMPLIANCE)
+- **TEST_FIXTURES**:
+  ```yaml
+  - name: skill_md_exists
+    input:
+      path: "src/vibe-spec/SKILL.md"
+    expected:
+      exists: true
+      has_frontmatter: true
+  
+  - name: reject_invalid_schema
+    input:
+      changes:
+        invalid_field: "value"
+    expected:
+      error_type: SchemaError
+  ```
