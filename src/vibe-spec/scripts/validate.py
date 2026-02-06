@@ -10,6 +10,29 @@ import sys
 from pathlib import Path
 
 
+
+
+def check_terminology(filename: str, content: str) -> list:
+    """Enforce Ubiquitous Language (VISION.GLOSSARY)."""
+    warnings = []
+    # Simple blacklist for now.
+    blacklist = {
+        'Check': 'Validate (static) or Verify (dynamic)',
+        'Checks': 'Validations or Verifications',
+        'checking': 'validating or verifying',
+        'Pipeline': 'Flow (if branching) or Pipeline (if linear)', 
+    }
+    
+    lines = content.split('\n')
+    for i, line in enumerate(lines):
+        if '```' in line or line.strip().startswith('#'): continue 
+        
+        for term, replacement in blacklist.items():
+            if re.search(r'\b' + re.escape(term) + r'\b', line):
+                 warnings.append(f"{filename}:{i+1}: Terminology Warning: Avoid '{term}'. Use '{replacement}'.")
+                 
+    return warnings
+
 def parse_spec_file(spec_file: Path) -> dict:
     """Parse spec file, deriving layer/id from filename."""
     # Derive layer and id from filename: L{N}-{ID}.md
@@ -34,12 +57,15 @@ def parse_spec_file(spec_file: Path) -> dict:
     else:
         body = content
     
-    # Derive exports from H2 headings (## ID) AND Semantic Keys (- **KEY**)
     exports = []
-    # Map ID -> Content Length (excluding Refs)
+    # Map ID -> Effective Length
+    # Effective = Text + (Formal * 50)
     export_lengths = {}
-    references = [] # List of (upstream_id, weight, line_num, source_id)
     
+    # Temp storage
+    raw_lengths = {} # {id: {'text': 0, 'formal': 0}}
+    
+    references = []
     current_h2 = None
     current_statement_id = None
     
@@ -50,29 +76,35 @@ def parse_spec_file(spec_file: Path) -> dict:
         stripped = line.strip()
         
         # Code Block Toggle
-        if stripped.startswith('```'):
+        if stripped.startswith('```') or stripped.startswith('~~~'):
             in_code_block = not in_code_block
-            continue
-        
-        # Skip content inside code blocks
-        if in_code_block:
+            # Attribute framing lines to formal
+            if current_statement_id:
+                 if current_statement_id not in raw_lengths: raw_lengths[current_statement_id] = {'text': 0, 'formal': 0}
+                 raw_lengths[current_statement_id]['formal'] += len(stripped) + 1
             continue
             
-        # Ignore inline code blocks for reference scanning
-        # Simple removal of backticked content
+        if in_code_block:
+             # Attribute body to formal
+             if current_statement_id:
+                 if current_statement_id not in raw_lengths: raw_lengths[current_statement_id] = {'text': 0, 'formal': 0}
+                 raw_lengths[current_statement_id]['formal'] += len(stripped) + 1
+             continue
+        
+        # OUTSIDE CODE BLOCK context
         clean_line = re.sub(r'`[^`]+`', '', stripped)
         
+        # Check for ID Transition BEFORE counting text content
         # H2 Detection
         h2_match = re.match(r'^## ([\w.]+)', stripped)
         if h2_match:
             current_h2 = h2_match.group(1)
-            # The H2 itself is an export (legacy/high-level)
             if current_h2.startswith(f'{spec_id}.'):
                 exports.append(current_h2)
                 current_statement_id = current_h2
             else:
                 current_statement_id = None
-            continue
+            continue # H2 line doesn't count as content
             
         # Semantic Key Detection: - **KEY**:
         if current_h2 and stripped.startswith('- **'):
@@ -82,35 +114,41 @@ def parse_spec_file(spec_file: Path) -> dict:
                 full_id = f"{current_h2}.{key}"
                 exports.append(full_id)
                 current_statement_id = full_id
+                
+                # The rest of the line counts as content for THIS key
+                # e.g. - **KEY**: Content...
+                # Strip the key definition part
+                content_part = stripped[len(key_match.group(0)):]
+                clean_content_part = re.sub(r'\(Ref:.*?\)', '', content_part).strip()
+                
+                if current_statement_id not in raw_lengths: raw_lengths[current_statement_id] = {'text': 0, 'formal': 0}
+                raw_lengths[current_statement_id]['text'] += len(clean_content_part)
+                
+                # Check Refs on this line
+                ref_line = re.sub(r'`[^`]+`', '', content_part) # clean inline code for refs
+                ref_matches = re.findall(r'\(Ref: ([\w.]+)(?:,\s*(\d+)%)?\)', ref_line)
+                for ref_id, weight_str in ref_matches:
+                    weight = int(weight_str) if weight_str else 100
+                    references.append({'id': ref_id, 'weight': weight, 'line': i+1, 'source_id': current_statement_id})
+                
+                continue
         
-        # Calculate Content Length (Only if inside a statement)
+        # Normal Text Line (continuation)
         if current_statement_id:
-            # Remove Refs for length calculation: (Ref: ...)
-            content_only = re.sub(r'\(Ref:.*?\)', '', clean_line).strip()
-            # If multi-line statement, accumulate? 
-            # Current spec implies 1 line = 1 statement usually, but let's just take the line length for now.
-            # If we visit the same ID multiple times (multiline), validation might be tricky.
-            # For now, simplistic approach: Length of the defining line + continuations.
-            if current_statement_id not in export_lengths:
-                export_lengths[current_statement_id] = len(content_only)
-            else:
-                 # Append length for multiline descriptions
-                 # Add 1 for newline/space approximation
-                 export_lengths[current_statement_id] += len(content_only) + 1
+             content_only = re.sub(r'\(Ref:.*?\)', '', clean_line).strip()
+             if current_statement_id not in raw_lengths: raw_lengths[current_statement_id] = {'text': 0, 'formal': 0}
+             raw_lengths[current_statement_id]['text'] += len(content_only) + 1
+             
+             # Check Refs
+             ref_matches = re.findall(r'\(Ref: ([\w.]+)(?:,\s*(\d+)%)?\)', clean_line)
+             for ref_id, weight_str in ref_matches:
+                weight = int(weight_str) if weight_str else 100
+                references.append({'id': ref_id, 'weight': weight, 'line': i+1, 'source_id': current_statement_id})
 
-        # Reference Detection: (Ref: ID) or (Ref: ID, N%)
-        # Regex handles both cases. Use findall for multiple refs.
-        # Use clean_line to avoid matching examples in backticks
-        ref_matches = re.findall(r'\(Ref: ([\w.]+)(?:,\s*(\d+)%)?\)', clean_line)
-        for ref_id, weight_str in ref_matches:
-            # Default to 100 if no weight provided
-            weight = int(weight_str) if weight_str else 100
-            references.append({
-                'id': ref_id, 
-                'weight': weight, 
-                'line': i+1,
-                'source_id': current_statement_id # Link ref to its container
-            })
+    # Calculate Effective Lengths
+    for sid, counts in raw_lengths.items():
+        effective = counts['text'] + (counts['formal'] * 50)
+        export_lengths[sid] = effective
 
     return {
         'layer': layer,
@@ -286,6 +324,13 @@ def validate_specs(specs_dir: Path) -> tuple[list, list]:
             density = len(unique_verbs) / len(content_words)
             if density < 0.05: # 5% Threshold
                 warnings.append(f"{data['file']}: Low Verb Density ({density:.1%}). Ensure action-oriented specs.")
+
+        # Terminology Check
+        term_errors = check_terminology(data['file'], data['body'])
+        if term_errors:
+            warnings.extend(term_errors)
+
+
 
     # 3. Traceability & References
     coverage = {exp: 0 for exp in exports_map}
