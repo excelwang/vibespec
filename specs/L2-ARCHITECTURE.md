@@ -16,16 +16,16 @@ Multi-stage compilation pipeline that transforms source specs into a unified doc
 **Guarantees**: Only validated content reaches compilation; output is deterministically ordered.
 - **SCANNER**: Recursively traverses source directory to identify all specification files matching the `L*.md` pattern. Ensures no relevant metadata is overlooked during compilation discovery phase as the foundation of the pipeline's input collection mechanism.
   **Interface**: `scan(path: string) -> File[]`
-  (Ref: CONTRACTS.METADATA_INTEGRITY.VALIDATION)
+  (Ref: FORMAT.METADATA.FRONTMATTER)
 - **PARSER**: Extracts and validates YAML frontmatter from each file while separating Markdown body content. Provides structured representation with typed metadata for downstream consumption, enabling consistent access patterns across all processing layers.
   **Interface**: `parse(file: File) -> {metadata: Frontmatter, body: string}`
-  (Ref: CONTRACTS.METADATA_INTEGRITY.VALIDATION)
+  (Ref: FORMAT.METADATA.FRONTMATTER)
 - **VALIDATOR**: Executes comprehensive suite of structural and semantic checks before compilation. Ensures layer dependencies are respected, all IDs are unique across the project, and no blocking errors exist. Acts as the quality gate preventing invalid content from propagating.
   **Interface**: `validate(specs: ParsedSpec[]) -> ValidationResult`
-  (Ref: CONTRACTS.TRACEABILITY), (Ref: CONTRACTS.QUANTIFIED_VALIDATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION)
+  (Ref: FORMAT.TRACEABILITY), (Ref: FORMAT.QUANTIFIED_VALIDATION), (Ref: FORMAT.ALGEBRAIC_VALIDATION)
 - **ASSEMBLER**: Merges all verified specification fragments into single authoritative `spec-full.md` document. Strictly preserves hierarchical order defined by layer metadata, generates table of contents and cross-reference anchors.
   **Interface**: `assemble(specs: ParsedSpec[]) -> Document`
-  (Ref: CONTRACTS.TRACEABILITY)
+  (Ref: FORMAT.TRACEABILITY)
 
 ## ARCHITECTURE.VALIDATOR_CORE
 Rule-based validation engine that enforces L1 contracts.
@@ -33,13 +33,13 @@ Rule-based validation engine that enforces L1 contracts.
 **Guarantees**: All violations are reported with actionable locations.
 - **RULE_ENGINE**: Architecturally decoupled validation rule system that allows dynamic injection of extensible rules. Enables new quality metrics without modifying core parsing logic. Executes rules in parallel where dependencies permit.
   **Interface**: `execute(rules: Rule[], input: Spec[]) -> Violation[]`
-  (Ref: CONTRACTS.QUANTIFIED_VALIDATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION)
+  (Ref: FORMAT.QUANTIFIED_VALIDATION), (Ref: FORMAT.ALGEBRAIC_VALIDATION)
 - **RESPONSIVENESS_CHECKER**: Validates specification completeness through graph traversal. Verifies every upstream requirement has aggregate downstream coverage of at least 100%. Flags gaps as blocking errors. Calculates coverage sums and asserts conservation threshold.
   **Interface**: `check_responsiveness(graph: SpecGraph) -> CoverageResult`
-  (Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION)
+  (Ref: FORMAT.TRACEABILITY.COMPLETENESS), (Ref: FORMAT.ALGEBRAIC_VALIDATION.CONSERVATION)
 - **FOCUS_ENFORCER**: Scans layer content for strict focus adherence to whitelist/blacklist definitions. Uses keyword analysis to detect forbidden terms or concepts. Prevents implementation details leaking into high-level specs. Flags violations as architectural breaches.
   **Interface**: `check_focus(spec: Spec) -> FocusViolation[]`
-  (Ref: CONTRACTS.LAYER_DEFINITIONS.L0_VISION), (Ref: CONTRACTS.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: CONTRACTS.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: CONTRACTS.LAYER_DEFINITIONS.L3_COMPILER)
+  (Ref: FORMAT.LAYER_DEFINITIONS.L0_VISION), (Ref: FORMAT.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: FORMAT.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: FORMAT.LAYER_DEFINITIONS.L3_COMPILER)
 
 ## ARCHITECTURE.IDEAS_PROCESSOR
 Transforms raw ideas into formal specifications through layered refinement.
@@ -146,10 +146,10 @@ Manages ID lifecycle and detects semantic drift in specifications.
 **Guarantees**: All drift and staleness issues are reported before they cause failures.
 - **ID_REGISTRY**: Maintains mapping of all published IDs with their creation timestamps and semantic definitions. Detects attempts to reuse or redefine existing IDs. Enforces versioning protocol for breaking changes.
   **Interface**: `register(id: string, definition: string) -> void`
-  (Ref: CONTRACTS.TRACEABILITY_MAINTENANCE.IMMUTABLE_IDS)
+  (Ref: FORMAT.TRACEABILITY_MAINTENANCE.IMMUTABLE_IDS)
 - **DRIFT_DETECTOR**: Monitors parent requirement changes and flags children that may be semantically stale. Compares modification timestamps and content hashes. Prompts for explicit compatibility decisions.
   **Interface**: `detect_drift(parent_id: string, child_ids: string[]) -> DriftResult`
-  (Ref: CONTRACTS.TRACEABILITY_MAINTENANCE.SEMANTIC_DRIFT), (Ref: CONTRACTS.TRACEABILITY_MAINTENANCE.STALENESS_WARNING)
+  (Ref: FORMAT.TRACEABILITY_MAINTENANCE.STALENESS_WARNING)
 
 ## ARCHITECTURE.TESTABILITY_ENFORCER
 Validates specification testability and format compliance.
@@ -157,10 +157,10 @@ Validates specification testability and format compliance.
 **Guarantees**: Untestable specifications are rejected before they enter the system.
 - **ASSERTION_SCANNER**: Scans L1/L2/L3 items for RFC2119 keywords and testable assertions. Flags items lacking testability markers. Counts keyword density for compliance checks.
   **Interface**: `scan_assertions(spec: Spec) -> AssertionResult`
-  (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE), (Ref: CONTRACTS.STRICT_TESTABILITY.RFC2119_ENFORCEMENT)
+  (Ref: FORMAT.STRICT_TESTABILITY.DEFAULT_TESTABLE), (Ref: FORMAT.STRICT_TESTABILITY.RFC2119_ENFORCEMENT)
 - **FORMAT_VALIDATOR**: Validates layer-appropriate formatting. Checks L0 for natural language, L1 for RFC2119, L2 for Intent/Guarantees, L3 for pseudocode/fixtures. Enforces rationale separation.
   **Interface**: `validate_format(spec: Spec) -> FormatResult`
-  (Ref: CONTRACTS.STRICT_TESTABILITY.RATIONALE_SEPARATION), (Ref: CONTRACTS.STRICT_TESTABILITY.PROGRESSIVE_FORMAT)
+  (Ref: FORMAT.STRICT_TESTABILITY.RATIONALE_SEPARATION), (Ref: FORMAT.STRICT_TESTABILITY.PROGRESSIVE_FORMAT)
 
 ## ARCHITECTURE.COMPILATION_ENGINE
 Produces optimized compilation output for agent consumption.
@@ -168,13 +168,13 @@ Produces optimized compilation output for agent consumption.
 **Guarantees**: Compiled output is navigable, anchored, and noise-free.
 - **ANCHOR_GENERATOR**: Creates HTML anchor tags for each major section during compilation. Enables precise context retrieval by agents navigating the compiled document.
   **Interface**: `generate_anchors(doc: Document) -> Document`
-  (Ref: CONTRACTS.COMPILATION.ANCHORING)
+  (Ref: FORMAT.COMPILATION.ANCHORING)
 - **TOC_BUILDER**: Constructs table of contents with links to anchored sections. Adds system preamble with usage instructions for agent orientation.
   **Interface**: `build_toc(doc: Document) -> Document`
-  (Ref: CONTRACTS.COMPILATION.NAVIGATION), (Ref: CONTRACTS.COMPILATION.LLM_OPTIMIZED)
+  (Ref: FORMAT.COMPILATION.NAVIGATION), (Ref: FORMAT.COMPILATION.LLM_OPTIMIZED)
 - **NOISE_STRIPPER**: Removes individual file frontmatter during assembly. Strips redundant metadata preserving only compiled document structure.
   **Interface**: `strip_noise(doc: Document) -> Document`
-  (Ref: CONTRACTS.COMPILATION.NOISE_REDUCTION)
+  (Ref: FORMAT.COMPILATION.NOISE_REDUCTION)
 
 ---
 
@@ -188,7 +188,7 @@ Enforces controlled vocabulary compliance across specifications.
 **Guarantees**: Terminology violations are caught during validation.
 - **VOCAB_MATCHER**: Scans content for controlled vocabulary terms. Flags incorrect usage of validate/verify, assert/error, pipeline/flow, violation/error. Provides remediation suggestions.
   **Interface**: `check_vocabulary(content: string) -> VocabResult`
-  (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.DATA_DRIVEN_VOCAB), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VALIDATE_VS_VERIFY), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.ASSERT_VS_ERROR), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.PIPELINE_VS_FLOW), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VIOLATION_VS_ERROR)
+  (Ref: FORMAT.TERMINOLOGY_ENFORCEMENT.VALIDATE_VS_VERIFY), (Ref: FORMAT.TERMINOLOGY_ENFORCEMENT.ASSERT_VS_ERROR), (Ref: FORMAT.TERMINOLOGY_ENFORCEMENT.PIPELINE_VS_FLOW), (Ref: FORMAT.TERMINOLOGY_ENFORCEMENT.VIOLATION_VS_ERROR)
 
 ## ARCHITECTURE.FORMAL_NOTATION_ENFORCER
 Promotes formal notation over prose in specifications.
@@ -196,7 +196,7 @@ Promotes formal notation over prose in specifications.
 **Guarantees**: Agents receive content optimized for parsing.
 - **FORMALISM_SCORER**: Analyzes specification content for formal notation usage. Counts Mermaid diagrams, JSON schemas, pseudocode blocks. Recommends formalization opportunities.
   **Interface**: `score_formalism(spec: Spec) -> FormalismScore`
-  (Ref: CONTRACTS.FORMAL_NOTATION.PREFER_FORMALISMS)
+  (Ref: FORMAT.FORMAL_NOTATION.PREFER_FORMALISMS)
 
 ## ARCHITECTURE.SCRIPT_AUTOMATION
 Implements script-first automation philosophy.
@@ -215,16 +215,16 @@ Manages layer definitions, focus rules, and layer-specific validation.
 **Guarantees**: Layer violations are detected at validation time.
 - **LAYER_REGISTRY**: Maintains definitions for L0-L3 including allowed content types, forbidden terms, and structural requirements. Provides lookup interface for other components.
   **Interface**: `get_layer_def(layer: int) -> LayerDefinition`
-  (Ref: CONTRACTS.LAYER_DEFINITIONS)
+  (Ref: FORMAT.LAYER_DEFINITIONS)
 - **FOCUS_RULES**: Defines whitelist/blacklist for each layer. L0: no implementation details. L1: no class names. L2: no variable names. L3: no vague visions.
   **Interface**: `get_focus_rules(layer: int) -> FocusRules`
-  (Ref: CONTRACTS.LAYER_DEFINITIONS.L0_VISION), (Ref: CONTRACTS.LAYER_DEFINITIONS.L1_CONTRACTS)
+  (Ref: FORMAT.LAYER_DEFINITIONS.L0_VISION), (Ref: FORMAT.LAYER_DEFINITIONS.L1_CONTRACTS)
 - **CONTENT_CLASSIFIER**: Analyzes content to determine appropriate layer. Uses keyword heuristics and structural patterns. Enables automatic layer detection for ideas.
   **Interface**: `classify_content(content: string) -> LayerClassification`
   (Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING)
 - **DEPTH_CHECKER**: Validates nesting depth does not exceed 2 levels. Scans document structure for deep hierarchies. Reports violations with locations.
   **Interface**: `check_depth(spec: Spec) -> DepthResult`
-  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.DEPTH)
+  (Ref: FORMAT.QUANTIFIED_VALIDATION.DEPTH)
 
 ## ARCHITECTURE.COVERAGE_TRACKER
 Tracks specification-to-test coverage and reports gaps.
@@ -232,16 +232,16 @@ Tracks specification-to-test coverage and reports gaps.
 **Guarantees**: Untested specifications are flagged before release.
 - **SPEC_INDEXER**: Builds index of all testable specifications across layers. Extracts MUST/SHOULD/MAY statements. Assigns unique IDs for tracking.
   **Interface**: `index_specs(specs: Spec[]) -> SpecIndex`
-  (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE)
+  (Ref: FORMAT.STRICT_TESTABILITY.DEFAULT_TESTABLE)
 - **TEST_SCANNER**: Scans test files for @verify_spec decorators. Extracts referenced spec IDs. Builds test coverage map.
   **Interface**: `scan_tests(test_dir: string) -> TestCoverageMap`
   (Ref: VISION.SCOPE.COV)
 - **GAP_REPORTER**: Compares spec index against test coverage. Identifies untested specifications. Generates coverage report with percentages.
   **Interface**: `report_gaps(specs: SpecIndex, tests: TestCoverageMap) -> GapReport`
-  (Ref: CONTRACTS.TRACEABILITY.COMPLETENESS)
+  (Ref: FORMAT.TRACEABILITY.COMPLETENESS)
 - **COVERAGE_CALCULATOR**: Computes coverage metrics per layer and overall. Tracks trends over time. Alerts on coverage regression.
   **Interface**: `calculate_coverage(specs: SpecIndex, tests: TestCoverageMap) -> CoverageMetrics`
-  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION)
+  (Ref: FORMAT.ALGEBRAIC_VALIDATION.CONSERVATION)
 
 
 ## ARCHITECTURE.REPORT_GENERATOR
@@ -259,7 +259,7 @@ Generates human-readable reports from validation and compilation results.
   (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED)
 - **METRICS_DASHBOARD**: Compiles key metrics: item counts, coverage percentages, expansion ratios. Visualizes trends. Identifies regressions.
   **Interface**: `render_dashboard(metrics: Metrics) -> Dashboard`
-  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
+  (Ref: FORMAT.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
 
 ## ARCHITECTURE.METRICS_COLLECTOR
 Collects and aggregates specification health metrics.
@@ -267,19 +267,19 @@ Collects and aggregates specification health metrics.
 **Guarantees**: Metrics are accurate and reproducible.
 - **ITEM_COUNTER**: Counts items per layer and section. Distinguishes headers, keys, sub-items. Provides breakdown for analysis.
   **Interface**: `count_items(specs: Spec[]) -> ItemCounts`
-  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
+  (Ref: FORMAT.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
 - **RATIO_CALCULATOR**: Computes expansion ratios between adjacent layers. Validates against target range 1.0-10.0. Flags violations.
   **Interface**: `calculate_ratios(counts: ItemCounts) -> RatioResult`
-  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
+  (Ref: FORMAT.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
 - **FANOUT_ANALYZER**: Measures downstream reference counts per upstream item. Detects Miller's Law violations (>7 refs). Suggests splits.
   **Interface**: `analyze_fanout(graph: SpecGraph) -> FanoutResult`
-  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.MILLERS_LAW)
+  (Ref: FORMAT.ALGEBRAIC_VALIDATION.MILLERS_LAW)
 - **WORD_COUNTER**: Counts words in L0 statements. Validates atomicity constraint (<50 words). Reports violations with locations.
   **Interface**: `count_words(spec: Spec) -> WordCountResult`
-  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.ATOMICITY)
+  (Ref: FORMAT.QUANTIFIED_VALIDATION.ATOMICITY)
 - **KEYWORD_DENSITY**: Measures RFC2119 keyword usage in L1. Calculates percentage of statements with keywords. Flags low density.
   **Interface**: `measure_density(spec: Spec) -> DensityResult`
-  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.RFC2119)
+  (Ref: FORMAT.QUANTIFIED_VALIDATION.RFC2119)
 - **VERB_COUNTER**: Analyzes statements for action-oriented language. Calculates verb density percentage. Flags passive or static descriptions (<10%).
   **Interface**: `count_verbs(spec: Spec) -> VerbDensityResult`
   (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.VERB_DENSITY)
@@ -324,13 +324,13 @@ Performs semantic analysis of specification content.
 **Guarantees**: Analysis is reproducible and deterministic.
 - **KEYWORD_EXTRACTOR**: Identifies key terms and concepts from specification text. Builds vocabulary index. Supports terminology enforcement.
   **Interface**: `extract_keywords(content: string) -> Keyword[]`
-  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.TERMINOLOGY)
+  (Ref: FORMAT.QUANTIFIED_VALIDATION.TERMINOLOGY)
 - **REFERENCE_PARSER**: Parses `(Ref: ID)` patterns from content. Builds reference graph. Validates referenced IDs exist.
   **Interface**: `parse_references(content: string) -> Reference[]`
-  (Ref: CONTRACTS.TRACEABILITY.IN_PLACE_REFS)
+  (Ref: FORMAT.TRACEABILITY.IN_PLACE_REFS)
 - **SEMANTIC_MATCHER**: Compares child content against parent semantics. Verifies key concepts are expanded. Flags semantic gaps.
   **Interface**: `match_semantics(parent: Spec, child: Spec) -> SemanticMatch`
-  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.SEMANTIC_COVERAGE)
+  (Ref: FORMAT.QUANTIFIED_VALIDATION.SEMANTIC_COVERAGE)
 - **IDEA_CLASSIFIER**: Classifies idea content by intended layer and action type. Supports multi-layer decomposition.
   **Interface**: `classify_idea(idea: Idea) -> Classification`
   (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION)

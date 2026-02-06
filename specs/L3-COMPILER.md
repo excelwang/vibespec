@@ -49,34 +49,16 @@ CLI entry point for spec management commands.
 ## COMPILER.IDEAS_IMPL
 Implementation of Ideas Processor pipeline.
 - **PROCESS_SESSION**: Unified ideas processing session. [PROMPT_NATIVE]
-  ```pseudocode
-  function run_process_session() -> void:
-    files = glob("specs/ideas/*.md")
-    if files.empty(): prompt("Run compile.py due to empty queue"); return
-    
-    sorted_ideas = files.sort(by=timestamp).map(parse_idea)
-    
-    for idea in sorted_ideas:
-      // 0. Scope Check
-      if not check_scope_adherence(idea): 
-        archive(idea, "rejected_scope")
-        continue
-
-      // 1. Decompose if needed (LLM)
-      chunks = detect_layer(idea).spans_multiple ? idea.decompose() : [idea]
-      
-      for chunk in chunks:
-        spec = load_spec(chunk.target_layer)
-        diff = spec.apply_changes(chunk) // LLM Logic
-        
-        // Validate & Present
-        if validator.check(diff): raise ValidationError
-        presenter.show_diff(diff)
-        
-        // Approval Interaction
-        if user.approve(): spec.save(); archive(idea)
-        else: revert(diff)
-  ```
+  > Read all idea files from `specs/ideas/` except those in `specs/ideas/archived/`, analyze each for scope adherence and target layer,
+  > then apply changes to the appropriate spec file. Present diffs for human approval.
+  
+  **Examples**:
+  - Input: `2026-02-06T1200-auth.md` with "Add login timeout of 30s"
+    → Detect as L1 contract → Apply to L1-CONTRACTS.md → Show diff → Await approval
+  - Input: Multi-layer idea "Vision: fast UX, Contract: MUST < 100ms, Impl: use cache"
+    → Decompose into 3 chunks → Process L0 first → Approval → L1 → Approval → L3
+  - Input: Idea violating scope "Add database replication"
+    → Reject and archive to `rejected_scope/`
   (Ref: ARCHITECTURE.IDEAS_PROCESSOR), (Ref: ARCHITECTURE.IDEAS_PROCESSOR.SCOPE_FILTER)
 - **TEST_FIXTURES**: [Type: SCRIPT]
   ```yaml
@@ -108,21 +90,16 @@ Implementation of Ideas Processor pipeline.
 ## COMPILER.REFLECT_IMPL
 Implementation of Reflector based on current context.
 - **REFLECT_SESSION**: Unified reflection session. [PROMPT_NATIVE]
-  ```pseudocode
-  function run_reflect_session() -> void:
-    // 1. Gather Context
-    context = log_api.fetch_after(cursor_manager.read())
-    if context.empty(): return
-    
-    // 2. Distill (LLM)
-    ideas = distiller.extract(context) // LLM extraction
-    
-    // 3. Review & Save
-    presenter.show(ideas)
-    if user.approve():
-      write_file(f"specs/ideas/{timestamp()}-reflection.md", ideas)
-      cursor_manager.update(context.last.timestamp)
-  ```
+  > Analyze current conversation context, identify key insights and decisions,
+  > distill them into actionable idea files for future processing.
+  
+  **Examples**:
+  - Context: "User discussed adding auth feature with JWT tokens"
+    → Extract idea: "L1: Add authentication contract with JWT requirement"
+  - Context: "Decided to use Redis for caching after performance discussion"
+    → Extract idea: "L2: Add Redis caching component to architecture"
+  - Context: No new insights since last reflection
+    → Report "Up to date" and exit
   (Ref: ARCHITECTURE.REFLECTOR), (Ref: ARCHITECTURE.REFLECTOR.DISTILLER)
 - **TEST_FIXTURES**: [Type: SCRIPT]
   ```yaml
@@ -259,16 +236,15 @@ Implementation of skill distribution.
   - Inside `src/` to travel with source code
   - Single source of truth; no secondary definitions permitted
   (Ref: ARCHITECTURE.SKILL_DISTRIBUTION.LOCATION)
-- **CREATOR**: Updates via `skill-creator` toolchain. [Type: PROMPT_FALLBACK] (skill schema evolves frequently)
-  ```pseudocode
-  function update_skill(changes: SkillChanges) -> void:
-    current = load("src/vibe-spec/SKILL.md")
-    validated = skill_creator.validate(changes)
-    if validated.errors:
-      raise SchemaError(validated.errors)
-    merged = skill_creator.apply(current, changes)
-    write("src/vibe-spec/SKILL.md", merged)
-  ```
+- **CREATOR**: Updates via `skill-creator` toolchain. [Type: PROMPT_FALLBACK]
+  > Identify changes to `SKILL.md` and instruct `skill-creator` to apply them.
+  > Ensure changes strictly adhere to the skill schema (which evolves frequently).
+  
+  **Examples**:
+  - Change: "Add new tool `validate.py`"
+    → Instruct `skill-creator`: "Register tool `validate.py` with arguments..."
+  - Change: "Update description of `compile.py`"
+    → Instruct `skill-creator`: "Modify description field of tool `compile.py`"
   (Ref: ARCHITECTURE.SKILL_DISTRIBUTION.COMPLIANCE)
 - **TEST_FIXTURES**:  [PROMPT_FALLBACK]
   ```yaml
@@ -296,22 +272,16 @@ Implementation of bootstrap processor for first-time setup.
   ```
   (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.DETECTOR)
 - **BOOTSTRAP_SESSION**: Unified interactive session for project initialization. [PROMPT_NATIVE]
-  ```pseudocode
-  function run_bootstrap_session() -> void:
-    // 1. Collect Scope
-    raw_scope = prompt("Describe your project in a few sentences:")
-    
-    // 2. Reformulate (LLM)
-    scope_result = {
-      in_scope: llm.extract_shall_statements(raw_scope),
-      out_scope: llm.extract_shall_not_statements(raw_scope)
-    }
-    
-    // 3. Initialize
-    if user.approve(scope_result):
-      mkdir("specs/ideas")
-      write("specs/L0-VISION.md", format_vision(scope_result))
-  ```
+  > Prompt user to describe their project, then reformulate into formal scope statements.
+  > Create initial L0-VISION.md with In-Scope (SHALL) and Out-of-Scope (SHALL NOT) sections.
+  
+  **Examples**:
+  - User: "I'm building a REST API for user management"
+    → In-Scope: "System SHALL provide user CRUD operations via REST API"
+    → Out-of-Scope: "System SHALL NOT handle payment processing"
+  - User: "A CLI tool for parsing logs"
+    → In-Scope: "Tool SHALL parse standard log formats"
+    → Out-of-Scope: "Tool SHALL NOT provide GUI interface"
   (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_COLLECTOR), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_REFORMER), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.INITIALIZER)
 
 ## COMPILER.ROUTER_IMPL
@@ -354,34 +324,28 @@ Implementation of validation execution during idle state.
     return sections.join("\n")
   ```
   (Ref: ARCHITECTURE.VALIDATION_RUNNER.REPORTER)
-- **FIX_PROPOSER_LOGIC**: Generates idea files from errors. [Type: PROMPT_NATIVE] (requires semantic understanding)
-  ```pseudocode
-  function propose_fixes(errors: Error[]) -> Idea[]:
-    ideas = []
-    for error in errors:
-      idea = generate_fix_idea(error)
-      ideas.push(idea)
-    return ideas
-  ```
+- **FIX_PROPOSER_LOGIC**: Generates idea files from errors. [Type: PROMPT_NATIVE]
+  > Analyze validation errors and propose actionable fixes as new Idea files.
+  > Ideas must be specific, targeted, and address the root cause of the error.
+  
+  **Examples**:
+  - Error: "Missing MUST keyword in L1 item"
+    → Idea: "Modify L1 item X to use MUST instead of 'will'"
+  - Error: "Orphan ID: AUTH.LOGIN"
+    → Idea: "Add reference to AUTH.LOGIN in L2 architecture component"
   (Ref: ARCHITECTURE.VALIDATION_RUNNER.FIX_PROPOSER)
 
 ## COMPILER.OPTIMIZER_IMPL
 Implementation of self-optimization pattern detection.
 - **OPTIMIZER_SESSION**: Unified optimization session. [PROMPT_NATIVE]
-  ```pseudocode
-  function run_optimizer_session(actions: Action[]) -> void:
-    // 1. Detect Patterns
-    patterns = llm.analyze_patterns(actions, min_len=3, min_count=2)
-    
-    // 2. Propose Scripts
-    for pattern in patterns:
-      idea = {
-        title: "Automate: " + pattern.description,
-        content: "Create script for: " + pattern.actions.join(" -> "),
-        layer: "L3"
-      }
-      presenter.propose(idea)
-  ```
+  > Analyze user's action history to detect repetitive patterns (>3 occurrences).
+  > Propose automation scripts for these patterns to reduce cognitive load.
+  
+  **Examples**:
+  - History: User ran `grep "TODO" src/` 5 times in 2 days
+    → Propose: "Create `scripts/scan_todos.py` to automate TODO tracking"
+  - History: User manually formatted 3 JSON specs
+    → Propose: "Create `scripts/fmt.py` to enforce JSON style"
   (Ref: ARCHITECTURE.SELF_OPTIMIZER.PATTERN_DETECTOR), (Ref: ARCHITECTURE.SELF_OPTIMIZER.SCRIPT_PROPOSER)
 
 
@@ -395,13 +359,14 @@ Implementation of traceability engine.
     registry[id] = {definition, timestamp: now()}
   ```
   (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.ID_REGISTRY)
-- **DRIFT_LOGIC**: Detects semantic drift. [Type: PROMPT_NATIVE] (semantic understanding required)
-  ```pseudocode
-  function detect_drift(parent_id: string, child_ids: string[]) -> DriftResult:
-    parent_mtime = get_mtime(parent_id)
-    stale = child_ids.filter(c => get_mtime(c) < parent_mtime)
-    return {stale_children: stale, recommend_review: stale.length > 0}
-  ```
+- **DRIFT_LOGIC**: Detects semantic drift. [Type: PROMPT_NATIVE]
+  > Compare parent and child specifications to determine if child has drifted from parent intent.
+  > Check for timestamp ordering (child older than parent = drift) and semantic divergence.
+  
+  **Examples**:
+  - Parent updated 2024-02-01, Child updated 2024-01-01 → **Drifted** (Stale)
+  - Parent requirement "User must log in" → Child Impl "Anonymous access allowed" → **Drifted** (Semantic)
+  - Parent/Child timestamps aligned, concepts consistent → **Stable**
   (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.DRIFT_DETECTOR)
 
 ## COMPILER.TESTABILITY_IMPL
@@ -455,15 +420,14 @@ Implementation of compilation engine.
 
 ## COMPILER.TERMINOLOGY_IMPL
 Implementation of terminology enforcement.
-- **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: PROMPT_NATIVE] (semantic matching)
-  ```pseudocode
-  function check_vocabulary(content: string) -> VocabResult:
-    violations = []
-    if content.contains("check ") and not content.contains("validate"):
-      violations.push("Use 'validate' instead of 'check'")
-    // ... more vocabulary rules
-    return {violations, clean: violations.length == 0}
-  ```
+- **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: PROMPT_NATIVE]
+  > Analyze content for terms that violate controlled vocabulary rules.
+  > Suggest replacements based on standard definitions.
+  
+  **Examples**:
+  - "Check the input" → Suggest "Validate the input" (Static) or "Verify the input" (Dynamic)
+  - "The data flow pipeline branches here" → Suggest "The data **Flow** branches here" (Pipeline is linear)
+  - "If error occurs, crash" → Suggest "If **Error** occurs" (vs Violation)
   (Ref: ARCHITECTURE.TERMINOLOGY_CHECKER.VOCAB_MATCHER)
 
 ## COMPILER.FORMALISM_IMPL
@@ -482,19 +446,23 @@ Implementation of formal notation enforcement.
 ## COMPILER.SCRIPT_AUTOMATION_IMPL
 Implementation of script automation tracking.
 - **GOAL_TRACKING**: Monitors for scriptable tasks. [Type: PROMPT_NATIVE]
-  ```pseudocode
-  function track_goals(operations: Operation[]) -> GoalResult:
-    mechanical = operations.filter(op => op.is_deterministic and op.count >= 3)
-    return {candidates: mechanical, automation_potential: mechanical.length}
-  ```
+  > Identify repetitive manual operations that are deterministic and frequent enough to warrant scripting.
+  > Propose new scripts when return on investment is high.
+  
+  **Examples**:
+  - User asks to "format JSON" 5 times → Suggest `scripts/format_json.py`
+  - User repeatedly "greps for TODOs" → Suggest `scripts/scan_todos.py`
+  - User asks complex creative questions → No script (Non-deterministic)
   (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.GOAL_TRACKER)
-- **DETERMINISM_CHECK**: Validates script determinism. [Type: PROMPT_NATIVE] (semantic code analysis)
-  ```pseudocode
-  function validate_determinism(script: Script) -> DeterminismResult:
-    has_random = script.uses("random") or script.uses("time.now")
-    has_external = script.uses("http") or script.uses("network")
-    return {is_deterministic: not has_random and not has_external}
-  ```
+- **DETERMINISM_CHECK**: Validates script determinism. [Type: PROMPT_NATIVE]
+  > Analyze script code to determine if execution is strictly deterministic.
+  > Flag usage of randomness, external network calls, or system time without freezing.
+  
+  **Examples**:
+  - `import random` or `uuid.uuid4()` → **Non-Deterministic**
+  - `requests.get(url)` or `socket.connect` → **Non-Deterministic** (Network)
+  - `datetime.now()` without mocking → **Non-Deterministic**
+  - Pure data transformation functions → **Deterministic**
   (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.DETERMINISM_VALIDATOR)
 
 ## COMPILER.LAYER_MANAGER_IMPL
@@ -518,15 +486,15 @@ Implementation of layer management logic.
     return {whitelist: def.focus_keywords, blacklist: def.forbidden}
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.FOCUS_RULES)
-- **CLASSIFY_IMPL**: Content layer classification. [Type: PROMPT_NATIVE] (semantic classification)
-  ```pseudocode
-  function classify_content(content: string) -> LayerClassification:
-    if contains(content, ["vision", "scope", "goal"]): return {layer: 0, confidence: 0.8}
-    if contains(content, ["MUST", "SHOULD", "MAY"]): return {layer: 1, confidence: 0.9}
-    if contains(content, ["Intent:", "Guarantees:", "Interface:"]): return {layer: 2, confidence: 0.9}
-    if contains(content, ["```pseudocode", "function"]): return {layer: 3, confidence: 0.9}
-    return {layer: -1, confidence: 0.0}
-  ```
+- **CLASSIFY_IMPL**: Content layer classification. [Type: PROMPT_NATIVE]
+  > Analyze content and determine which specification layer (L0-L3) it belongs to.
+  > Consider abstraction level, vocabulary, and presence of implementation details.
+  
+  **Examples**:
+  - "We need fast response times" → L0 (Vision: abstract goal)
+  - "System MUST respond within 100ms" → L1 (Contract: RFC2119 keyword)
+  - "API Gateway routes requests to UserService" → L2 (Architecture: components)
+  - "`function validate(spec)` checks frontmatter" → L3 (Implementation: code)
   (Ref: ARCHITECTURE.LAYER_MANAGER.CONTENT_CLASSIFIER)
 - **DEPTH_IMPL**: Nesting depth validation. [Type: SCRIPT]
   ```pseudocode
@@ -688,15 +656,14 @@ Implementation of metrics collection.
 ## COMPILER.CONFLICT_RESOLVER_IMPL
 Implementation of conflict resolution.
 - **DETECT_IMPL**: Conflict detection. [Type: PROMPT_NATIVE]
-  ```pseudocode
-  function detect_conflicts(ideas: Idea[]) -> Conflict[]:
-    conflicts = []
-    for i, idea1 in enumerate(ideas):
-      for idea2 in ideas[i+1:]:
-        if idea1.target_id == idea2.target_id:
-          conflicts.push({left: idea1, right: idea2})
-    return conflicts
-  ```
+  > Analyze a batch of ideas to identify conflicting intents or contradictory requirements.
+  > Flag pairs of ideas that cannot logically coexist.
+  
+  **Examples**:
+  - Idea A: "Enforce 100ms timeout" vs Idea B: "Allow 5s timeout for heavy tasks"
+    → **Conflict**: Mutually exclusive logical constraints
+  - Idea A: "Add Auth" vs Idea B: "Add Logging"
+    → **No Conflict**: Orthogonal features
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.CONFLICT_DETECTOR)
 - **PRIORITY_IMPL**: Priority resolution. [Type: SCRIPT]
   ```pseudocode
@@ -730,23 +697,15 @@ Implementation of conflict resolution.
 ## COMPILER.APPROVAL_WORKFLOW_IMPL
 Implementation of approval workflow.
 - **APPROVAL_SESSION**: Unified approval workflow. [PROMPT_NATIVE]
-  ```pseudocode
-  function run_approval_session(changes: Change[]) -> void:
-    // 1. Contextualize
-    context = present_context(changes)
-    
-    // 2. Prompt User
-    display(context)
-    result = prompt("Approve changes? (y/n)")
-    
-    // 3. Act & Track
-    if result.approved:
-      track_approval(changes.id, "APPROVED")
-    else:
-      track_approval(changes.id, "REJECTED")
-      revert(changes.transaction_id)
-      log("Rejection reason: " + result.reason)
-  ```
+  > Present proposed changes with context, prompt user for approval,
+  > then commit or revert based on response. Track all decisions.
+  
+  **Examples**:
+  - Change: Add new L1 contract for timeout
+    → Show diff with context → User approves → Commit and archive idea
+  - Change: Modify L2 component interface
+    → Show diff with impact analysis → User rejects "needs more detail"
+    → Revert changes, log rejection reason
   (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_PROMPTER), (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.REJECTION_HANDLER), (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.CONTEXT_PRESENTER)
 - **TRACK_IMPL**: Approval state tracking. [Type: SCRIPT]
   ```pseudocode
@@ -759,12 +718,14 @@ Implementation of approval workflow.
 ## COMPILER.SEMANTIC_ANALYZER_IMPL
 Implementation of semantic analysis.
 - **KEYWORD_IMPL**: Keyword extraction. [Type: PROMPT_NATIVE]
-  ```pseudocode
-  function extract_keywords(content: string) -> Keyword[]:
-    words = content.split()
-    keywords = words.filter(w => w.upper() == w and len(w) > 2)
-    return keywords.map(k => {text: k, frequency: count(content, k)})
-  ```
+  > Extract semantically significant keywords from content, ignoring stopwords.
+  > Focus on domain-specific nouns and high-value verbs.
+  
+  **Examples**:
+  - Input: "The system implementation handles user authentication"
+    → Keywords: ["system", "implementation", "handles", "user", "authentication"]
+  - Input: "Validate specs against schema"
+    → Keywords: ["validate", "specs", "schema"]
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.KEYWORD_EXTRACTOR)
 - **REFERENCE_IMPL**: Reference parsing. [Type: SCRIPT]
   ```pseudocode
@@ -774,22 +735,26 @@ Implementation of semantic analysis.
     return matches.map(m => {id: m, valid: id_exists(m)})
   ```
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.REFERENCE_PARSER)
-- **SEMANTIC_IMPL**: Semantic matching. [PROMPT_NATIVE] (requires semantic understanding)
-  ```pseudocode
-  function match_semantics(parent: Spec, child: Spec) -> SemanticMatch:
-    parent_keywords = extract_keywords(parent.content)
-    child_keywords = extract_keywords(child.content)
-    covered = parent_keywords.filter(k => k in child_keywords)
-    return {coverage: len(covered) / len(parent_keywords), gaps: parent_keywords - child_keywords}
-  ```
+- **SEMANTIC_IMPL**: Semantic matching. [PROMPT_NATIVE]
+  > Compare two spec items to determine semantic overlap and coverage.
+  > Calculate how much of the parent's intent is covered by the child.
+  
+  **Examples**:
+  - Parent: "Secure login required" vs Child: "Implement OAuth2 flow"
+    → Coverage: High (OAuth2 implements secure login)
+  - Parent: "Fast response time" vs Child: "Use blue background"
+    → Coverage: None (Unrelated concepts)
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.SEMANTIC_MATCHER)
-- **IDEA_CLASS_IMPL**: Idea classification. [PROMPT_NATIVE] (requires semantic layer detection)
-  ```pseudocode
-  function classify_idea(idea: Idea) -> Classification:
-    layer = classify_content(idea.content).layer
-    action = detect_action(idea.content)  // "add", "modify", "delete"
-    return {layer, action, targets: extract_target_ids(idea.content)}
-  ```
+
+- **IDEA_CLASS_IMPL**: Idea classification. [PROMPT_NATIVE]
+  > Analyze a raw idea to determine its target layer (L0-L3), action type (Add/Mod/Del),
+  > and the specific target IDs it affects.
+  
+  **Examples**:
+  - Idea: "Update L1 contract regarding timeouts"
+    → Layer: L1, Action: Modify, Target: CONTRACTS.TIMEOUT
+  - Idea: "Remove the legacy auth component"
+    → Layer: L2, Action: Delete, Target: ARCHITECTURE.AUTH.LEGACY
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.IDEA_CLASSIFIER)
 
 
