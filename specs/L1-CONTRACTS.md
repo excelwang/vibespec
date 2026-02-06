@@ -1,5 +1,5 @@
 ---
-version: 2.1.0
+version: 2.2.0
 invariants:
   - id: INV_UNIQUE_IDS
     statement: "Every Spec ID and Export ID must be unique within the project."
@@ -209,6 +209,9 @@ invariants:
 - **DETERMINISM**: Deterministic code MUST be preferred over probabilistic LLM reasoning for mechanical tasks.
   > Rationale: Randomness is liability, not asset, in validation/manipulation.
   (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
+- **ZERO_DEPS**: Scripts MUST use only standard library components (No pip install).
+  > Rationale: Ensures portability and prevents supply chain attacks.
+  (Ref: VISION.SCOPE.DEPS)
 
 ## CONTRACTS.SKILL_DISTRIBUTION
 - **SKILL_MD**: `SKILL.md` MUST be the single source of truth for agent capabilities.

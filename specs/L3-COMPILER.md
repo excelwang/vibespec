@@ -57,7 +57,12 @@ Implementation of Ideas Processor pipeline.
     sorted_ideas = files.sort(by=timestamp).map(parse_idea)
     
     for idea in sorted_ideas:
-      // Decompose if needed (LLM)
+      // 0. Scope Check
+      if not check_scope_adherence(idea): 
+        archive(idea, "rejected_scope")
+        continue
+
+      // 1. Decompose if needed (LLM)
       chunks = detect_layer(idea).spans_multiple ? idea.decompose() : [idea]
       
       for chunk in chunks:
@@ -72,7 +77,7 @@ Implementation of Ideas Processor pipeline.
         if user.approve(): spec.save(); archive(idea)
         else: revert(diff)
   ```
-  (Ref: ARCHITECTURE.IDEAS_PROCESSOR)
+  (Ref: ARCHITECTURE.IDEAS_PROCESSOR), (Ref: ARCHITECTURE.IDEAS_PROCESSOR.SCOPE_FILTER)
 - **TEST_FIXTURES**: [Type: SCRIPT]
   ```yaml
   - name: single_l1_idea
@@ -671,6 +676,14 @@ Implementation of metrics collection.
     return {density: with_keyword / total, threshold: 0.5, valid: density >= 0.5}
   ```
   (Ref: ARCHITECTURE.METRICS_COLLECTOR.KEYWORD_DENSITY)
+- **VERB_LOGIC**: Verb density calculation. [Type: SCRIPT]
+  ```pseudocode
+  function count_verbs(spec: Spec) -> VerbDensityResult:
+    verbs = nlp.extract_verbs(spec.text)
+    density = len(verbs) / len(spec.words)
+    return {density, threshold: 0.1, valid: density >= 0.1}
+  ```
+  (Ref: ARCHITECTURE.METRICS_COLLECTOR.VERB_COUNTER)
 
 ## COMPILER.CONFLICT_RESOLVER_IMPL
 Implementation of conflict resolution.

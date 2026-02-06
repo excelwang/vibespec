@@ -1,5 +1,5 @@
 ---
-version: 1.9.0
+version: 2.0.0
 ---
 
 # L2: Vibe-Spec Architecture
@@ -69,7 +69,8 @@ Distills conversation history into formal specification ideas.
 ## ARCHITECTURE.SCRIPTS
 Standalone dependency-free automation tools for mechanical workflows.
 **Intent**: Encapsulate deterministic operations in code rather than LLM generation.
-**Guarantees**: 100% reliable execution; no stochastic behavior.
+**Guarantees**: 100% reliable execution; no stochastic behavior; zero external dependencies.
+(Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS)
 - **ARCHIVE_IDEAS**: Script `scripts/archive_ideas.sh` automates post-processing cleanup. Moves processed files from active to archived folder. Critical for "Inbox Zero" workflow. Executes robust file transaction with verification.
   **Interface**: `archive_ideas.sh [path]`
   (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
@@ -278,6 +279,9 @@ Collects and aggregates specification health metrics.
 - **KEYWORD_DENSITY**: Measures RFC2119 keyword usage in L1. Calculates percentage of statements with keywords. Flags low density.
   **Interface**: `measure_density(spec: Spec) -> DensityResult`
   (Ref: CONTRACTS.QUANTIFIED_VALIDATION.RFC2119)
+- **VERB_COUNTER**: Analyzes statements for action-oriented language. Calculates verb density percentage. Flags passive or static descriptions (<10%).
+  **Interface**: `count_verbs(spec: Spec) -> VerbDensityResult`
+  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.VERB_DENSITY)
 
 ## ARCHITECTURE.CONFLICT_RESOLVER
 Handles conflicts between overlapping ideas and specification changes.

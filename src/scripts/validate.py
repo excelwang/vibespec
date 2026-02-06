@@ -70,6 +70,7 @@ def parse_spec_file(spec_file: Path) -> dict:
     references = []
     current_h2 = None
     current_statement_id = None
+    items = {} # {id: {'header': str, 'body': str}}
     
     lines = body.split('\n')
     in_code_block = False
@@ -82,6 +83,7 @@ def parse_spec_file(spec_file: Path) -> dict:
             in_code_block = not in_code_block
             # Attribute framing lines to formal
             if current_statement_id:
+                 if current_statement_id in items: items[current_statement_id]['body'] += line + '\n'
                  if current_statement_id not in raw_lengths: raw_lengths[current_statement_id] = {'text': 0, 'formal': 0}
                  raw_lengths[current_statement_id]['formal'] += len(stripped) + 1
             continue
@@ -89,6 +91,7 @@ def parse_spec_file(spec_file: Path) -> dict:
         if in_code_block:
              # Attribute body to formal
              if current_statement_id:
+                 if current_statement_id in items: items[current_statement_id]['body'] += line + '\n'
                  if current_statement_id not in raw_lengths: raw_lengths[current_statement_id] = {'text': 0, 'formal': 0}
                  raw_lengths[current_statement_id]['formal'] += len(stripped) + 1
              continue
@@ -126,6 +129,9 @@ def parse_spec_file(spec_file: Path) -> dict:
                 if current_statement_id not in raw_lengths: raw_lengths[current_statement_id] = {'text': 0, 'formal': 0}
                 raw_lengths[current_statement_id]['text'] += len(clean_content_part)
                 
+                # Capture item
+                items[current_statement_id] = {'header': stripped, 'body': content_part + '\n'}
+
                 # Check Refs on this line
                 ref_line = re.sub(r'`[^`]+`', '', content_part) # clean inline code for refs
                 ref_matches = re.findall(r'\(Ref: ([\w.]+)(?:,\s*(\d+)%)?\)', ref_line)
@@ -137,6 +143,9 @@ def parse_spec_file(spec_file: Path) -> dict:
         
         # Normal Text Line (continuation)
         if current_statement_id:
+             if current_statement_id in items:
+                 items[current_statement_id]['body'] += line + '\n'
+
              content_only = re.sub(r'\(Ref:.*?\)', '', clean_line).strip()
              if current_statement_id not in raw_lengths: raw_lengths[current_statement_id] = {'text': 0, 'formal': 0}
              raw_lengths[current_statement_id]['text'] += len(content_only) + 1
@@ -160,6 +169,7 @@ def parse_spec_file(spec_file: Path) -> dict:
         'export_lengths': export_lengths,
         'references': references,
         'file': spec_file.name,
+        'items': items,
         'body': body
     }
 
@@ -354,6 +364,17 @@ def validate_specs(specs_dir: Path) -> tuple[list, list]:
         term_errors = check_terminology(data['file'], data['body'])
         if term_errors:
             warnings.extend(term_errors)
+
+        # L3 SCRIPT_NO_LLM Check
+        if data['layer'] == 3:
+            for item_id, item_data in data['items'].items():
+                header = item_data['header']
+                if '[Type: SCRIPT]' in header:
+                    forbidden = ['prompt(', 'llm.', 'ai.', 'openai', 'anthropic', 'gemini']
+                    body_lower = item_data['body'].lower()
+                    for term in forbidden:
+                        if term in body_lower:
+                            errors.append(f"{spec_id}: SCRIPT Violation. Item `{item_id}` is [Type: SCRIPT] but contains forbidden LLM term `{term}`.")
 
 
 
