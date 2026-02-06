@@ -289,7 +289,7 @@ Implementation of skill distribution.
 
 ## COMPILER.BOOTSTRAP_IMPL
 Implementation of bootstrap processor for first-time setup.
-- **DETECTOR_LOGIC**: Checks filesystem for specs directory presence.  [PROMPT_FALLBACK]
+- **DETECTOR_LOGIC**: Checks filesystem for specs directory presence. [Type: SCRIPT]
   ```pseudocode
   function detect_bootstrap_needed(root: string) -> bool:
     return not path.exists(root + "/specs") or dir_empty(root + "/specs")
@@ -395,7 +395,7 @@ Implementation of traceability engine.
     registry[id] = {definition, timestamp: now()}
   ```
   (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.ID_REGISTRY)
-- **DRIFT_LOGIC**: Detects semantic drift. [Type: SCRIPT]
+- **DRIFT_LOGIC**: Detects semantic drift. [Type: PROMPT_NATIVE] (semantic understanding required)
   ```pseudocode
   function detect_drift(parent_id: string, child_ids: string[]) -> DriftResult:
     parent_mtime = get_mtime(parent_id)
@@ -455,7 +455,7 @@ Implementation of compilation engine.
 
 ## COMPILER.TERMINOLOGY_IMPL
 Implementation of terminology enforcement.
-- **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: PROMPT_FALLBACK] (pattern recognition)
+- **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: PROMPT_NATIVE] (semantic matching)
   ```pseudocode
   function check_vocabulary(content: string) -> VocabResult:
     violations = []
@@ -481,14 +481,14 @@ Implementation of formal notation enforcement.
 
 ## COMPILER.SCRIPT_AUTOMATION_IMPL
 Implementation of script automation tracking.
-- **GOAL_TRACKING**: Monitors for scriptable tasks. [Type: PROMPT_FALLBACK] (pattern recognition)
+- **GOAL_TRACKING**: Monitors for scriptable tasks. [Type: PROMPT_NATIVE]
   ```pseudocode
   function track_goals(operations: Operation[]) -> GoalResult:
     mechanical = operations.filter(op => op.is_deterministic and op.count >= 3)
     return {candidates: mechanical, automation_potential: mechanical.length}
   ```
   (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.GOAL_TRACKER)
-- **DETERMINISM_CHECK**: Validates script determinism. [Type: SCRIPT]
+- **DETERMINISM_CHECK**: Validates script determinism. [Type: PROMPT_NATIVE] (semantic code analysis)
   ```pseudocode
   function validate_determinism(script: Script) -> DeterminismResult:
     has_random = script.uses("random") or script.uses("time.now")
@@ -518,7 +518,7 @@ Implementation of layer management logic.
     return {whitelist: def.focus_keywords, blacklist: def.forbidden}
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.FOCUS_RULES)
-- **CLASSIFY_IMPL**: Content layer classification.[Type: PROMPT_FALLBACK] (pattern recognition)
+- **CLASSIFY_IMPL**: Content layer classification. [Type: PROMPT_NATIVE] (semantic classification)
   ```pseudocode
   function classify_content(content: string) -> LayerClassification:
     if contains(content, ["vision", "scope", "goal"]): return {layer: 0, confidence: 0.8}
@@ -614,7 +614,7 @@ Implementation of report generation.
     return diff.map(line => (line.type == "+" ? "+" : "-") + line.text).join("\n")
   ```
   (Ref: ARCHITECTURE.REPORT_GENERATOR.DIFF_RENDERER)
-- **DASHBOARD_IMPL**: Metrics dashboard. [Type: SCRIPT]
+- **DASHBOARD_IMPL**: Metrics dashboard. [Type: PROMPT_FALLBACK]
   ```pseudocode
   function render_dashboard(metrics: Metrics) -> Dashboard:
     return {
@@ -687,7 +687,7 @@ Implementation of metrics collection.
 
 ## COMPILER.CONFLICT_RESOLVER_IMPL
 Implementation of conflict resolution.
-- **DETECT_IMPL**: Conflict detection. [Type: SCRIPT]
+- **DETECT_IMPL**: Conflict detection. [Type: PROMPT_NATIVE]
   ```pseudocode
   function detect_conflicts(ideas: Idea[]) -> Conflict[]:
     conflicts = []
@@ -758,7 +758,7 @@ Implementation of approval workflow.
 
 ## COMPILER.SEMANTIC_ANALYZER_IMPL
 Implementation of semantic analysis.
-- **KEYWORD_IMPL**: Keyword extraction. [Type: SCRIPT]
+- **KEYWORD_IMPL**: Keyword extraction. [Type: PROMPT_NATIVE]
   ```pseudocode
   function extract_keywords(content: string) -> Keyword[]:
     words = content.split()

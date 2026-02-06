@@ -35,3 +35,14 @@ Skill-creator 应：
 1. 读取 `src/SKILL.md` 作为技能入口点
 2. 将 `src/scripts/` 下的脚本打包为工具
 3. 确保技能在触发词匹配时被正确路由
+
+## ARCHITECTURE.SKILL_DISTRIBUTION
+Distributes vibe-spec as an agentic skill for AI agent consumption.
+**Intent**: Package skill for discoverable, version-controlled deployment.
+**Guarantees**: Single source of truth; ecosystem-compatible format.
+- **LOCATION**: `SKILL.md` resides within `src/vibe-spec/` source directory. Physically isolates skill definition from generated artifacts. Unmistakable source of truth for agent instantiation. Immutable reference preventing shadow configuration.
+  **Interface**: `src/vibe-spec/SKILL.md`
+  (Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD)
+- **COMPLIANCE**: Updates validated against skill-creator schema. Integrates with CI pipeline for schema verification. Enforces compatibility with agent ecosystem. Rejects deviations from established protocol.
+  **Interface**: `skill-creator validate <path>`
+  (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE)
