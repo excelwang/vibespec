@@ -87,27 +87,6 @@ Standalone dependency-free automation tools for mechanical workflows.
   **Interface**: `compile.py <specs_path> <output_path>`
   (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
 
----
-
-# (PACKAGING) skill-creator 集成
-
-> How this skill is packaged for consumption by **skill-creator**.
-
-## ARCHITECTURE.SKILL_DISTRIBUTION
-Distributes vibe-spec as an agentic skill for AI agent consumption.
-**Intent**: Package skill for discoverable, version-controlled deployment.
-**Guarantees**: Single source of truth; ecosystem-compatible format.
-- **LOCATION**: `SKILL.md` resides within `src/vibe-spec/` source directory. Physically isolates skill definition from generated artifacts. Unmistakable source of truth for agent instantiation. Immutable reference preventing shadow configuration.
-  **Interface**: `src/vibe-spec/SKILL.md`
-  (Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD)
-- **COMPLIANCE**: Updates validated against skill-creator schema. Integrates with CI pipeline for schema verification. Enforces compatibility with agent ecosystem. Rejects deviations from established protocol.
-  **Interface**: `skill-creator validate <path>`
-  (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE)
-
----
-
-# (SKILL INTERNAL) 技能内部组件 (续)
-
 ## ARCHITECTURE.BOOTSTRAP_PROCESSOR
 Handles first-time project initialization when specification infrastructure does not exist.
 **Intent**: Guide user through scope definition and create minimal spec structure.

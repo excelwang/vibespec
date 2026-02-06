@@ -254,7 +254,7 @@ Standalone scripts (zero third-party dependencies).
 
 ## COMPILER.SKILL_DISTRIBUTION_IMPL
 Implementation of skill distribution.
-- **SKILL_MD_LOC**: `src/vibe-spec/SKILL.md`
+- **SKILL_MD_LOC**: `src/vibe-spec/SKILL.md`  [PROMPT_FALLBACK]
   - Hardcoded path in tooling
   - Inside `src/` to travel with source code
   - Single source of truth; no secondary definitions permitted
@@ -270,7 +270,7 @@ Implementation of skill distribution.
     write("src/vibe-spec/SKILL.md", merged)
   ```
   (Ref: ARCHITECTURE.SKILL_DISTRIBUTION.COMPLIANCE)
-- **TEST_FIXTURES**: [Type: SCRIPT]
+- **TEST_FIXTURES**:  [PROMPT_FALLBACK]
   ```yaml
   - name: skill_md_exists
     input:
@@ -289,7 +289,7 @@ Implementation of skill distribution.
 
 ## COMPILER.BOOTSTRAP_IMPL
 Implementation of bootstrap processor for first-time setup.
-- **DETECTOR_LOGIC**: Checks filesystem for specs directory presence. [Type: SCRIPT]
+- **DETECTOR_LOGIC**: Checks filesystem for specs directory presence.  [PROMPT_FALLBACK]
   ```pseudocode
   function detect_bootstrap_needed(root: string) -> bool:
     return not path.exists(root + "/specs") or dir_empty(root + "/specs")
@@ -316,7 +316,7 @@ Implementation of bootstrap processor for first-time setup.
 
 ## COMPILER.ROUTER_IMPL
 Implementation of trigger routing logic.
-- **PARSE_INVOCATION**: Lexical analysis of trigger string. [Type: SCRIPT]
+- **PARSE_INVOCATION**: Lexical analysis of trigger string.  [PROMPT_FALLBACK]
   ```pseudocode
   function parse(input: string) -> ParsedCommand:
     normalized = input.lower().replace("-", "").replace(" ", "")
@@ -326,7 +326,7 @@ Implementation of trigger routing logic.
     return null
   ```
   (Ref: ARCHITECTURE.TRIGGER_ROUTER.PARSER)
-- **DISPATCH_LOGIC**: Decision tree for handler selection. [PROMPT_NATIVE] (LLM routing decision)
+- **DISPATCH_LOGIC**: Decision tree for handler selection.  [PROMPT_FALLBACK]
   ```pseudocode
   function dispatch(cmd: ParsedCommand) -> Handler:
     if cmd.args: return IdeaCaptureHandler
@@ -455,7 +455,7 @@ Implementation of compilation engine.
 
 ## COMPILER.TERMINOLOGY_IMPL
 Implementation of terminology enforcement.
-- **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: SCRIPT]
+- **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: PROMPT_FALLBACK] (pattern recognition)
   ```pseudocode
   function check_vocabulary(content: string) -> VocabResult:
     violations = []
@@ -499,7 +499,7 @@ Implementation of script automation tracking.
 
 ## COMPILER.LAYER_MANAGER_IMPL
 Implementation of layer management logic.
-- **REGISTRY_IMPL**: Layer definitions lookup. [Type: SCRIPT]
+- **REGISTRY_IMPL**: Layer definitions lookup. [Type: PROMPT_FALLBACK] (pattern recognition)
   ```pseudocode
   LAYER_DEFS = {
     0: {name: "VISION", focus: "Why/What", forbidden: ["class", "function", "script"]},
@@ -511,14 +511,14 @@ Implementation of layer management logic.
     return LAYER_DEFS[layer]
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.LAYER_REGISTRY)
-- **FOCUS_IMPL**: Focus rules enforcement. [Type: SCRIPT]
+- **FOCUS_IMPL**: Focus rules enforcement. [Type: PROMPT_FALLBACK] (pattern recognition)
   ```pseudocode
   function get_focus_rules(layer: int) -> FocusRules:
     def = get_layer_def(layer)
     return {whitelist: def.focus_keywords, blacklist: def.forbidden}
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.FOCUS_RULES)
-- **CLASSIFY_IMPL**: Content layer classification. [Type: SCRIPT]
+- **CLASSIFY_IMPL**: Content layer classification.[Type: PROMPT_FALLBACK] (pattern recognition)
   ```pseudocode
   function classify_content(content: string) -> LayerClassification:
     if contains(content, ["vision", "scope", "goal"]): return {layer: 0, confidence: 0.8}
@@ -587,7 +587,7 @@ Implementation of coverage tracking.
 
 ## COMPILER.REPORT_GENERATOR_IMPL
 Implementation of report generation.
-- **FORMAT_IMPL**: Error formatting logic. [Type: SCRIPT]
+- **FORMAT_IMPL**: Error formatting logic. [Type: PROMPT_FALLBACK]
   ```pseudocode
   function format_errors(errors: Error[]) -> string:
     lines = []
@@ -596,7 +596,7 @@ Implementation of report generation.
     return lines.join("\n")
   ```
   (Ref: ARCHITECTURE.REPORT_GENERATOR.ERROR_FORMATTER)
-- **SUMMARY_IMPL**: Summary building. [Type: SCRIPT]
+- **SUMMARY_IMPL**: Summary building. [Type: PROMPT_FALLBACK]
   ```pseudocode
   function build_summary(result: ValidationResult) -> Summary:
     return {
@@ -607,7 +607,7 @@ Implementation of report generation.
     }
   ```
   (Ref: ARCHITECTURE.REPORT_GENERATOR.SUMMARY_BUILDER)
-- **DIFF_IMPL**: Diff rendering. [Type: SCRIPT]
+- **DIFF_IMPL**: Diff rendering. [Type: PROMPT_FALLBACK]
   ```pseudocode
   function render_diff(before: Spec, after: Spec) -> string:
     diff = compute_diff(before.content, after.content)
