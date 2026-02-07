@@ -43,6 +43,23 @@ invariants:
 
 ---
 
+## [standard] CONTRACTS.LEAF_TYPE_PURITY
+
+- **PURE_LEAF**: Script MUST enforce L2 leaf items are pure Agent OR pure Script type.
+  > Responsibility: Separation — no mixed responsibilities in leaf nodes.
+  > Verification: Zero items with both Agent and Script keywords.
+  (Ref: VISION.PHILOSOPHY.SEPARATION)
+
+- **AGENT_KEYWORDS**: Agent indicators: 语义分析, 上下文, 判断, 推理, semantic, context, decide, infer.
+- **SCRIPT_KEYWORDS**: Script indicators: 遍历, 计数, 排序, 解析, scan, count, sort, parse, format.
+
+- **DECOMPOSE_MIXED**: Agent MUST decompose mixed items until each leaf is pure.
+  > Responsibility: Granularity — continue splitting until purity achieved.
+  > Verification: All leaf items pass purity check.
+  (Ref: VISION.PHILOSOPHY.SEPARATION)
+
+---
+
 ## [system] CONTRACTS.IDEAS_PIPELINE
 
 - **BATCH_READ**: Script MUST read all idea files before analysis.

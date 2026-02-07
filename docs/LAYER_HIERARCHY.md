@@ -111,53 +111,103 @@ User wants vibe-skill to [do something / have capability]
 
 ---
 
-## L3: Implementation Layer
+## L3: Runtime Layer
 
-### Three Content Types
+> **File**: L3-RUNTIME.md
+> **Purpose**: 固化复杂/易出错的实现细节，确保可测试
 
-#### 1. Role Implementation
+### 三种内容类型
+
+| 类型 | 来源 | 必须性 | 格式 |
+|------|------|--------|------|
+| **INTERFACES** | 所有 L2 叶子 Component | ✓ 必须 | TypeScript 签名 |
+| **DECISIONS** | L2 Role 复杂决策 | ⚠️ 选择性 | 决策规则表 |
+| **ALGORITHMS** | L2 Component 复杂逻辑 | ⚠️ 选择性 | 伪代码 |
+
+### 组织结构
+
 ```markdown
-- **[ROLE].OBSERVE**: How to perceive environment/input
-- **[ROLE].DECIDE**: How to make decisions based on observations
-- **[ROLE].ACT**: How to execute decision outcomes
+L3-RUNTIME.md
+├── ## INTERFACES (接口规格)
+│   ├── ### COMPILER_PIPELINE
+│   │   ├── #### SCANNER
+│   │   ├── #### PARSER
+│   │   └── ...
+│   └── ### VALIDATOR_CORE
+│       └── ...
+├── ## DECISIONS (复杂决策)
+│   ├── ### LAYER_CLASSIFICATION
+│   └── ### CONFLICT_RESOLUTION
+└── ## ALGORITHMS (复杂算法)
+    └── ### COVERAGE_VALIDATION
 ```
 
-#### 2. Component Implementation
+### 可测试性要求
+
+每个 L3 item **必须**包含:
+
+| 要素 | 描述 | 最小数量 |
+|------|------|---------|
+| **Fixtures** | 输入/期望输出对 | ≥ 3 |
+| **Edge Cases** | 边界情况 | ≥ 1 |
+| **Error Cases** | 错误场景 | ≥ 1 |
+
+### 示例: 接口规格
+
 ```markdown
-- **[COMPONENT].INTERFACE**: method(args) -> result
-- **[COMPONENT].ALGORITHM**: Internal logic (pseudocode)
-- **[COMPONENT].OUTPUT**: Return value/side effect description
+#### SCANNER
+
+> Implements: [Component: COMPONENTS.COMPILER_PIPELINE.SCANNER]
+
+**Interface**:
+```typescript
+interface Scanner {
+  scan(path: string): File[]
+}
 ```
 
-#### 3. Interaction Flow
-```markdown
-- **[FLOW_NAME]**: Complete sequence of Role→Component→Output→Role observation
+**Fixtures**:
+| Input | Expected | Edge Case |
+|-------|----------|-----------|
+| "specs/" | File[] | Normal |
+| "" | Error | Empty path |
+| "nonexistent/" | [] | Not found |
+
+**Consumers**: [ARCHITECT, COMPILER_PIPELINE]
 ```
 
-### Examples
+### 示例: 复杂决策
+
 ```markdown
-# Component Implementation
-- **READER.read_all**: 
-  ```pseudocode
-  function read_all(path: Path) -> File[]:
-    files = glob(path / "*.md")
-    return [read(f) for f in sorted(files)]
-  ```
+### LAYER_CLASSIFICATION
 
-# Role Implementation  
-- **REVIEWER.OBSERVE**: Listen to file system change events
-- **REVIEWER.DECIDE**: Check if changes impact L1 contracts
-- **REVIEWER.ACT**: Call notify_user() to request human review
+> Implements: [Role: ROLES.SPEC_MANAGEMENT.ARCHITECT]
 
-# Interaction Flow
-- **REVIEW_FLOW**: 
-  1. REVIEWER observes file change
-  2. REVIEWER calls READER.read_all() to get content
-  3. REVIEWER evaluates impact scope
-  4. REVIEWER calls VALIDATOR to check consistency
-  5. VALIDATOR outputs check result
-  6. REVIEWER observes result → decides whether to notify user
+**决策规则**:
+| 优先级 | 信号 | 目标层级 |
+|--------|------|----------|
+| 1 | 含 RFC2119 | L1 |
+| 2 | 提及架构实体 | L2 |
+| 3 | 含算法描述 | L3 |
+| 4 | 默认 | L0 |
+
+**Fixtures**:
+| Input | Expected | Reason |
+|-------|----------|--------|
+| "系统 MUST..." | L1 | RFC2119 |
+| "添加 Cache Component" | L2 | 组件 |
+| "做得更好" | L0 | 默认 |
 ```
+
+### 校验规则
+
+| 规则 ID | 描述 |
+|---------|------|
+| `INTERFACE_COMPLETE` | 每个 L2 叶子 Component 必须有 L3 接口 |
+| `FIXTURES_MIN_3` | 每个 L3 item 必须有 ≥3 个 Fixtures |
+| `IMPLEMENTS_VALID` | Implements 引用必须指向有效 L2 item |
+| `NO_SYSTEM_STANDARD` | L3 不区分 system/standard |
+
 
 ---
 
