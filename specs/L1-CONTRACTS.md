@@ -498,3 +498,33 @@ standard_terms:
   > Verification: Warning on prose-only sections.
 
 (Ref: VISION.FORMAL_SYNTAX)
+
+---
+
+## [system] CONTRACTS.TESTING_WORKFLOW
+
+- **COVERAGE_REPORT**: Script MUST report L1 and L3 coverage percentages.
+  > Responsibility: Visibility — show testability gaps.
+  > Verification: Report includes L1% and L3% values.
+
+- **UNCOVERED_LIST**: Script MUST list uncovered spec IDs.
+  > Responsibility: Actionability — identify missing tests.
+  > Verification: Uncovered IDs listed in report.
+
+- **TEST_GENERATION**: Agent MUST generate tests for uncovered L3 fixtures.
+  > Responsibility: Completeness — close coverage gaps.
+  > Verification: Test file created for each uncovered L3 item.
+
+- **HUMAN_APPROVAL_TEST**: Agent MUST request approval before saving generated tests.
+  > Responsibility: Quality gate — human reviews test design.
+  > Verification: notify_user called before file write.
+
+- **EXECUTION_REPORT**: Script MUST report PASS/FAIL counts by test type.
+  > Responsibility: Transparency — summarize test results.
+  > Verification: Report includes SCRIPT and PROMPT results.
+
+- **RESULT_EVALUATION**: Agent SHOULD analyze failures and propose fixes.
+  > Responsibility: Actionability — convert failures to work items.
+  > Verification: Idea generated for failing tests.
+
+(Ref: VISION.SCOPE.COV), (Ref: VISION.VIBE_CODING.SHIFT_LEFT)

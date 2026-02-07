@@ -34,29 +34,39 @@ Manage the refinement of raw thoughts into traceable specifications.
 **Test Directory Structure**:
 ```
 tests/specs/
-├── scripts/     # SCRIPT type tests (auto-detected framework)
-└── prompts/     # PROMPT type tests (LLM self-verification)
+├── acceptance/  # L1 Contract + L3 Decision Tests (YAML)
+└── scripts/     # L3 Interface/Algorithm Tests (Python)
 ```
 
-**Execution**:
-1. **SCRIPT tests** (`tests/specs/scripts/`):
-   - Detect project language and test framework automatically
-   - Python → pytest, JS/TS → jest/vitest, Go → go test, etc.
-   - Run tests with `@verify_spec` decorators
-2. **PROMPT tests** (`tests/specs/prompts/`):
-   - Load test fixtures from YAML/JSON files
-   - Self-execute each PROMPT item with fixture inputs
-   - Verify output matches expected behavior
-3. If `SPEC_ID` provided: Filter to matching specs only.
-4. Report combined coverage: SCRIPT % + PROMPT %.
+**Phase 1: Collect Testable Specs** (COVERAGE_ANALYZER Component)
+1. L1 Contracts: Extract `MUST/SHOULD/MAY` assertions from `L1-CONTRACTS.md`
+2. L3 Runtime: Extract `[interface]`/`[decision]`/`[algorithm]` fixtures from `L3-RUNTIME.md`
 
-**PROMPT Self-Test Protocol**:
+**Phase 2: Analyze Coverage** (COVERAGE_ANALYZER Component)
+- Scan `tests/specs/` for `@verify_spec("ID")` or YAML `id:` fields
+- Report: L1 coverage + L3 coverage
+
+**Phase 3: Generate Missing Tests** (TEST_DESIGNER Role)
+| Spec Type | Output Format | Location |
+|-----------|---------------|----------|
+| L1 Agent Contract | YAML acceptance (blind test) | `acceptance/` |
+| L1 Script Contract | Python pytest | `scripts/` |
+| L3 Interface | Python unittest + Mock | `scripts/` |
+| L3 Decision | YAML acceptance | `acceptance/` |
+| L3 Algorithm | Python unittest | `scripts/` |
+
+**Phase 4: Execute**
+- SCRIPT tests: `pytest tests/specs/scripts/`
+- PROMPT tests: LLM self-validates YAML fixtures
+
+**Phase 5: Report**
 ```
-For each PROMPT fixture:
-  1. Read spec + fixture input
-  2. Execute: Attempt the task as specified
-  3. Validate: Compare output to expected
-  4. Report: ✅ PASS / ❌ FAIL with rationale
+=== Vibe-Spec Test Coverage ===
+L1 Contracts: X/Y (Z%)
+L3 Runtime:   A/B (C%)
+---
+SCRIPT tests: PASS/FAIL
+PROMPT tests: PASS/FAIL
 ```
 
 ---

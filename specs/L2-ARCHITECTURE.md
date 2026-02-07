@@ -145,9 +145,19 @@ version: 3.0.0
 - **Decides**: Pass/Fail based on behavior, Mocking strategy
 - **Acts**: Generates mock-based test code, reports result with evidence
 
-- **Acts**: Generates mock-based test code, reports result with evidence
+(Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.RESULT_EVALUATION)
 
-(Ref: VISION.VIBE_CODING.AI_ASSIST), (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE), (Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION)
+#### TEST_DESIGNER
+
+**Role**: Generates test cases from specs
+
+- **Observes**: L3 fixtures, edge cases, error cases, existing test coverage
+- **Decides**: Test strategy, boundary scenarios, missing coverage areas
+- **Acts**: Generates test code with `@verify_spec` decorators, requests approval
+
+> Rationale: Script implementation would be prohibitively complex due to semantic understanding requirements.
+
+(Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST)
 
 ---
 
@@ -279,14 +289,6 @@ version: 3.0.0
  
  (Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD), (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE)
 
-#### TEST_RUNNER
-
-**Script**: `scripts/run_tests.py`
-
-- Input: `tests_dir`
-- Output: `TestResult`
-
-(Ref: CONTRACTS.ALGEBRAIC_VALIDATION.TEST_COVERAGE), (Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE)
 
 #### VALIDATE_SCRIPT
 
@@ -393,7 +395,7 @@ version: 3.0.0
 - Input: `spec: Spec`
 - Output: `AssertionResult`
 
-(Ref: CONTRACTS.STRICT_TESTABILITY.RFC2119_ENFORCEMENT)
+(Ref: CONTRACTS.STRICT_TESTABILITY.RFC2119_ENFORCEMENT), (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE)
  
  #### LINT_CHECKER
  
@@ -457,9 +459,32 @@ version: 3.0.0
 
 #### COVERAGE_ANALYZER
 
-**Component**: Computes coverage
+**Component**: Collects testable specs and computes coverage
 
-- Input: `specs: SpecIndex, tests: TestMap`
-- Output: `CoverageReport`
+- Input: `specs_dir: Path, tests_dir: Path`
+- Output: `CoverageReport{l1_coverage, l3_coverage, uncovered_ids[]}`
+- Logic:
+  1. Extract L1 assertions (MUST/SHOULD/MAY) from specs
+  2. Extract L3 fixtures from `[interface]`/`[decision]`/`[algorithm]`
+  3. Scan tests for `@verify_spec("ID")` or YAML `id:` matches
+  4. Compute coverage percentages
 
-(Ref: CONTRACTS.ALGEBRAIC_VALIDATION.TEST_COVERAGE)
+(Ref: CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.UNCOVERED_LIST), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.TEST_COVERAGE)
+
+#### TEST_EXECUTOR
+
+**Component**: Runs test suites
+
+- Input: `tests_dir: Path, env: MOCK|REAL`
+- Output: `ExecutionResult{passed, failed, skipped}`
+
+(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE)
+
+#### TEST_REPORTER
+
+**Component**: Formats test results
+
+- Input: `coverage: CoverageReport, execution: ExecutionResult`
+- Output: `string` (formatted report)
+
+(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT)

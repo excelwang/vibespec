@@ -175,27 +175,6 @@ interface Sorter {
 
 ---
 
-## [interface] TEST_RUNNER
-
-> Implements: [Component: COMPONENTS.SCRIPTS.TEST_RUNNER]
-
-```typescript
-interface TestRunner {
-  run(tests_dir: Path, env: 'MOCK' | 'REAL'): TestResult
-}
-```
-
-**Fixtures**:
-| Input | Expected | Case |
-|-------|----------|------|
-| env="MOCK" | Exec Mock Tests | Normal |
-| env="REAL" | Exec Real Tests | Normal |
-| tests_dir="empty" | No Tests Found | Edge |
-
-**Consumers**: [USER_LIAISON]
-
----
-
 ## [decision] LAYER_CLASSIFICATION
 
 > Implements: [Role: ROLES.SPEC_MANAGEMENT.ARCHITECT]
@@ -323,3 +302,78 @@ function validate_coverage(specs: Spec[]) -> Violation[]:
 | L0.A → 8 items | [FanoutViolation] | Error |
 
 (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.MILLERS_LAW)
+
+---
+
+## [interface] COVERAGE_ANALYZER
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.COVERAGE_ANALYZER]
+
+```typescript
+interface CoverageAnalyzer {
+  analyze(specs_dir: Path, tests_dir: Path): CoverageReport
+}
+
+interface CoverageReport {
+  l1_coverage: number  // 0.0 - 1.0
+  l3_coverage: number  // 0.0 - 1.0
+  uncovered_ids: string[]
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| specs/ + tests/ | {l1: 0.8, l3: 0.6, []} | Normal |
+| specs/ + empty tests/ | {l1: 0.0, l3: 0.0, [...]} | Edge |
+| empty specs/ | EmptySpecError | Error |
+
+(Ref: CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT)
+
+---
+
+## [interface] TEST_EXECUTOR
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEST_EXECUTOR]
+
+```typescript
+interface TestExecutor {
+  run(tests_dir: Path, env: 'MOCK' | 'REAL'): ExecutionResult
+}
+
+interface ExecutionResult {
+  passed: number
+  failed: number
+  skipped: number
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| tests/ + MOCK | {passed: 5, failed: 0} | Normal |
+| tests/ + REAL | {passed: 4, failed: 1} | Normal |
+| empty tests/ | {passed: 0, failed: 0} | Edge |
+
+(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT)
+
+---
+
+## [interface] TEST_REPORTER
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEST_REPORTER]
+
+```typescript
+interface TestReporter {
+  format(coverage: CoverageReport, execution: ExecutionResult): string
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| {80%, 60%} + {5, 0} | Formatted string | Normal |
+| {0%, 0%} + {0, 0} | "No tests" warning | Edge |
+| null coverage | ReportError | Error |
+
+(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT)
