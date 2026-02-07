@@ -27,7 +27,7 @@ version: 3.0.0
 - **Decides**: Target layer, decomposition strategy, conflict resolution
 - **Acts**: Creates change proposals, requests approval
 
-(Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING), (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION)
+(Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING), (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION), (Ref: CONTRACTS.LEAF_TYPE_PURITY.DECOMPOSE_MIXED)
 
 #### REVIEWER
 
@@ -37,7 +37,27 @@ version: 3.0.0
 - **Decides**: Internal consistency, traceability coverage, contradiction detection
 - **Acts**: Approves or rejects, presents to user
 
-(Ref: CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT), (Ref: CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK)
+(Ref: CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT), (Ref: CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION)
+ 
+ #### QUALITY_AUDITOR
+ 
+ **Role**: Deep quality inspection
+ 
+ - Observes: Spec content, alignment rules
+ - Decides: Compliance with pillars
+ - Acts: Flags non-compliance
+ 
+ (Ref: CONTRACTS.REVIEW_PROTOCOL.QUALITY_ALIGNMENT), (Ref: CONTRACTS.REVIEW_PROTOCOL.FOCUS_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY)
+ 
+ #### CONSISTENCY_CHECKER
+ 
+ **Role**: Logical consistency check
+ 
+ - Observes: Parent/Child Specs
+ - Decides: Omissions, redundancies
+ - Acts: Blocks invalid edits
+ 
+ (Ref: CONTRACTS.REVIEW_PROTOCOL.OMISSION_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY), (Ref: CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY)
 
 #### TRACEABILITY_GUARDIAN
 
@@ -47,7 +67,7 @@ version: 3.0.0
 - **Decides**: Orphan detection, dangling refs, staleness detection
 - **Acts**: Flags violations, generates fix ideas
 
-(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION)
+(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL)
 
 ### ROLES.USER_INTERACTION
 
@@ -61,7 +81,7 @@ version: 3.0.0
 - **Decides**: Information format, urgency level
 - **Acts**: Calls notify_user, waits for response
 
-(Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION), (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED)
+(Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION), (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED), (Ref: CONTRACTS.BOOTSTRAP.APPROVAL_GATE)
 
 #### BOOTSTRAP_AGENT
 
@@ -71,7 +91,17 @@ version: 3.0.0
 - **Decides**: Whether bootstrap needed, scope formulation
 - **Acts**: Prompts for scope, converts to SHALL/SHALL_NOT, creates L0
 
-(Ref: CONTRACTS.BOOTSTRAP.DETECTION), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_REFORM)
+(Ref: CONTRACTS.BOOTSTRAP.DETECTION), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_REFORM), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY)
+ 
+ #### ONBOARDING_ASSISTANT
+ 
+ **Role**: Guides new users
+ 
+ - Observes: Empty project state
+ - Decides: Engagement strategy
+ - Acts: Invites brainstorming
+ 
+ (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT)
 
 ### ROLES.AUTOMATION
 
@@ -85,7 +115,7 @@ version: 3.0.0
 - **Decides**: Retry vs revert, whether to change approach
 - **Acts**: Attempts fix (max 3), reverts on failure
 
-(Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_RETRY), (Ref: CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION)
+(Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_RETRY), (Ref: CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION), (Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_GIVEUP)
 
 #### INSIGHT_MINER
 
@@ -95,7 +125,7 @@ version: 3.0.0
 - **Decides**: Key decisions, architectural shifts, new requirements
 - **Acts**: Creates idea files, requests approval
 
-(Ref: CONTRACTS.REFLECT.CONTEXT_BASED), (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW)
+(Ref: CONTRACTS.REFLECT.CONTEXT_BASED), (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE)
 
 #### PATTERN_SCOUT
 
@@ -105,7 +135,7 @@ version: 3.0.0
 - **Decides**: Script-worthiness (frequency, determinism)
 - **Acts**: Proposes new scripts via idea pipeline
 
-(Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE)
+(Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE), (Ref: CONTRACTS.SCRIPT_FIRST.GOAL)
 
 #### TEST_VERIFIER
 
@@ -115,7 +145,7 @@ version: 3.0.0
 - **Decides**: Pass/Fail based on behavior
 - **Acts**: Reports result with evidence
 
-(Ref: VISION.VIBE_CODING.AI_ASSIST)
+(Ref: VISION.VIBE_CODING.AI_ASSIST), (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE), (Ref: CONTRACTS.STRICT_TESTABILITY.RATIONALE_SEPARATION)
 
 ---
 
@@ -143,7 +173,16 @@ version: 3.0.0
 - Input: `file: File`
 - Output: `{metadata, body}`
 
-(Ref: CONTRACTS.METADATA.FRONTMATTER)
+(Ref: CONTRACTS.METADATA.FRONTMATTER), (Ref: CONTRACTS.TRACEABILITY.SEMANTIC_IDS), (Ref: CONTRACTS.L3_TYPE_ANNOTATION.TYPE_REQUIRED)
+ 
+ #### SECTION_PARSER
+ 
+ **Component**: Identifying sections
+ 
+ - Input: `lines: string[]`
+ - Output: `Section[]`
+ 
+ (Ref: CONTRACTS.SECTION_MARKERS.H2_ANNOTATION), (Ref: CONTRACTS.SECTION_MARKERS.SYSTEM_SEMANTICS), (Ref: CONTRACTS.SECTION_MARKERS.STANDARD_SEMANTICS)
 
 #### VALIDATOR
 
@@ -152,7 +191,7 @@ version: 3.0.0
 - Input: `specs: ParsedSpec[]`
 - Output: `ValidationResult`
 
-(Ref: CONTRACTS.TRACEABILITY), (Ref: CONTRACTS.QUANTIFIED_VALIDATION)
+(Ref: CONTRACTS.VALIDATION_MODE.FULL_SCAN), (Ref: CONTRACTS.TRACEABILITY.IN_PLACE_REFS), (Ref: CONTRACTS.TRACEABILITY.ANCHORING)
 
 #### ASSEMBLER
 
@@ -161,7 +200,7 @@ version: 3.0.0
 - Input: `specs: ParsedSpec[]`
 - Output: `Document`
 
-(Ref: CONTRACTS.COMPILATION)
+(Ref: CONTRACTS.COMPILATION.LLM_OPTIMIZED), (Ref: CONTRACTS.COMPILATION.NOISE_REDUCTION), (Ref: CONTRACTS.COMPILATION.NAVIGATION)
 
 ### COMPONENTS.VALIDATOR_CORE
 
@@ -174,7 +213,7 @@ version: 3.0.0
 - Input: `rules: Rule[], specs: Spec[]`
 - Output: `Violation[]`
 
-(Ref: CONTRACTS.QUANTIFIED_VALIDATION)
+(Ref: CONTRACTS.QUANTIFIED_VALIDATION.ATOMICITY), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.DEPTH), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.RFC2119)
 
 #### CUSTOM_RULES_LOADER
 
@@ -183,7 +222,7 @@ version: 3.0.0
 - Input: `specs_dir: Path`
 - Output: `Rule[]`
 
-(Ref: CONTRACTS.CUSTOM_RULES.RULE_FILE)
+(Ref: CONTRACTS.CUSTOM_RULES.RULE_FILE), (Ref: CONTRACTS.CUSTOM_RULES.RULE_SCHEMA), (Ref: CONTRACTS.CUSTOM_RULES.VIBE_SPEC_RULES)
 
 #### RESPONSIVENESS_CHECKER
 
@@ -192,7 +231,7 @@ version: 3.0.0
 - Input: `graph: SpecGraph`
 - Output: `CoverageResult`
 
-(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS)
+(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.MILLERS_LAW)
 
 ### COMPONENTS.IDEAS_PROCESSOR
 
@@ -214,7 +253,7 @@ version: 3.0.0
 - Input: `ideas: Idea[]`
 - Output: `Idea[]` (sorted)
 
-(Ref: CONTRACTS.IDEAS_PIPELINE.TIMESTAMP_ORDER)
+(Ref: CONTRACTS.IDEAS_PIPELINE.TIMESTAMP_ORDER), (Ref: CONTRACTS.IDEAS_PIPELINE.CONFLICT_RES)
 
 #### ARCHIVER
 
@@ -223,11 +262,20 @@ version: 3.0.0
 - Input: `ideas: Idea[]`
 - Output: `void`
 
-(Ref: CONTRACTS.IDEAS_PIPELINE.COMPILE_PROMPT)
+(Ref: CONTRACTS.IDEAS_PIPELINE.COMPILE_PROMPT), (Ref: CONTRACTS.VALIDATION_MODE.COMPILE_PROMPT)
 
 ### COMPONENTS.SCRIPTS
 
 > Standalone automation tools
+ 
+ #### SKILL_LOADER
+ 
+ **Component**: Loads SKILL.md
+ 
+ - Input: `path`
+ - Output: `SkillDef`
+ 
+ (Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD), (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE)
 
 #### VALIDATE_SCRIPT
 
@@ -236,7 +284,7 @@ version: 3.0.0
 - Input: `specs_path`
 - Output: `ValidationResult`
 
-(Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
+(Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE), (Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS)
 
 #### COMPILE_SCRIPT
 
@@ -245,7 +293,16 @@ version: 3.0.0
 - Input: `specs_path, output_path`
 - Output: `Document`
 
-(Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
+(Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE), (Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS)
+ 
+ #### INIT_SCRIPT
+ 
+ **Script**: `scripts/init.py`
+ 
+ - Input: `scope`
+ - Output: `L0-VISION.md`
+ 
+ (Ref: CONTRACTS.BOOTSTRAP.INITIALIZATION)
 
 ### COMPONENTS.TRIGGER_ROUTER
 
@@ -258,7 +315,7 @@ version: 3.0.0
 - Input: `input: string`
 - Output: `{command, args}`
 
-(Ref: CONTRACTS.TRIGGERS.TRIGGER_ALIASES)
+(Ref: CONTRACTS.TRIGGERS.TRIGGER_ALIASES), (Ref: CONTRACTS.SKILL_DISTRIBUTION.TRIGGER_WORDS)
 
 #### WORKFLOW_DISPATCHER
 
@@ -272,7 +329,7 @@ version: 3.0.0
   3. SKILL.md exists → Validation workflow
   4. Otherwise → Bootstrap workflow
 
-(Ref: CONTRACTS.TRIGGERS)
+(Ref: CONTRACTS.TRIGGERS.TRIGGER_SCAN), (Ref: CONTRACTS.TRIGGERS.IDLE_BEHAVIOR), (Ref: CONTRACTS.SKILL_DISTRIBUTION.ENTRY_POINT)
 
 ### COMPONENTS.REPORTING
 
@@ -316,7 +373,7 @@ version: 3.0.0
 - Input: `content: string`
 - Output: `VocabResult`
 
-(Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT)
+(Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.TERMINOLOGY)
 
 #### ASSERTION_CHECKER
 
@@ -326,8 +383,55 @@ version: 3.0.0
 - Output: `AssertionResult`
 
 (Ref: CONTRACTS.STRICT_TESTABILITY.RFC2119_ENFORCEMENT)
+ 
+ #### LINT_CHECKER
+ 
+ **Component**: Checks annotation rules
+ 
+ - Input: `spec: Spec`
+ - Output: `LintResult`
+ 
+ (Ref: CONTRACTS.L3_TYPE_ANNOTATION.SCRIPT_THRESHOLD), (Ref: CONTRACTS.L3_TYPE_ANNOTATION.FALLBACK_RATIONALE), (Ref: CONTRACTS.L3_TYPE_ANNOTATION.PROMPT_BATCHING)
+ 
+ #### PURITY_CHECKER
+ 
+ **Component**: Enforces type purity
+ 
+ - Input: `spec: Spec`
+ - Output: `PurityResult`
+ 
+ (Ref: CONTRACTS.LEAF_TYPE_PURITY.PURE_LEAF), (Ref: CONTRACTS.LEAF_TYPE_PURITY.AGENT_KEYWORDS), (Ref: CONTRACTS.LEAF_TYPE_PURITY.SCRIPT_KEYWORDS)
+ 
+ #### SCRIPT_SCANNER
+ 
+ **Component**: Scans scripts for safety
+ 
+ - Input: `script: Script`
+ - Output: `SafetyResult`
+ 
+ (Ref: CONTRACTS.L3_TYPE_ANNOTATION.SCRIPT_NO_LLM), (Ref: CONTRACTS.SCRIPT_FIRST.DETERMINISM)
+ 
+ #### NOTATION_CHECKER
+ 
+ **Component**: Enforces formal syntax
+ 
+ - Input: `spec: Spec`
+ - Output: `NotationResult`
+ 
+ (Ref: CONTRACTS.FORMAL_NOTATION.PREFER_FORMALISMS)
 
-### COMPONENTS.METRICS
+### COMPONENTS.INFRASTRUCTURE
+ 
+ > Low-level system operations
+ 
+ #### ATOMIC_WRITER
+ 
+ **Component**: Safe file operations
+ 
+ - Input: `path, content`
+ - Output: `void`
+ 
+ (Ref: CONTRACTS.REJECTION_HANDLING.NO_PARTIAL_COMMITS)
 
 > Metrics collection
 
@@ -338,7 +442,7 @@ version: 3.0.0
 - Input: `specs: Spec[]`
 - Output: `{itemCounts, ratios, fanout, wordCounts}`
 
-(Ref: CONTRACTS.ALGEBRAIC_VALIDATION)
+(Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
 
 #### COVERAGE_ANALYZER
 

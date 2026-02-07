@@ -315,7 +315,35 @@ def validate_specs(specs_dir: Path) -> tuple:
             if count == 0:
                 warnings.append(f"Completeness Warning: `{exp}` (L1) has 0 downstream refs.")
 
-    # 5. Custom Rules
+    # 5. Check Leaf Constraints (L2 Only)
+    MAX_L1_REFS_PER_LEAF = 3
+    for spec_id, data in specs.items():
+        if data['layer'] != 2: continue
+        
+        # Track refs per item
+        item_refs = {iid: [] for iid in data['items']}
+        for ref in data['references']:
+            if ref['source_id'] in item_refs:
+                item_refs[ref['source_id']].append(ref['id'])
+                
+        for item_id, item_data in data['items'].items():
+            # Identify depth based on ID structure or H-level
+            # Robust way: check header
+            header = item_data['header']
+            is_leaf = header.startswith('#### ')
+            is_group = header.startswith('## ') or header.startswith('### ')
+            
+            refs = item_refs.get(item_id, [])
+            l1_refs = [r for r in refs if 'CONTRACTS.' in r or 'VISION.' in r] # Approximation of L1 refs
+            
+            if is_group and l1_refs:
+                errors.append(f"Structure Violation: `{item_id}` (Group) has references. Move to Leaf.")
+            
+            if is_leaf:
+                if len(l1_refs) > MAX_L1_REFS_PER_LEAF:
+                     errors.append(f"Complexity Violation: `{item_id}` has {len(l1_refs)} L1 refs (Max {MAX_L1_REFS_PER_LEAF}). Split responsibilities.")
+
+    # 6. Custom Rules
     custom_rules = extract_rules_from_l1(specs)
     if custom_rules:
         ce, cw = apply_custom_rules(custom_rules, specs)

@@ -289,10 +289,7 @@ invariants:
 
 ## [system] CONTRACTS.VALIDATION_MODE
 
-- **TRIGGER**: Agent MUST enter when ideas/ empty and SKILL.md present.
-  > Responsibility: Continuous monitoring — catch accumulated drift.
-  > Verification: Mode activated on conditions.
-  (Ref: VISION.AUTOMATION.EVOLUTION)
+
 
 - **FULL_SCAN**: Script MUST run validation across all layers.
   > Responsibility: Completeness — scan L0-L3.
@@ -328,10 +325,7 @@ invariants:
   > Verification: Error on missing required fields.
   (Ref: VISION.EXTENSIBILITY.SCHEMA_DRIVEN)
 
-- **RULE_TYPES**: Script MUST support: forbidden_terms, forbidden_pattern, required_pattern.
-  > Responsibility: Coverage — common validation needs.
-  > Verification: All listed types work.
-  (Ref: VISION.EXTENSIBILITY.SCHEMA_DRIVEN)
+
 
 - **VIBE_SPEC_RULES**: This project's custom rules:
   ```yaml
@@ -385,18 +379,7 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.LAYER_DEFINITIONS
 
-Layer focus rules:
-
-| Layer | Focus | Forbidden |
-|-------|-------|-----------|
-| **L0** | Why, What | Implementation details, tool names, paths |
-| **L1** | Rules, Invariants | Architecture, script logic |
-| **L2** | Components, Data Flow | Method definitions, variable names |
-| **L3** | How | Vague vision statements |
-
-(Ref: VISION.TRACEABILITY.WORKFLOW)
 
 ---
 
@@ -435,9 +418,7 @@ Layer focus rules:
 - **SYSTEM_SEMANTICS**: `[system]` = implementation details (How).
 - **STANDARD_SEMANTICS**: `[standard]` = design patterns (Rules).
 
-- **COMPILATION_BEHAVIOR**: Script MUST retain all sections by default; filter only on `--public`.
-  > Responsibility: Completeness — full context for agents.
-  > Verification: Both markers in default compile.
+
 
 (Ref: VISION.AGENT_AS_DEVELOPER)
 
@@ -478,7 +459,7 @@ Layer focus rules:
 ## [system] CONTRACTS.COMPILATION
 
 - **LLM_OPTIMIZED**: Script MUST produce single continuous markdown.
-- **ANCHORING**: Script MUST generate HTML anchors for sections.
+
 - **NAVIGATION**: Script MUST include TOC and preamble.
 - **NOISE_REDUCTION**: Script MUST strip frontmatter.
 
