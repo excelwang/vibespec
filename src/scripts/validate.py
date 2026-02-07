@@ -74,10 +74,15 @@ def extract_rules_from_l1(specs: dict) -> list:
         if ':' in stripped and not stripped.startswith('-'):
             key, value = stripped.split(':', 1)
             key = key.strip()
-            value = value.strip().strip('"').strip("'")
+            raw_value = value.strip()
             
-            # Handle list values like ["a", "b"]
-            if value.startswith('[') and value.endswith(']'):
+            # Check if value was originally quoted (preserve as string)
+            is_quoted = (raw_value.startswith('"') and raw_value.endswith('"')) or \
+                       (raw_value.startswith("'") and raw_value.endswith("'"))
+            value = raw_value.strip('"').strip("'")
+            
+            # Handle list values like ["a", "b"] - but only if not originally quoted
+            if not is_quoted and value.startswith('[') and value.endswith(']'):
                 items = value[1:-1].split(',')
                 value = [item.strip().strip('"').strip("'") for item in items if item.strip()]
             elif key == 'layer' and value.isdigit():
@@ -112,9 +117,9 @@ def apply_custom_rules(rules: list, specs: dict) -> tuple[list, list]:
                 header = item_data.get('header', '')
                 body = item_data.get('body', '')
                 
-                # Header match filter
+                # Header match filter (uses string contains, not regex)
                 match_header = rule.get('match_header')
-                if match_header and not re.search(match_header, header):
+                if match_header and match_header not in header:
                     continue
                 
                 violation = False
@@ -131,13 +136,13 @@ def apply_custom_rules(rules: list, specs: dict) -> tuple[list, list]:
                 # forbidden_pattern: check if pattern exists in body
                 elif rule_type == 'forbidden_pattern':
                     pattern = rule.get('pattern', '')
-                    if pattern and pattern in body:
+                    if pattern and re.search(pattern, body):
                         violation = True
                 
                 # required_pattern: check if pattern is missing
                 elif rule_type == 'required_pattern':
                     pattern = rule.get('pattern', '')
-                    if pattern and pattern not in body:
+                    if pattern and not re.search(pattern, body):
                         violation = True
                 
                 if violation:

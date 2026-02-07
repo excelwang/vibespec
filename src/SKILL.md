@@ -30,23 +30,33 @@ Manage the refinement of raw thoughts into traceable specifications.
    - Upon approval, save as timestamped idea files in `specs/ideas/`.
 
 ### `vibe-spec test [SPEC_ID]`
-1. **SCRIPT coverage**: Run `python3 scripts/run_tests.py tests/` for `@verify_spec` tests.
-2. **PROMPT coverage (self-test)**:
-   - Extract all `[Type: PROMPT_NATIVE]` and `[Type: PROMPT_FALLBACK]` items from L3 specs.
-   - For each PROMPT item, self-execute with a sample input.
-   - Verify output matches expected behavior per spec description.
-   - Report pass/fail with rationale.
+
+**Test Directory Structure**:
+```
+tests/specs/
+├── scripts/     # SCRIPT type tests (auto-detected framework)
+└── prompts/     # PROMPT type tests (LLM self-verification)
+```
+
+**Execution**:
+1. **SCRIPT tests** (`tests/specs/scripts/`):
+   - Detect project language and test framework automatically
+   - Python → pytest, JS/TS → jest/vitest, Go → go test, etc.
+   - Run tests with `@verify_spec` decorators
+2. **PROMPT tests** (`tests/specs/prompts/`):
+   - Load test fixtures from YAML/JSON files
+   - Self-execute each PROMPT item with fixture inputs
+   - Verify output matches expected behavior
 3. If `SPEC_ID` provided: Filter to matching specs only.
 4. Report combined coverage: SCRIPT % + PROMPT %.
 
 **PROMPT Self-Test Protocol**:
 ```
-For each PROMPT item:
-  1. Read spec: What should this do?
-  2. Generate test input (edge case preferred)
-  3. Execute: Attempt the task as specified
-  4. Validate: Does output satisfy spec requirements?
-  5. Report: ✅ PASS / ❌ FAIL with explanation
+For each PROMPT fixture:
+  1. Read spec + fixture input
+  2. Execute: Attempt the task as specified
+  3. Validate: Compare output to expected
+  4. Report: ✅ PASS / ❌ FAIL with rationale
 ```
 
 ---

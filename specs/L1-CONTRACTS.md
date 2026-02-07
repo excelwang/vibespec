@@ -192,7 +192,7 @@ invariants:
       description: "SCRIPT items must not reference LLM APIs"
       layer: 3
       type: forbidden_terms
-      match_header: "\\[Type: SCRIPT\\]"
+      match_header: "[Type: SCRIPT]"
       terms: ["prompt(", "llm.", "ai.", "openai", "anthropic", "gemini"]
       severity: warning
 
@@ -202,6 +202,14 @@ invariants:
       type: forbidden_pattern
       match_header: "PROMPT_NATIVE|PROMPT_FALLBACK"
       pattern: "```pseudocode"
+      severity: warning
+
+    - id: L3_REQUIRES_FIXTURES
+      description: "L3 items should include Test Fixtures"
+      layer: 3
+      type: required_pattern
+      match_header: "[Type:"
+      pattern: "Fixtures"
       severity: warning
   ```
   (Ref: VISION.EXTENSIBILITY.PROJECT_RULES)
