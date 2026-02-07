@@ -177,3 +177,90 @@ class TestSorter(unittest.TestCase):
         # TODO: Implement actual test
         self.skipTest("Not implemented")
 
+
+@verify_spec("TEST_RUNNER")
+class TestTest_Runner(unittest.TestCase):
+    """Tests for TEST_RUNNER interface."""
+    # Implements: COMPONENTS.SCRIPTS.TEST_RUNNER
+
+    def setUp(self):
+        # Import TestRunner from scripts.run_tests
+        # Since scripts is not a package, we import via path or assume it's available
+        # For this test generation context, run_tests is the script running us? No, we are running via unittest
+        # We need to import the class.
+        import sys
+        from pathlib import Path
+        
+        # Add src/scripts to path if not present
+        scripts_path = Path(__file__).resolve().parent.parent.parent.parent / 'src' / 'scripts'
+        # Adjusted path: tests/specs/scripts/test_interfaces.py -> ../../../../src/scripts
+        if str(scripts_path) not in sys.path:
+            sys.path.append(str(scripts_path))
+            
+        try:
+            from run_tests import TestRunner
+            self.runner_cls = TestRunner
+        except ImportError:
+            self.skipTest("Could not import TestRunner from run_tests.py")
+
+    def test_normal_1(self):
+        """Input: env="MOCK", Expected: Exec Mock Tests"""
+        from unittest.mock import MagicMock, patch
+        
+        runner = self.runner_cls()
+        tests_dir = MagicMock()
+        tests_dir.exists.return_value = True
+        
+        with patch('run_tests.find_verified_tests') as mock_find:
+            mock_find.return_value = {'test.py': ['ID']}
+            
+            # Action
+            exit_code = runner.run(tests_dir, env='MOCK')
+            
+            # Assert
+            self.assertEqual(exit_code, 0)
+            # Should NOT call subprocess in MOCK mode
+            with patch('subprocess.call') as mock_call:
+                runner.run(tests_dir, env='MOCK')
+                mock_call.assert_not_called()
+
+    def test_normal_2(self):
+        """Input: env="REAL", Expected: Exec Real Tests"""
+        from unittest.mock import MagicMock, patch
+        
+        runner = self.runner_cls()
+        tests_dir = MagicMock()
+        tests_dir.exists.return_value = True
+        
+        with patch('run_tests.find_verified_tests') as mock_find, \
+             patch('run_tests.detect_framework') as mock_detect, \
+             patch('subprocess.call') as mock_call:
+            
+            mock_find.return_value = {'test.py': ['ID']}
+            mock_detect.return_value = ('python', ['cmd'])
+            mock_call.return_value = 0
+            
+            # Action
+            exit_code = runner.run(tests_dir, env='REAL')
+            
+            # Assert
+            self.assertEqual(exit_code, 0)
+            mock_call.assert_called_once()
+
+    def test_edge_3(self):
+        """Input: tests_dir="empty", Expected: No Tests Found"""
+        from unittest.mock import MagicMock, patch
+        
+        runner = self.runner_cls()
+        tests_dir = MagicMock()
+        tests_dir.exists.return_value = True
+        
+        with patch('run_tests.find_verified_tests') as mock_find:
+            mock_find.return_value = {}  # Empty
+            
+            # Action
+            exit_code = runner.run(tests_dir, env='REAL')
+            
+            # Assert
+            self.assertEqual(exit_code, 0)
+

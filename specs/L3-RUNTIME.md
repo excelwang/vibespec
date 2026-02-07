@@ -175,6 +175,27 @@ interface Sorter {
 
 ---
 
+## [interface] TEST_RUNNER
+
+> Implements: [Component: COMPONENTS.SCRIPTS.TEST_RUNNER]
+
+```typescript
+interface TestRunner {
+  run(tests_dir: Path, env: 'MOCK' | 'REAL'): TestResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| env="MOCK" | Exec Mock Tests | Normal |
+| env="REAL" | Exec Real Tests | Normal |
+| tests_dir="empty" | No Tests Found | Edge |
+
+**Consumers**: [USER_LIAISON]
+
+---
+
 ## [decision] LAYER_CLASSIFICATION
 
 > Implements: [Role: ROLES.SPEC_MANAGEMENT.ARCHITECT]

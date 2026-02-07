@@ -1,0 +1,15 @@
+# Auto-generated from L3-RUNTIME.md [decision] CONFLICT_RESOLUTION
+# Implements: ROLES.SPEC_MANAGEMENT.ARCHITECT
+tests:
+  - id: CONFLICT_RESOLUTION.case.1
+    description: "[10:00, 10:05] conflict -> 10:05 wins"
+    input: "[10:00, 10:05] conflict"
+    expect: "10:05 wins"
+  - id: CONFLICT_RESOLUTION.case.2
+    description: "Same timestamp -> User decides"
+    input: "Same timestamp"
+    expect: "User decides"
+  - id: CONFLICT_RESOLUTION.case.3
+    description: "Mergeable content -> Merge proposal"
+    input: "Mergeable content"
+    expect: "Merge proposal"
