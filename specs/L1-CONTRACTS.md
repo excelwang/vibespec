@@ -1,5 +1,5 @@
 ---
-version: 2.3.0
+version: 3.0.0
 invariants:
   - id: INV_TIMESTAMP_ORDER
     statement: "Ideas are processed in timestamp order; later ideas supersede earlier ones on conflict."
@@ -7,343 +7,489 @@ invariants:
     statement: "L(N) must be human-approved before L(N+1) refinement begins."
 ---
 
-# L1: Vibe-Spec Skill Behavior Contracts
+# L1: Vibe-Spec Behavior Contracts
+
+> **Subject**: Agent | Script. Pattern: `[Agent|Script] MUST [action]`
+> - Responsibility: WHO is accountable
+> - Verification: HOW to measure compliance
+
+---
 
 ## [standard] CONTRACTS.L3_TYPE_ANNOTATION
-- **TYPE_REQUIRED**: Each L3 item MUST include `[Type: X]` where X is PROMPT_NATIVE, SCRIPT, or PROMPT_FALLBACK.
-  > Rationale: Enables skill-creator to route items to appropriate execution mechanism.
-  (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION), (Ref: VISION.SCOPE.DEFINITION)
-- **SCRIPT_THRESHOLD**: Items SHOULD be typed SCRIPT if deterministic and implementable in <100 LOC.
-  > Rationale: Balances automation benefits against development complexity.
+
+- **TYPE_REQUIRED**: Script MUST enforce `[Type: X]` annotation on all L3 items.
+  > Responsibility: Validation — ensure routing to correct execution mechanism.
+  > Verification: Zero L3 items without type annotation.
+  (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION)
+
+- **SCRIPT_THRESHOLD**: Agent SHOULD assign `SCRIPT` type if task is deterministic and <100 LOC.
+  > Responsibility: Decision quality — balance automation vs complexity.
+  > Verification: SCRIPT assigned for eligible tasks.
   (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
-- **FALLBACK_RATIONALE**: PROMPT_FALLBACK items SHOULD include brief rationale for not scripting.
-  > Rationale: Prevents lazy fallback to LLM; documents automation barriers.
-- **PROMPT_BATCHING**: Adjacent PROMPT_NATIVE items SHOULD be grouped into a single unified prompt.
-  > Rationale: Reduces LLM call overhead; LLM is command center, scripts are tools it invokes.
+
+- **FALLBACK_RATIONALE**: Agent SHOULD document rationale for `PROMPT_FALLBACK` items.
+  > Responsibility: Transparency — explain automation barriers.
+  > Verification: All PROMPT_FALLBACK items have rationale.
+
+- **PROMPT_BATCHING**: Agent SHOULD batch adjacent PROMPT_NATIVE items.
+  > Responsibility: Efficiency — reduce LLM call overhead.
+  > Verification: No unbatched adjacent prompts.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
-- **SCRIPT_NO_LLM**: Items typed [Type: SCRIPT] MUST NOT invoke LLM operations.
-  > Rationale: Scripts are tools called by LLM; We have no api for script to call LLM.
+
+- **SCRIPT_NO_LLM**: Script MUST NOT contain LLM API calls.
+  > Responsibility: Separation — scripts are tools, not thinkers.
+  > Verification: Zero LLM terms in SCRIPT items.
   (Ref: VISION.AUTOMATION)
 
+---
+
 ## [system] CONTRACTS.IDEAS_PIPELINE
-- **BATCH_READ**: All idea files MUST be read before analysis begins.
-  > Rationale: Complete picture enables prioritization and merging.
+
+- **BATCH_READ**: Script MUST read all idea files before analysis.
+  > Responsibility: Data integrity — complete picture for prioritization.
+  > Verification: `files_read == files_exist`.
   (Ref: VISION.SCOPE.IDEAS)
-- **TIMESTAMP_ORDER**: Files named `YYYY-MM-DDTHHMM-<desc>.md` MUST be sorted chronologically.
-  > Rationale: Preserves user's sequential intent and narrative arc.
+
+- **TIMESTAMP_ORDER**: Script MUST sort ideas by filename timestamp.
+  > Responsibility: Preserve user intent sequence.
+  > Verification: Processing order matches chronological order.
   (Ref: VISION.SCOPE.IDEAS)
-- **LEVEL_SEEKING**: Processors MUST identify the highest appropriate layer (L0-L3) for each idea segment.
-  > Rationale: Shift-Left prevents implementation details polluting high-level docs.
+
+- **LEVEL_SEEKING**: Agent MUST classify each idea to highest applicable layer.
+  > Responsibility: Shift-left — prevent detail pollution.
+  > Verification: Each segment has correct layer assignment.
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
-- **DECOMPOSITION**: Mixed-level ideas MUST be split and processed sequentially (Highest Layer → Approval → Lower Layer).
-  > Rationale: Prevents "Big Ball of Mud" by serializing architectural changes.
+
+- **DECOMPOSITION**: Agent MUST split mixed-level ideas and process sequentially.
+  > Responsibility: Architectural integrity — serialize changes.
+  > Verification: Higher layers approved before lower layers processed.
   (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
-- **APPROVAL_REQUIRED**: Agents MUST pause and request human review immediately after creating a new Idea file.
-  > Rationale: Critical feedback loop prevents drift from user intent.
+
+- **APPROVAL_REQUIRED**: Agent MUST pause for human review after creating idea file.
+  > Responsibility: Human gate — prevent drift from user intent.
+  > Verification: `notify_user` called after each idea creation.
   (Ref: VISION.VIBE_CODING.HUMAN_GATE)
-- **COMPILE_PROMPT**: Upon completion of idea processing, IF `specs/ideas/` is empty, the user MUST be prompted to run compilation.
-  > Rationale: Keeps compiled artifact in sync with source.
+
+- **COMPILE_PROMPT**: Agent SHOULD prompt for compilation when ideas/ is empty.
+  > Responsibility: Artifact sync — keep compiled output current.
+  > Verification: Prompt shown when preconditions met.
   (Ref: VISION.AUTOMATION.EVOLUTION)
-- **CONFLICT_RES**: Later ideas SHALL supersede earlier conflicting ones.
-  > Rationale: Most recent user intent is current source of truth.
+
+- **CONFLICT_RES**: Agent MUST resolve conflicts by latest timestamp.
+  > Responsibility: Truth source — most recent intent wins.
+  > Verification: Later idea values supersede earlier ones.
   (Ref: VISION.SCOPE.IDEAS)
+
+---
 
 ## [system] CONTRACTS.REVIEW_PROTOCOL
-- **SELF_AUDIT**: After revising a layer, the agent MUST read the full new content to verify internal consistency.
-  > Rationale: Catches errors before wasting human review time.
+
+- **SELF_AUDIT**: Agent MUST read full layer content after revision.
+  > Responsibility: Quality — catch errors before human review.
+  > Verification: Self-check performed on each edit.
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
-- **QUALITY_ALIGNMENT**: Agent SHOULD verify implementations align with TARGET_PROJECT pillars. Violations are warnings.
-  > Rationale: Ensures maintainability, observability, determinism, modularity.
+
+- **QUALITY_ALIGNMENT**: Agent SHOULD verify TARGET_PROJECT pillar alignment.
+  > Responsibility: Maintainability, observability, determinism, modularity.
+  > Verification: Warning raised for non-alignment.
   (Ref: VISION.TARGET_PROJECT)
-- **HIERARCHY_CHECK**: Agent MUST load Parent Layer (L_N-1) to ensure L(N) fully implements parent requirements.
-  > Rationale: Backbone of traceability; prevents implementation drift.
+
+- **HIERARCHY_CHECK**: Agent MUST load parent layer before editing child.
+  > Responsibility: Traceability — prevent drift from parent requirements.
+  > Verification: Parent layer loaded on edit start.
   (Ref: VISION.TRACEABILITY.CHAIN)
-- **OMISSION_CHECK**: Agent MUST verify every key in L(N-1) is represented in L(N). Missing requirements are BLOCKING.
-  > Rationale: Forces agent to account for every parent specification.
+
+- **OMISSION_CHECK**: Agent MUST verify all parent keys are represented in child.
+  > Responsibility: Completeness — zero missing requirements.
+  > Verification: Coverage >= 100%.
   (Ref: VISION.TRACEABILITY.GOAL)
-- **REDUNDANCY**: Agent MUST flag redundant keys or sections.
-  > Rationale: Keeps specification lean; avoids maintenance burden.
+
+- **REDUNDANCY**: Agent MUST flag duplicate definitions.
+  > Responsibility: Lean specs — avoid maintenance burden.
+  > Verification: Warning on redundant sections.
   (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
-- **CONTRADICTION**: Agent MUST flag logic that conflicts with preserved sections.
-  > Rationale: Conflicts indicate potential axiom breakage.
+
+- **CONTRADICTION**: Agent MUST flag conflicts with existing content.
+  > Responsibility: Consistency — detect axiom breakage.
+  > Verification: Error on logical contradiction.
   (Ref: VISION.VIBE_CODING.TRUTH)
-- **NOTIFICATION**: Findings MUST be presented to user during approval phase.
-  > Rationale: Transparency empowers informed decisions.
+
+- **NOTIFICATION**: Agent MUST present all findings during approval.
+  > Responsibility: Transparency — enable informed decisions.
+  > Verification: All findings shown to user.
   (Ref: VISION.VIBE_CODING.PARADIGM)
-- **SEQUENTIAL_ONLY**: Agents MUST NOT revise more than one specification layer in a single turn.
-  > Rationale: Prevents cascading failures across layers.
+
+- **SEQUENTIAL_ONLY**: Agent MUST NOT edit multiple layers in one turn.
+  > Responsibility: Safety — prevent cascading failures.
+  > Verification: Single layer per turn.
   (Ref: VISION.TRACEABILITY.CHAIN)
-- **FOCUS_CHECK**: Agent MUST verify L(N) content aligns with FORMAT.LAYER_DEFINITIONS[L(N)]. Violations are BLOCKING.
-  > Rationale: Prevents implementation details leaking to wrong layers.
+
+- **FOCUS_CHECK**: Script MUST verify layer content matches layer definition.
+  > Responsibility: Focus — prevent wrong-layer content.
+  > Verification: Focus violations are blocking.
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
-- **SKILL_TRACEABILITY**: Agents MUST NOT edit SKILL.md directly without first updating corresponding spec layer.
-  > Rationale: SKILL.md is L3-level artifact; changes must trace through hierarchy.
+
+- **SKILL_TRACEABILITY**: Agent MUST NOT edit SKILL.md without updating L3.
+  > Responsibility: Traceability — SKILL.md is derived artifact.
+  > Verification: L3 updated before SKILL.md.
   (Ref: VISION.TRACEABILITY.CHAIN)
+
+---
 
 ## [system] CONTRACTS.REJECTION_HANDLING
-- **AUTOMATED_RETRY**: Agents MAY attempt self-correction up to 3 times for Validator errors.
-  > Rationale: Recovers from minor syntax/formatting issues without human intervention.
+
+- **AUTOMATED_RETRY**: Agent MAY self-correct up to 3 times for fixable errors.
+  > Responsibility: Recovery — minimize human intervention for minor issues.
+  > Verification: Max 3 retry attempts.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
-- **AUTOMATED_GIVEUP**: If self-correction fails >3 times, Agent MUST REVERT changes and halt.
-  > Rationale: Prevents infinite loops or garbage outputs.
+
+- **AUTOMATED_GIVEUP**: Agent MUST revert and halt after 3 failed retries.
+  > Responsibility: Safety — prevent infinite loops.
+  > Verification: Revert triggered on 4th failure.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
-- **HUMAN_REJECTION**: If user rejects approach (not just minor fixes), Agent MUST REVERT to pre-task state.
-  > Rationale: Allows clean restart with new approach.
+
+- **HUMAN_REJECTION**: Agent MUST revert to pre-task state on user rejection.
+  > Responsibility: Clean slate — enable fresh approach.
+  > Verification: Full revert on "try different approach".
   (Ref: VISION.VIBE_CODING.PARADIGM)
-- **NO_PARTIAL_COMMITS**: A Spec Layer is either fully approved and committed, or fully reverted.
-  > Rationale: Transactional integrity; no broken builds propagate.
+
+- **NO_PARTIAL_COMMITS**: Script MUST ensure atomic layer commits.
+  > Responsibility: Transactional integrity — no broken states.
+  > Verification: Layer fully approved or fully reverted.
   (Ref: VISION.VIBE_CODING.TRUTH)
+
+---
 
 ## [system] CONTRACTS.REFLECT
-- **CONTEXT_BASED**: Agent SHOULD rely on current conversation context to identify key ideas.
-  > Rationale: LLM already has access to current context; external log access is unnecessary.
+
+- **CONTEXT_BASED**: Agent SHOULD extract ideas from current conversation.
+  > Responsibility: Efficiency — use existing context.
+  > Verification: Ideas extracted without external log access.
   (Ref: VISION.SCOPE.REFL)
-- **HUMAN_REVIEW**: Distilled summary MUST be approved before saving.
-  > Rationale: Prevents AI-generated insights from committing without verification.
+
+- **HUMAN_REVIEW**: Agent MUST get approval before saving distilled ideas.
+  > Responsibility: Human gate — verify AI insights.
+  > Verification: Approval requested before file creation.
   (Ref: VISION.VIBE_CODING.HUMAN_GATE)
+
+---
 
 ## [system] CONTRACTS.SCRIPT_FIRST
-- **TARGET**: File I/O, structural validation, archival, and formatting MUST be handled by scripts.
-  > Rationale: Ensures 100% reliability for operations prone to LLM hallucination.
+
+- **TARGET**: Script MUST handle file I/O, validation, archival, formatting.
+  > Responsibility: Reliability — 100% deterministic for mechanical ops.
+  > Verification: Scripts used for listed operations.
   (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
-- **GOAL**: Script delegation improves stability and reduces token consumption.
-  > Rationale: Frees LLM context for high-level reasoning.
+
+- **GOAL**: Script SHOULD reduce token consumption vs LLM approach.
+  > Responsibility: Efficiency — free LLM for reasoning.
+  > Verification: Measurable token savings.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
-- **PROACTIVE**: Agents MUST actively identify repetitive workflows and propose new scripts.
-  > Rationale: Drives system towards increasing autonomy.
+
+- **PROACTIVE**: Agent MUST propose scripts for repetitive workflows.
+  > Responsibility: Evolution — drive increasing autonomy.
+  > Verification: Script proposal after 3+ repetitions.
   (Ref: VISION.AUTOMATION.EVOLUTION)
-- **DETERMINISM**: Deterministic code MUST be preferred over probabilistic LLM reasoning for mechanical tasks.
-  > Rationale: Randomness is liability, not asset, in validation/manipulation.
+
+- **DETERMINISM**: Script MUST use deterministic algorithms for mechanical tasks.
+  > Responsibility: Predictability — randomness is liability.
+  > Verification: No stochastic behavior in scripts.
   (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
-- **ZERO_DEPS**: Scripts MUST use only standard library components (No pip install).
-  > Rationale: Ensures portability and prevents supply chain attacks.
+
+- **ZERO_DEPS**: Script MUST use only standard library.
+  > Responsibility: Portability — no supply chain risk.
+  > Verification: No pip dependencies.
   (Ref: VISION.SCOPE.DEPS)
 
+---
+
 ## [standard] CONTRACTS.SCRIPT_USABILITY
-- **HELP_MESSAGE**: All scripts MUST implement a help message (e.g., via `--help`) to describe usage, arguments, and effects.
-  > Rationale: Improves discoverability and reduces cognitive load for both agents and humans.
+
+- **HELP_MESSAGE**: Script MUST implement `--help` with usage and arguments.
+  > Responsibility: Discoverability — reduce cognitive load.
+  > Verification: Help output on `--help` flag.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
 
+---
+
 ## [system] CONTRACTS.BOOTSTRAP
-- **DETECTION**: Agent MUST detect missing `specs/` directory and trigger Bootstrap Phase.
-  > Rationale: Prevents accidental operation on uninitialized projects.
+
+- **DETECTION**: Script MUST detect missing `specs/` and trigger bootstrap.
+  > Responsibility: Safety — prevent operation on uninitialized project.
+  > Verification: Bootstrap triggered when specs/ absent.
   (Ref: VISION.SCOPE.IDEAS)
-- **SCOPE_INQUIRY**: Agent MUST prompt user to describe the project in natural language.
-  > Rationale: Captures raw user intent before formalization.
+
+- **SCOPE_INQUIRY**: Agent MUST ask user to describe project.
+  > Responsibility: Capture — get raw user intent.
+  > Verification: Open-ended question asked.
   (Ref: VISION.VIBE_CODING.PARADIGM)
-- **SCOPE_REFORM**: Agent MUST reformulate user input into In-Scope (SHALL) and Out-of-Scope (SHALL NOT) statements.
-  > Rationale: Transforms vague intent into machine-verifiable boundaries.
+
+- **SCOPE_REFORM**: Agent MUST convert input to SHALL/SHALL NOT statements.
+  > Responsibility: Formalization — transform vague to verifiable.
+  > Verification: Output contains In-Scope and Out-of-Scope.
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
-- **APPROVAL_GATE**: Reformed scope MUST be presented for human approval BEFORE creating files.
-  > Rationale: Prevents misdirected initialization.
+
+- **APPROVAL_GATE**: Agent MUST get approval before creating files.
+  > Responsibility: Human gate — prevent misdirected init.
+  > Verification: Approval before any file creation.
   (Ref: VISION.VIBE_CODING.HUMAN_GATE)
-- **INITIALIZATION**: Upon approval, agent MUST create `specs/L0-VISION.md` and `specs/ideas/` directory.
-  > Rationale: Establishes minimum viable structure for spec management.
+
+- **INITIALIZATION**: Script MUST create L0-VISION.md and ideas/ on approval.
+  > Responsibility: Structure — minimum viable spec foundation.
+  > Verification: Required files exist after init.
   (Ref: VISION.SCOPE.VAL)
+
+---
 
 ## [system] CONTRACTS.TRIGGERS
-- **TRIGGER_SCAN**: `vibe-spec` (no arguments) MUST scan `specs/ideas/` and begin refinement workflow.
-  > Rationale: Default action is to process pending ideas.
+
+- **TRIGGER_SCAN**: Script MUST scan ideas/ on bare `vibe-spec` invocation.
+  > Responsibility: Default action — process pending ideas.
+  > Verification: Ideas scanned when no arguments.
   (Ref: VISION.SCOPE.IDEAS)
-- **TRIGGER_CAPTURE**: `vibe-spec <content>` MUST save content as timestamped idea file and halt for approval.
-  > Rationale: Captures raw thoughts without immediate processing.
+
+- **TRIGGER_CAPTURE**: Script MUST save inline content as timestamped idea.
+  > Responsibility: Capture — save raw thoughts immediately.
+  > Verification: File created with timestamp name.
   (Ref: VISION.VIBE_CODING.PARADIGM)
-- **TRIGGER_ALIASES**: System MUST recognize aliases: `vibe-spec`, `vibespec`, `vibe spec`.
-  > Rationale: Reduces friction in natural language invocation.
+
+- **TRIGGER_ALIASES**: Script MUST recognize: `vibe-spec`, `vibespec`, `vibe spec`.
+  > Responsibility: Usability — reduce friction.
+  > Verification: All aliases work identically.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
-- **IDLE_BEHAVIOR**: When no ideas exist AND SKILL.md exists, MUST enter Validation Mode.
-  > Rationale: Self-hosting mode enables continuous spec health monitoring.
+
+- **IDLE_BEHAVIOR**: Agent MUST enter Validation Mode when ideas/ empty and SKILL.md exists.
+  > Responsibility: Self-hosting — continuous health monitoring.
+  > Verification: Validation Mode triggered on conditions.
   (Ref: VISION.AUTOMATION.EVOLUTION)
-- **EMPTY_PROMPT**: When no ideas exist AND no SKILL.md, MUST invite user to brainstorm.
-  > Rationale: Friendly onboarding for new empty projects.
+
+- **EMPTY_PROMPT**: Agent MUST invite brainstorming when project empty.
+  > Responsibility: Onboarding — friendly new project experience.
+  > Verification: Invitation shown on empty state.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+
+---
 
 ## [system] CONTRACTS.VALIDATION_MODE
-- **TRIGGER**: Validation Mode MUST be triggered when `specs/ideas/` is empty AND `SKILL.md` exists.
-  > Rationale: Enables continuous health monitoring in self-hosting mode.
+
+- **TRIGGER**: Agent MUST enter when ideas/ empty and SKILL.md present.
+  > Responsibility: Continuous monitoring — catch accumulated drift.
+  > Verification: Mode activated on conditions.
   (Ref: VISION.AUTOMATION.EVOLUTION)
-- **FULL_SCAN**: Agent MUST run `validate.py` across all spec layers.
-  > Rationale: Catches accumulated drift and orphans.
+
+- **FULL_SCAN**: Script MUST run validation across all layers.
+  > Responsibility: Completeness — scan L0-L3.
+  > Verification: All spec files validated.
   (Ref: VISION.SCOPE.VAL)
-- **REPORT**: Agent MUST summarize findings: Orphan IDs, expansion ratio warnings, terminology warnings.
-  > Rationale: Provides actionable feedback for spec maintenance.
+
+- **REPORT**: Agent MUST summarize orphans, ratio warnings, terminology issues.
+  > Responsibility: Feedback — actionable maintenance report.
+  > Verification: All findings listed.
   (Ref: VISION.VIBE_CODING.TRUTH)
-- **FIX_PROPOSAL**: If errors found, agent MUST generate ideas to resolve them.
-  > Rationale: Closes the loop by converting issues into actionable work items.
+
+- **FIX_PROPOSAL**: Agent MUST generate ideas for found errors.
+  > Responsibility: Closing loop — convert issues to work items.
+  > Verification: Idea file created for each issue.
   (Ref: VISION.AUTOMATION.EVOLUTION)
-- **COMPILE_PROMPT**: If validation passes, agent MUST prompt for compilation.
-  > Rationale: Keeps compiled artifact in sync with source.
+
+- **COMPILE_PROMPT**: Agent SHOULD prompt for compilation on pass.
+  > Responsibility: Artifact sync — keep output current.
+  > Verification: Prompt shown on clean validation.
   (Ref: VISION.SCOPE.DOCS)
 
+---
+
 ## [system] CONTRACTS.CUSTOM_RULES
-- **RULE_FILE**: Custom validation rules MUST be defined in `specs/.vibe-rules.yaml`.
-  > Rationale: Separates project-specific rules from universal framework logic.
-  (Ref: VISION.EXTENSIBILITY.RULE_LOCATION), (Ref: VISION.EXTENSIBILITY.CORE_VS_CUSTOM)
-- **RULE_SCHEMA**: Each rule MUST specify `id`, `layer`, `type`, `severity`, and type-specific config.
-  > Rationale: Declarative rules enable validation without code changes.
+
+- **RULE_FILE**: Script MUST load rules from `specs/.vibe-rules.yaml`.
+  > Responsibility: Separation — project rules separate from framework.
+  > Verification: File loaded when present.
+  (Ref: VISION.EXTENSIBILITY.RULE_LOCATION)
+
+- **RULE_SCHEMA**: Script MUST validate rule schema: id, layer, type, severity.
+  > Responsibility: Correctness — reject malformed rules.
+  > Verification: Error on missing required fields.
   (Ref: VISION.EXTENSIBILITY.SCHEMA_DRIVEN)
-- **RULE_TYPES**: Supported types: `forbidden_terms`, `forbidden_pattern`, `required_pattern`.
-  > Rationale: Covers common validation needs while remaining simple.
+
+- **RULE_TYPES**: Script MUST support: forbidden_terms, forbidden_pattern, required_pattern.
+  > Responsibility: Coverage — common validation needs.
+  > Verification: All listed types work.
   (Ref: VISION.EXTENSIBILITY.SCHEMA_DRIVEN)
-- **VIBE_SPEC_RULES**: Vibe-spec project-specific rules:
+
+- **VIBE_SPEC_RULES**: This project's custom rules:
   ```yaml
   rules:
     - id: SCRIPT_NO_LLM
-      description: "SCRIPT items must not reference LLM APIs"
       layer: 3
       type: forbidden_terms
       match_header: "[Type: SCRIPT]"
-      terms: ["prompt(", "llm.", "ai.", "openai", "anthropic", "gemini"]
+      terms: ["prompt(", "llm.", "openai", "anthropic"]
       severity: warning
 
     - id: PROMPT_NO_PSEUDOCODE
-      description: "PROMPT items should use natural language descriptions"
       layer: 3
       type: forbidden_pattern
       match_header: "PROMPT_NATIVE|PROMPT_FALLBACK"
       pattern: "```pseudocode"
       severity: warning
-
-    - id: L3_REQUIRES_FIXTURES
-      description: "L3 items should include Test Fixtures"
-      layer: 3
-      type: required_pattern
-      match_header: "[Type:"
-      pattern: "Fixtures"
-      severity: error
-
-    - id: L3_FIXTURES_STRUCTURE
-      description: "L3 Fixtures must define Input and Expected states"
-      layer: 3
-      type: required_pattern
-      match_header: "[Type:"
-      pattern: "(?si)Fixtures.*?Input:.*?Expected:"
-      severity: error
   ```
   (Ref: VISION.EXTENSIBILITY.PROJECT_RULES)
 
+---
+
 ## [system] CONTRACTS.SKILL_DISTRIBUTION
-- **SKILL_MD**: `SKILL.md` is the single source of truth for skill capabilities.
-  > Rationale: Version-controlled, auditable; prevents configuration drift.
+
+- **SKILL_MD**: Script MUST treat SKILL.md as single source of truth for capabilities.
+  > Responsibility: Auditability — version-controlled capabilities.
+  > Verification: Capabilities match SKILL.md.
   (Ref: VISION.SCOPE.SKILL)
-- **COMPLIANCE**: Updates MUST follow `skill-creator` standard.
-  > Rationale: Ensures ecosystem compatibility.
+
+- **COMPLIANCE**: Script MUST validate SKILL.md against skill-creator schema.
+  > Responsibility: Ecosystem compatibility.
+  > Verification: Schema validation passes.
   (Ref: VISION.SCOPE.SKILL)
-- **ENTRY_POINT**: `src/SKILL.md` is the skill entry point.
-  > Rationale: Physically isolates skill definition from generated artifacts.
-- **TRIGGER_WORDS**: System MUST recognize: `vibe-spec`, `vibespec`, `vibe spec`, `refine specs`.
-  > Rationale: Multiple aliases reduce friction.
+
+- **ENTRY_POINT**: Script MUST use `src/SKILL.md` as skill entry.
+  > Responsibility: Location — consistent skill path.
+  > Verification: Loader finds skill at path.
+
+- **TRIGGER_WORDS**: Script MUST recognize: vibe-spec, vibespec, vibe spec, refine specs.
+  > Responsibility: Activation — multiple aliases.
+  > Verification: All triggers activate skill.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
 
 ---
 
 ## [standard] CONTRACTS.METADATA
-- **FRONTMATTER**: Each spec file MUST contain valid YAML frontmatter with a `version` field.
-  > Rationale: Machine-parseable metadata for automation pipelines.
+
+- **FRONTMATTER**: Script MUST validate YAML frontmatter with `version` field.
+  > Responsibility: Automation — machine-parseable metadata.
+  > Verification: Error on missing version.
+
+---
 
 ## [standard] CONTRACTS.LAYER_DEFINITIONS
-- **L0_VISION**: L0 focuses on "Why" and "What". Implementation details, tool names, file paths are FORBIDDEN.
-- **L1_CONTRACTS**: L1 focuses on "Rules" and "Invariants". Architecture components, script logic are FORBIDDEN.
-- **L2_ARCHITECTURE**: L2 focuses on "Components" and "Data Flow". Class methods, variable names are FORBIDDEN.
-- **L3_IMPLEMENTATION**: L3 focuses on "How". Vague vision statements are FORBIDDEN.
 
-(Ref: VISION.TRACEABILITY.WORKFLOW), (Ref: VISION.TRACEABILITY.GRANULARITY)
+Layer focus rules:
+
+| Layer | Focus | Forbidden |
+|-------|-------|-----------|
+| **L0** | Why, What | Implementation details, tool names, paths |
+| **L1** | Rules, Invariants | Architecture, script logic |
+| **L2** | Components, Data Flow | Method definitions, variable names |
+| **L3** | How | Vague vision statements |
+
+(Ref: VISION.TRACEABILITY.WORKFLOW)
+
+---
 
 ## [standard] CONTRACTS.TRACEABILITY
-- **SEMANTIC_IDS**: Each statement MUST begin with a bold semantic key (`- **KEY**: ...`). Sequential numbering is FORBIDDEN.
-- **IN_PLACE_REFS**: Downstream items MUST explicitly reference parent IDs using `(Ref: PARENT_ID)`.
-- **DRIFT_DETECTION**: Referencing non-existent parent IDs is a BLOCKING error.
-- **COMPLETENESS**: Each upstream ID MUST be referenced by at least one downstream item (coverage >= 100%).
-- **ANCHORING**: Each downstream item (Layer > 0) MUST reference at least one valid parent node.
-- **REDUNDANCY**: Upstream keys with 0% downstream coverage MUST be flagged as "orphans".
+
+- **SEMANTIC_IDS**: Script MUST enforce `- **KEY**: ...` format (no sequential numbering).
+  > Responsibility: Addressability — unique semantic keys.
+  > Verification: Error on numbered lists.
+
+- **IN_PLACE_REFS**: Script MUST require `(Ref: PARENT_ID)` on downstream items.
+  > Responsibility: Linkage — explicit parent references.
+  > Verification: Error on missing refs.
+
+- **DRIFT_DETECTION**: Script MUST reject references to non-existent IDs.
+  > Responsibility: Integrity — no dangling refs.
+  > Verification: Error on invalid ref.
+
+- **COMPLETENESS**: Script MUST ensure each upstream ID has downstream coverage.
+  > Responsibility: Coverage — no orphan requirements.
+  > Verification: Error on 0% coverage.
+
+- **ANCHORING**: Script MUST require at least one parent ref per downstream item.
+  > Responsibility: Grounding — all items anchored.
+  > Verification: Error on unanchored items.
 
 (Ref: VISION.TRACEABILITY.CHAIN), (Ref: VISION.TRACEABILITY.GOAL)
 
+---
+
 ## [system] CONTRACTS.SECTION_MARKERS
-- **H2_ANNOTATION**: All H2 section headers MUST be annotated with `[system]` or `[standard]`.
-- **SYSTEM_SEMANTICS**: `[system]` marks vibe-spec system logic or project-specific implementation details (The "How"). Analogous to the **Executor** role.
-  > Example: "Use Shunting-yard algorithm" (Mechanism) or "Deploy via Docker" (Implementation).
-- **STANDARD_SEMANTICS**: `[standard]` marks reusable design patterns, meta-rules, or user-facing specification standards (The "Rules"). Analogous to the **Legislator** role.
-  > Example: "Must retain 4 decimal places" (Constraint) or "UI Must be Dark Mode" (Requirement).
-- **COMPILATION_BEHAVIOR**: `compile.py` MUST retain ALL sections (both markers) by default. Filtering is only for explicit `--public` mode.
-- **VALIDATION_CHECK**: `validate.py` SHOULD warn if H2 headers lack a marker annotation.
 
-(Ref: VISION.AGENT_AS_DEVELOPER.PRIMARY_CONSUMER), (Ref: VISION.AGENT_AS_DEVELOPER.FULL_CONTEXT), (Ref: VISION.AGENT_AS_DEVELOPER.INTERNAL_PURPOSE), (Ref: VISION.AGENT_AS_DEVELOPER.TEMPLATE_PURPOSE), (Ref: VISION.AGENT_AS_DEVELOPER.INFORMATION_COMPLETENESS), (Ref: VISION.AGENT_AS_DEVELOPER.PUBLIC_EXPORT)
+- **H2_ANNOTATION**: Script MUST warn on H2 headers without `[system]` or `[standard]`.
+  > Responsibility: Classification — distinguish impl from rules.
+  > Verification: Warning on unmarked H2.
 
-## [standard] CONTRACTS.TESTING_STRATEGY
-- **L1_PROMPT_TESTS**: L1 contracts SHOULD have PROMPT-type acceptance tests. Agent self-verifies compliance during task execution.
-  > Rationale: L1 defines user expectations; testing requires judgment, not automation.
-- **L2_NO_INDEPENDENT_TESTS**: L2 architecture SHOULD NOT have independent tests. L2 testable points are covered by L1 (intent) and L3 (implementation).
-  > Rationale: L2 is a design bridge. Interface signatures are tested by L3 unit tests; design intent is tested by L1 acceptance tests.
-- **L3_SCRIPT_TESTS**: L3 implementation items SHOULD have SCRIPT-type unit tests with Input/Expected fixtures.
-  > Rationale: L3 is deterministic code; automated testing is appropriate.
-- **TEST_TYPE_ANNOTATION**: L1 acceptance tests MAY include `[Type: PROMPT|SCRIPT|MANUAL]` annotation. Default is PROMPT for agent skill projects.
-  > Rationale: Allows flexibility for different project types.
+- **SYSTEM_SEMANTICS**: `[system]` = implementation details (How).
+- **STANDARD_SEMANTICS**: `[standard]` = design patterns (Rules).
 
-(Ref: VISION.SCOPE.COV), (Ref: VISION.VIBE_CODING.AI_ASSIST)
+- **COMPILATION_BEHAVIOR**: Script MUST retain all sections by default; filter only on `--public`.
+  > Responsibility: Completeness — full context for agents.
+  > Verification: Both markers in default compile.
 
-## [standard] CONTRACTS.TRACEABILITY_MAINTENANCE
-- **IMMUTABLE_IDS**: Once published, ID semantics MUST NOT change unless explicitly versioned (e.g., `AUTH.LOGIN` → `AUTH.LOGIN_V2`).
-- **STALENESS_WARNING**: If `mtime(Parent) > mtime(Child)`, validator SHOULD warn that child may be stale.
+(Ref: VISION.AGENT_AS_DEVELOPER)
 
-(Ref: VISION.TRACEABILITY.GOAL)
+---
 
 ## [standard] CONTRACTS.QUANTIFIED_VALIDATION
-- **ATOMICITY**: (L0 only) Single Vision statement MUST NOT exceed 50 words.
-- **DEPTH**: Spec nesting MUST NOT exceed 2 levels.
-- **FORMAL_NOTATION**: Formal blocks (Mermaid, JSON, code blocks) SHOULD be preferred over prose.
-- **TERMINOLOGY**: Controlled vocabulary from VISION.UBIQUITOUS_LANGUAGE MUST be used.
-- **RFC2119**: At least 50% of L1 contract statements MUST use uppercase keywords (MUST, SHOULD, MAY).
-- **SEMANTIC_COVERAGE**: Downstream items SHOULD cover all key concepts from parent nodes.
 
-(Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC), (Ref: VISION.FORMAL_SYNTAX.MULTIPLIER)
+- **ATOMICITY**: Script MUST enforce <50 words per L0 statement.
+- **DEPTH**: Script MUST enforce <=2 nesting levels.
+- **TERMINOLOGY**: Script MUST validate controlled vocabulary usage.
+- **RFC2119**: Script MUST require >=50% RFC2119 keyword density in L1.
+
+(Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+
+---
 
 ## [standard] CONTRACTS.ALGEBRAIC_VALIDATION
-- **MILLERS_LAW**: Downstream references per upstream requirement MUST NOT exceed 7 (Fan-Out <= 7).
-- **CONSERVATION**: Sum of coverage weights MUST be >= 100%.
-- **EXPANSION_RATIO**: Ratio of L(N) to L(N-1) item count MUST be between 1.0 and 10.0.
-- **VERB_DENSITY**: Spec statements MUST maintain verb density >= 10%.
-- **TEST_COVERAGE**: Each leaf node (L3 item with no downstream refs) MUST be referenced by at least one `@verify_spec(ID)` tag.
 
-(Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC), (Ref: VISION.SCOPE.COV)
+- **MILLERS_LAW**: Script MUST enforce Fan-Out <= 7.
+- **CONSERVATION**: Script MUST enforce coverage sum >= 100%.
+- **EXPANSION_RATIO**: Script SHOULD warn if L(N)/L(N-1) ratio outside 1.0-10.0.
+- **TEST_COVERAGE**: Script SHOULD warn if L3 leaf has no `@verify_spec` reference.
+
+(Ref: VISION.SCOPE.COV)
+
+---
 
 ## [standard] CONTRACTS.STRICT_TESTABILITY
-- **DEFAULT_TESTABLE**: Each L1/L2/L3 item (bold key with MUST/SHOULD/MAY) is considered testable.
-- **RATIONALE_SEPARATION**: Explanatory text MUST use `> Rationale:` block separation.
-- **PROGRESSIVE_FORMAT**: Each layer SHOULD use format appropriate to its abstraction level.
-- **RFC2119_ENFORCEMENT**: L1 items MUST contain at least one RFC2119 keyword.
 
-(Ref: VISION.SCOPE.COV), (Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE), (Ref: VISION.VIBE_CODING.AI_ASSIST)
+- **DEFAULT_TESTABLE**: Items with MUST/SHOULD/MAY are testable requirements.
+- **RATIONALE_SEPARATION**: Use `> Rationale:` block for explanations.
+- **RFC2119_ENFORCEMENT**: Script MUST require RFC2119 keyword in L1 items.
+
+(Ref: VISION.SCOPE.COV)
+
+---
 
 ## [system] CONTRACTS.COMPILATION
-- **LLM_OPTIMIZED**: Compiled output MUST be optimized for Agent consumption.
-- **ANCHORING**: Compiled output MUST include HTML anchors for each major section.
-- **NAVIGATION**: Compiled output MUST include system preamble and table of contents.
-- **NOISE_REDUCTION**: File frontmatter MUST be stripped during compilation.
 
-(Ref: VISION.COMPILATION_STRUCTURE.LLM_FRIENDLY), (Ref: VISION.COMPILATION_STRUCTURE.CONTEXT_ANCHORS), (Ref: VISION.COMPILATION_STRUCTURE.NAVIGATION), (Ref: VISION.COMPILATION_STRUCTURE.NOISE_REDUCTION)
+- **LLM_OPTIMIZED**: Script MUST produce single continuous markdown.
+- **ANCHORING**: Script MUST generate HTML anchors for sections.
+- **NAVIGATION**: Script MUST include TOC and preamble.
+- **NOISE_REDUCTION**: Script MUST strip frontmatter.
+
+(Ref: VISION.COMPILATION_STRUCTURE)
+
+---
 
 ## [standard] CONTRACTS.TERMINOLOGY_ENFORCEMENT
 
 ```yaml
 standard_terms:
-  Validate: Static checks (linting, compilation, structure)
-  Verify: Dynamic checks (runtime tests, behavior)
-  Pipeline: Linear, non-branching sequence of steps
-  Flow: Branching, conditional logic paths
-  Assert: Hard-blocking failure condition
-  Error: Runtime exception or crash
-  Violation: Specification compliance failure
+  Validate: Static checks (linting, structure)
+  Verify: Dynamic checks (runtime tests)
+  Pipeline: Linear sequence
+  Flow: Branching logic
+  Assert: Hard-blocking failure
+  Error: Runtime exception
+  Violation: Spec non-compliance
 ```
 
-- **VALIDATE_VS_VERIFY**: "Validate" means static checks; "Verify" means dynamic checks.
-- **ASSERT_VS_ERROR**: "Assert" means hard-blocking; "Error" means runtime exception.
-- **PIPELINE_VS_FLOW**: "Pipeline" means linear steps; "Flow" means branching logic.
-- **VIOLATION_VS_ERROR**: "Violation" means spec non-compliance; "Error" means code crash.
+(Ref: VISION.UBIQUITOUS_LANGUAGE)
 
-(Ref: VISION.UBIQUITOUS_LANGUAGE.CONTROLLED_VOCABULARY), (Ref: VISION.UBIQUITOUS_LANGUAGE.VALIDATE), (Ref: VISION.UBIQUITOUS_LANGUAGE.VERIFY), (Ref: VISION.UBIQUITOUS_LANGUAGE.ASSERT), (Ref: VISION.UBIQUITOUS_LANGUAGE.PIPELINE), (Ref: VISION.UBIQUITOUS_LANGUAGE.FLOW), (Ref: VISION.UBIQUITOUS_LANGUAGE.VIOLATION), (Ref: VISION.UBIQUITOUS_LANGUAGE.ERROR)
+---
 
 ## [standard] CONTRACTS.FORMAL_NOTATION
-- **PREFER_FORMALISMS**: L2 SHOULD prefer architecture diagrams, flowcharts, JSON schema; L3 SHOULD prefer pseudocode.
 
-(Ref: VISION.FORMAL_SYNTAX.FORMALISMS), (Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE)
+- **PREFER_FORMALISMS**: Agent SHOULD use diagrams in L2, pseudocode in L3.
+  > Responsibility: Clarity — formal notation over prose.
+  > Verification: Warning on prose-only sections.
+
+(Ref: VISION.FORMAL_SYNTAX)

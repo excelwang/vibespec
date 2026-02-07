@@ -1,91 +1,107 @@
 ---
-version: 2.1.0
+version: 3.0.0
 ---
 
 # L0: Vibe-Spec Vision
 
+> **Subject**: User → vibe-skill. Pattern: `User wants vibe-skill to [goal]`
+
 ## [system] VISION.SCOPE
-- **DEFINITION**: Vibe-Spec is a **specification management framework**, not a code generation engine itself.
+
+User wants vibe-skill to be a **specification management framework** (not a code generator).
 
 ### In-Scope
-- **VAL**: Hierarchical spec validation (L0-L3).
-- **TRACE**: Traceability mapping (Layer dependency).
-- **DOCS**: Document compilation (Single authoritative `VIBE-SPECS.md`).
-- **COV**: Test-to-spec coverage tracking (`@verify_spec`).
-- **IDEAS**: "Ideas" ingestion pipeline (raw thought -> refined spec).
-- **REFL**: Conversation reflection (`vibe-spec reflect`).
-- **DEPS**: Zero third-party dependency operation.
-- **AUTO**: Script-first workflow automation.
-- **SKILL**: Agentic skill distribution (SKILL.md + skill-creator compliance).
+- **VAL**: User wants vibe-skill to validate specs hierarchically (L0-L3).
+- **TRACE**: User wants vibe-skill to track layer dependencies for traceability.
+- **DOCS**: User wants vibe-skill to compile specs into a single authoritative document.
+- **COV**: User wants vibe-skill to track test-to-spec coverage via `@verify_spec`.
+- **IDEAS**: User wants vibe-skill to ingest raw ideas and refine them into specs.
+- **REFL**: User wants vibe-skill to reflect on conversations and extract new ideas.
+- **DEPS**: User wants vibe-skill to operate with zero third-party dependencies.
+- **AUTO**: User wants vibe-skill to automate workflows via scripts first.
+- **SKILL**: User wants vibe-skill to distribute as an agentic skill (SKILL.md).
 
 ### Out-of-Scope
-* LLM: Integrated LLM code generation (delegated to external agents like Antigravity).
-* UI: UI design tools.
-* PM: Project management or ticketing systems.
+- **LLM**: User does NOT want vibe-skill to generate code (delegated to external agents).
+- **UI**: User does NOT want vibe-skill to provide UI design tools.
+- **PM**: User does NOT want vibe-skill to manage projects or tickets.
 
 ## [system] VISION.AUTOMATION
-- **SCRIPT_FIRST**: If a task CAN be formalized into a script, it MUST be.
-- **COGNITIVE_LOAD**: Minimize LLM/Human cognitive load by offloading mechanical work to deterministic scripts.
-- **EVOLUTION**: The system evolves by identifying patterns and rigidifying them into code.
-- **ITEM_CLASSIFICATION**: L3 items MUST be tagged with execution type: PROMPT_NATIVE (LLM), SCRIPT (automation), or PROMPT_FALLBACK (LLM when scripting too complex).
+
+- **SCRIPT_FIRST**: User wants vibe-skill to script any formalizable task.
+- **COGNITIVE_LOAD**: User wants vibe-skill to minimize LLM/human cognitive load via deterministic scripts.
+- **EVOLUTION**: User wants vibe-skill to evolve by rigidifying patterns into code.
+- **ITEM_CLASSIFICATION**: User wants vibe-skill to tag L3 items with execution type (PROMPT_NATIVE | SCRIPT | PROMPT_FALLBACK).
 
 ## [system] VISION.EXTENSIBILITY
-- **PROJECT_RULES**: Projects MAY define custom validation rules beyond core traceability.
-- **RULE_LOCATION**: Custom rules MUST be defined in the `CONTRACTS.CUSTOM_RULES` section of L1-CONTRACTS.
-- **CORE_VS_CUSTOM**: Core rules (traceability, anchors, refs) are universal; custom rules are project-specific.
-- **SCHEMA_DRIVEN**: Rule definitions follow a declarative schema, not code.
+
+- **PROJECT_RULES**: User wants vibe-skill to allow project-specific validation rules.
+- **RULE_LOCATION**: User wants vibe-skill to define custom rules in L1-CONTRACTS.
+- **CORE_VS_CUSTOM**: User wants vibe-skill to separate universal rules from project-specific ones.
+- **SCHEMA_DRIVEN**: User wants vibe-skill to use declarative schemas for rule definitions.
 
 ---
 
 ## [standard] VISION.TRACEABILITY
-- **CHAIN**: The system must support full-chain traceability from vague user requests to verified code.
-- **WORKFLOW**: **Workflow**: Vague Request -> Requirement Breakdown -> Specs -> Implementation -> Verification.
-- **GRANULARITY**: Every statement in a specification must be atomically addressable (numbered lines).
-- **GOAL**: Ensure every line of code exists to satisfy a specific requirement.
+
+- **CHAIN**: User wants vibe-skill to support full traceability from request to verified code.
+- **WORKFLOW**: User wants vibe-skill to follow: Request → Breakdown → Specs → Implementation → Verification.
+- **GRANULARITY**: User wants vibe-skill to make every spec statement atomically addressable.
+- **GOAL**: User wants vibe-skill to ensure every line of code satisfies a requirement.
 
 ## [standard] VISION.VIBE_CODING
-- **TRUTH**: The system must enable "Vibe Coding", where specifications are the primary source of truth.
-- **PARADIGM**: **Paradigm**: Human defines Spec -> AI writes code -> Human & AI verify.
-- **HUMAN_GATE**: Human approval is required before any specification change is persisted.
-- **AI_ASSIST**: AI agents assist in code generation, validation, and refinement.
-- **SHIFT_LEFT**: **Shift-Left**: Errors should be caught at the Spec level, not implementation.
+
+- **TRUTH**: User wants vibe-skill to treat specs as the primary source of truth.
+- **PARADIGM**: User wants vibe-skill to enable: Human defines Spec → AI writes code → Human & AI verify.
+- **HUMAN_GATE**: User wants vibe-skill to require human approval before persisting spec changes.
+- **AI_ASSIST**: User wants vibe-skill to leverage AI for generation, validation, and refinement.
+- **SHIFT_LEFT**: User wants vibe-skill to catch errors at spec level, not implementation.
 
 ## [standard] VISION.PHILOSOPHY
-- **HUMAN_CENTRIC**: Specs must be atomic and readable to minimize human context switching.
-- **LLM_CENTRIC**: Prompts must be concise and deterministic to prevent reasoning drift.
-- **SYSTEM_CENTRIC**: Complexity is managed by scripts, not by memory.
+
+- **HUMAN_CENTRIC**: User wants vibe-skill to produce atomic, readable specs.
+- **LLM_CENTRIC**: User wants vibe-skill to generate concise, deterministic prompts.
+- **SYSTEM_CENTRIC**: User wants vibe-skill to manage complexity via scripts, not memory.
 
 ## [system] VISION.AGENT_AS_DEVELOPER
-- **PRIMARY_CONSUMER**: The compiled `spec-full` is a **Developer's Bible** for AI Agents, not external documentation.
-- **FULL_CONTEXT**: AI as Core Developer requires "God's Eye View" of all internal details to maintain code.
-- **INTERNAL_PURPOSE**: `[system]` marks implementation details essential for code maintenance and refactoring.
-- **TEMPLATE_PURPOSE**: `[standard]` marks design patterns and meta-rules for ensuring new code aligns with project architecture.
-- **INFORMATION_COMPLETENESS**: Completeness of information (retaining all sections) is key to code quality and system stability.
-- **PUBLIC_EXPORT**: Filtering `[system]` is ONLY valid for external/public documentation (future `compile.py --public` mode).
+
+- **PRIMARY_CONSUMER**: User wants vibe-skill to compile a "Developer's Bible" for AI agents.
+- **FULL_CONTEXT**: User wants vibe-skill to provide AI with "God's Eye View" of internals.
+- **INTERNAL_PURPOSE**: User wants vibe-skill to mark implementation details with `[system]`.
+- **TEMPLATE_PURPOSE**: User wants vibe-skill to mark design patterns with `[standard]`.
+- **INFORMATION_COMPLETENESS**: User wants vibe-skill to retain all sections for code quality.
+- **PUBLIC_EXPORT**: User wants vibe-skill to support filtering `[system]` for public docs (future).
 
 ## [system] VISION.COMPILATION_STRUCTURE
-- **LLM_FRIENDLY**: The compiled `VIBE-SPECS.md` must be optimized for Agent consumption.
-- **CONTEXT_ANCHORS**: Sections must have explicit HTML anchors for precise context retrieval.
-- **NAVIGATION**: A system preamble and table of contents are mandatory.
-- **NOISE_REDUCTION**: Individual file frontmatter must be stripped in the compilation.
+
+- **LLM_FRIENDLY**: User wants vibe-skill to optimize compiled output for agent consumption.
+- **CONTEXT_ANCHORS**: User wants vibe-skill to include HTML anchors for precise retrieval.
+- **NAVIGATION**: User wants vibe-skill to include preamble and TOC.
+- **NOISE_REDUCTION**: User wants vibe-skill to strip frontmatter during compilation.
 
 ## [standard] VISION.FORMAL_SYNTAX
-- **PRECISION_OVER_PROSE**: Specifications SHALL prioritize formal notation over verbose text.
-- **FORMALISMS**: Preferred formats include Mermaid diagrams, JSON/TypeScript schemas, and pseudocode.
-- **MULTIPLIER**: Formal blocks (code fences, diagrams) carry higher information density than prose.
+
+- **PRECISION_OVER_PROSE**: User wants vibe-skill to prioritize formal notation over prose.
+- **FORMALISMS**: User wants vibe-skill to use Mermaid, JSON/TypeScript schemas, pseudocode.
+- **MULTIPLIER**: User wants vibe-skill to leverage high-density formal blocks.
 
 ## [standard] VISION.UBIQUITOUS_LANGUAGE
-- **CONTROLLED_VOCABULARY**: The system SHALL use precise, unambiguous terminology.
-- **VALIDATE**: Structural/static checks performed by scripts or linters.
-- **VERIFY**: Dynamic/runtime checks performed by tests or manual review.
-- **ASSERT**: A hard blocking condition expressed in code.
-- **PIPELINE**: A linear sequence of processing steps.
-- **FLOW**: A possibly branching logic path or user workflow.
-- **VIOLATION**: Breaking a specification rule.
-- **ERROR**: A runtime crash or exception.
+
+User wants vibe-skill to use precise, unambiguous terminology:
+| Term | Definition |
+|------|------------|
+| Validate | Structural/static checks by scripts |
+| Verify | Dynamic/runtime checks by tests |
+| Assert | Hard blocking condition in code |
+| Pipeline | Linear sequence of steps |
+| Flow | Branching logic path |
+| Violation | Breaking a spec rule |
+| Error | Runtime crash or exception |
 
 ## [standard] VISION.TARGET_PROJECT
-- **MAINTAINABILITY**: Code is read more than written; clarity over cleverness.
-- **OBSERVABILITY**: If you cannot see it, assume it is broken.
-- **DETERMINISM**: Stochastic behavior is a bug unless explicitly required.
-- **MODULARITY**: High cohesion within modules, low coupling between them.
+
+User wants vibe-skill to help build projects with these qualities:
+- **MAINTAINABILITY**: Clarity over cleverness.
+- **OBSERVABILITY**: If you can't see it, assume it's broken.
+- **DETERMINISM**: Stochastic behavior is a bug unless required.
+- **MODULARITY**: High cohesion, low coupling.
