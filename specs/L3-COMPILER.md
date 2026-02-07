@@ -7,7 +7,7 @@ version: 2.0.0
 ## [system] COMPILER.CLI_INTERFACE
 CLI entry point for spec management commands.
 - **COMMANDS**: Distinct subcommands for each lifecycle phase. [Type: PROMPT_FALLBACK]
-  - **VALIDATE**: `vibe-spec validate <path>` triggers comprehensive validation.
+  - **VALIDATE**: `vibe-spec validate <path>` triggers comprehensive validation. [Type: SCRIPT]
     ```pseudocode
     function validate(path: string) -> ExitCode:
       files = scanner.scan(path)
@@ -19,7 +19,7 @@ CLI entry point for spec management commands.
       return 0
     ```
     (Ref: ARCHITECTURE.VALIDATOR_CORE)
-  - **COMPILE**: `vibe-spec compile <dir> <output>` assembles final document.
+  - **COMPILE**: `vibe-spec compile <dir> <output>` assembles final document. [Type: SCRIPT]
     ```pseudocode
     function compile(dir: string, output: string) -> void:
       specs = scanner.scan(dir).map(parser.parse)
@@ -29,20 +29,17 @@ CLI entry point for spec management commands.
       doc.write(output)
     ```
     (Ref: ARCHITECTURE.COMPILER_PIPELINE)
-  - **REFLECT**: `vibe-spec reflect` initiates interactive distillation.
-    ```pseudocode
-    function reflect() -> void:
-      cursor = cursor_manager.read()
-      messages = log_api.fetch_after(cursor)
-      if messages.empty(): print("Up to date"); return
-      filtered = filter.apply(messages)
-      ideas = distiller.extract(filtered)
-      presenter.show(ideas)
-      if user.approve():
-        writer.save_ideas(ideas)
-        cursor_manager.update(messages.last.timestamp)
-    ```
+  - **REFLECT**: `vibe-spec reflect` initiates interactive distillation. [Type: PROMPT_NATIVE]
+    > Agent analyzes current conversation context to extract key insights. If no new insights found, reports "Up to date" and exits. Otherwise, formats insights as idea proposals, presents to user for approval, and saves approved ideas to `specs/ideas/`.
     (Ref: ARCHITECTURE.REFLECTOR)
+  - **TEST**: `vibe-spec test [SPEC_ID]` runs spec-linked tests. [Type: SCRIPT]
+    ```pseudocode
+    function test(spec_id: string = null) -> ExitCode:
+      tests = scanner.find_verified_tests(tests_dir)
+      if spec_id: tests = tests.filter(t => t.spec_ids.includes(spec_id))
+      return runner.execute(tests)
+    ```
+    (Ref: ARCHITECTURE.COVERAGE_TRACKER)
 - **FEEDBACK**: Compiler-grade error messages with file paths, line numbers, contract IDs. [Type: SCRIPT]
   (Ref: ARCHITECTURE.VALIDATOR_CORE)
 

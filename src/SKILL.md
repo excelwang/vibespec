@@ -21,6 +21,34 @@ Manage the refinement of raw thoughts into traceable specifications.
    - **Re-read** the idea file before proceeding.
 3. Begin refinement workflow.
 
+### `vibe-spec reflect`
+1. Analyze current conversation context for key insights.
+2. If no new insights: Report "Up to date" and exit.
+3. Otherwise:
+   - Distill insights into formal idea proposals.
+   - Present summary for human approval.
+   - Upon approval, save as timestamped idea files in `specs/ideas/`.
+
+### `vibe-spec test [SPEC_ID]`
+1. **SCRIPT coverage**: Run `python3 scripts/run_tests.py tests/` for `@verify_spec` tests.
+2. **PROMPT coverage (self-test)**:
+   - Extract all `[Type: PROMPT_NATIVE]` and `[Type: PROMPT_FALLBACK]` items from L3 specs.
+   - For each PROMPT item, self-execute with a sample input.
+   - Verify output matches expected behavior per spec description.
+   - Report pass/fail with rationale.
+3. If `SPEC_ID` provided: Filter to matching specs only.
+4. Report combined coverage: SCRIPT % + PROMPT %.
+
+**PROMPT Self-Test Protocol**:
+```
+For each PROMPT item:
+  1. Read spec: What should this do?
+  2. Generate test input (edge case preferred)
+  3. Execute: Attempt the task as specified
+  4. Validate: Does output satisfy spec requirements?
+  5. Report: ✅ PASS / ❌ FAIL with explanation
+```
+
 ---
 
 ## Phase 0: Bootstrap (First-Time Setup)

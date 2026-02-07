@@ -21,6 +21,14 @@ Multi-stage compilation pipeline that transforms source specs into a unified doc
   **Interface**: `assemble(specs: ParsedSpec[]) -> Document`
   (Ref: CONTRACTS.TRACEABILITY.SEMANTIC_IDS), (Ref: CONTRACTS.TRACEABILITY.ANCHORING), (Ref: CONTRACTS.TRACEABILITY.REDUNDANCY), (Ref: CONTRACTS.SECTION_MARKERS.COMPILATION_BEHAVIOR), (Ref: CONTRACTS.SECTION_MARKERS.SYSTEM_SEMANTICS), (Ref: CONTRACTS.SECTION_MARKERS.STANDARD_SEMANTICS)
 
+```mermaid
+flowchart LR
+    A[SCANNER] --> B[PARSER]
+    B --> C[VALIDATOR]
+    C --> D[ASSEMBLER]
+    D --> E[vibe-spec-full.md]
+```
+
 ## [system] ARCHITECTURE.VALIDATOR_CORE
 Rule-based validation engine that enforces L1 contracts.
 **Intent**: Systematically verify specification health against quantified metrics.

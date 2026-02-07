@@ -406,8 +406,8 @@ def check_spec_health(filename: str, content: str) -> list:
                 if any(k in stripped for k in ['MUST', 'SHOULD', 'MAY', 'SHALL']):
                     rfc_count += 1
             
-            # 4. Type Annotation Check (L3 Only, top-level items)
-            if is_l3 and stripped.startswith('- **') and indent == 0:
+            # 4. Type Annotation Check (L3 Only, ALL items with sub-titles)
+            if is_l3 and stripped.startswith('- **'):
                 if '[Type:' not in stripped:
                     # Extract key name for error message
                     key_match = re.match(r'-\s*\*\*([A-Z0-9_]+)\*\*:', stripped)
