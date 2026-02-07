@@ -15,6 +15,16 @@ vibe-spec uses a four-layer specification system (L0-L3) to define software syst
 | **L2** | Role \| Component | Architectural Entities | Who (Actors) |
 | **L3** | Role/Component Interaction | Implementation Details | How (Mechanics) |
 
+## Annotation System
+
+Annotate specific sections to control their mutability and purpose:
+
+| Annotation | Meaning | Directive |
+|------------|---------|-----------|
+| `[system]` | **Implementation Details** | **Do not change** (Reserved for System Architect) |
+| `[standard]` | **Design Patterns** | **Follow strictures** (Enforced by linters/tests) |
+| *(none)* | **User Content** | Free to edit by Agent/User |
+
 ---
 
 ## L0: Vision Layer

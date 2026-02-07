@@ -142,10 +142,12 @@ version: 3.0.0
 **Role**: LLM-driven test execution
 
 - **Observes**: L3 prompt items, test fixtures
-- **Decides**: Pass/Fail based on behavior
-- **Acts**: Reports result with evidence
+- **Decides**: Pass/Fail based on behavior, Mocking strategy
+- **Acts**: Generates mock-based test code, reports result with evidence
 
-(Ref: VISION.VIBE_CODING.AI_ASSIST), (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE), (Ref: CONTRACTS.STRICT_TESTABILITY.RATIONALE_SEPARATION)
+- **Acts**: Generates mock-based test code, reports result with evidence
+
+(Ref: VISION.VIBE_CODING.AI_ASSIST), (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE), (Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION)
 
 ---
 
@@ -276,6 +278,15 @@ version: 3.0.0
  - Output: `SkillDef`
  
  (Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD), (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE)
+
+#### TEST_RUNNER
+
+**Script**: `scripts/run_tests.py`
+
+- Input: `tests_dir`
+- Output: `TestResult`
+
+(Ref: CONTRACTS.ALGEBRAIC_VALIDATION.TEST_COVERAGE), (Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE)
 
 #### VALIDATE_SCRIPT
 
@@ -418,7 +429,7 @@ version: 3.0.0
  - Input: `spec: Spec`
  - Output: `NotationResult`
  
- (Ref: CONTRACTS.FORMAL_NOTATION.PREFER_FORMALISMS)
+ (Ref: CONTRACTS.FORMAL_NOTATION.PREFER_FORMALISMS), (Ref: CONTRACTS.STRICT_TESTABILITY.RATIONALE_SEPARATION)
 
 ### COMPONENTS.INFRASTRUCTURE
  

@@ -134,15 +134,21 @@ def generate_interface_tests(items: List[L3Item]) -> str:
     lines = [
         '#!/usr/bin/env python3',
         '"""Auto-generated from L3-RUNTIME.md [interface] items."""',
-        'import pytest',
+        '"""Auto-generated from L3-RUNTIME.md [interface] items."""',
+        'import unittest',
         '',
         '# TODO: Import actual implementations',
         '# from vibe_spec.scanner import Scanner',
         '',
+        '# Dummy decorator for test discovery',
+        'def verify_spec(id):',
+        '    return lambda f: f',
+        '',
     ]
     
     for item in items:
-        lines.append(f'class Test{item.item_id.title()}:')
+        lines.append(f'@verify_spec("{item.item_id}")')
+        lines.append(f'class Test{item.item_id.title()}(unittest.TestCase):')
         lines.append(f'    """Tests for {item.item_id} interface."""')
         lines.append(f'    # Implements: {item.implements}')
         lines.append('')
@@ -156,7 +162,7 @@ def generate_interface_tests(items: List[L3Item]) -> str:
             lines.append(f'    def {test_name}(self):')
             lines.append(f'        """Input: {input_val}, Expected: {expected}"""')
             lines.append(f'        # TODO: Implement actual test')
-            lines.append(f'        pytest.skip("Not implemented")')
+            lines.append(f'        self.skipTest("Not implemented")')
             lines.append('')
         
         lines.append('')
@@ -169,12 +175,17 @@ def generate_algorithm_tests(items: List[L3Item]) -> str:
     lines = [
         '#!/usr/bin/env python3',
         '"""Auto-generated from L3-RUNTIME.md [algorithm] items."""',
-        'import pytest',
+        'import unittest',
+        '',
+        '# Dummy decorator for test discovery',
+        'def verify_spec(id):',
+        '    return lambda f: f',
         '',
     ]
     
     for item in items:
-        lines.append(f'class Test{item.item_id.title().replace("_", "")}:')
+        lines.append(f'@verify_spec("{item.item_id}")')
+        lines.append(f'class Test{item.item_id.title().replace("_", "")}(unittest.TestCase):')
         lines.append(f'    """Tests for {item.item_id} algorithm."""')
         lines.append(f'    # Implements: {item.implements}')
         lines.append('')
@@ -187,7 +198,7 @@ def generate_algorithm_tests(items: List[L3Item]) -> str:
             test_name = f'test_{case_type.lower()}_{i+1}'
             lines.append(f'    def {test_name}(self):')
             lines.append(f'        """Input: {input_val}, Expected: {expected}"""')
-            lines.append(f'        pytest.skip("Not implemented")')
+            lines.append(f'        self.skipTest("Not implemented")')
             lines.append('')
         
         lines.append('')
@@ -203,14 +214,19 @@ def generate_decision_stubs(items: List[L3Item]) -> str:
         'Auto-generated from L3-RUNTIME.md [decision] items.',
         'These tests require LLM verification - run with --llm flag.',
         '"""',
-        'import pytest',
+        'import unittest',
         '',
-        'pytestmark = pytest.mark.llm  # Mark all as LLM tests',
+        '# pytestmark = pytest.mark.llm  # Mark all as LLM tests',
+        '',
+        '# Dummy decorator for test discovery',
+        'def verify_spec(id):',
+        '    return lambda f: f',
         '',
     ]
     
     for item in items:
-        lines.append(f'class Test{item.item_id.title().replace("_", "")}:')
+        lines.append(f'@verify_spec("{item.item_id}")')
+        lines.append(f'class Test{item.item_id.title().replace("_", "")}(unittest.TestCase):')
         lines.append(f'    """LLM verification for {item.item_id} decision."""')
         lines.append(f'    # Implements: {item.implements}')
         lines.append('')
@@ -227,7 +243,7 @@ def generate_decision_stubs(items: List[L3Item]) -> str:
             lines.append(f'        Expected: {expected}')
             lines.append(f'        Reason: {reason}')
             lines.append(f'        """')
-            lines.append(f'        pytest.skip("Requires LLM verification")')
+            lines.append(f'        self.skipTest("Requires LLM verification")')
             lines.append('')
         
         lines.append('')
@@ -283,7 +299,8 @@ def detect_framework(project_root: Path) -> tuple:
     if (project_root / "go.mod").exists() or list(project_root.glob("*_test.go")):
         return "go", ["go", "test", "./..."]
 
-    return "unknown", []
+    # Default to unittest (StdLib)
+    return "python", [sys.executable, "-m", "unittest", "-v"]
 
 
 def run_script_tests(test_files: list, project_root: Path) -> int:

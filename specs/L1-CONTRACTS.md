@@ -415,8 +415,8 @@ invariants:
   > Responsibility: Classification — distinguish impl from rules.
   > Verification: Warning on unmarked H2.
 
-- **SYSTEM_SEMANTICS**: `[system]` = implementation details (How).
-- **STANDARD_SEMANTICS**: `[standard]` = design patterns (Rules).
+- **SYSTEM_SEMANTICS**: `[system]` = implementation details (How). Do not change unless you are the System Architect.
+- **STANDARD_SEMANTICS**: `[standard]` = design patterns (Rules). Follow these strictures.
 
 
 
@@ -451,6 +451,13 @@ invariants:
 - **DEFAULT_TESTABLE**: Items with MUST/SHOULD/MAY are testable requirements.
 - **RATIONALE_SEPARATION**: Use `> Rationale:` block for explanations.
 - **RFC2119_ENFORCEMENT**: Script MUST require RFC2119 keyword in L1 items.
+- **MOCK_GENERATION**: Agent MUST generate mock objects for external interfaces.
+  > Responsibility: Isolation — unit tests must not depend on environment.
+  > Verification: Mocks used in generated tests.
+
+- **ENVIRONMENT_TOGGLE**: Script MUST support `TEST_ENV=MOCK|REAL` switch.
+  > Responsibility: Flexibilty — validation (Mock) vs verification (Real).
+  > Verification: Tests run against Real implementation when set.
 
 (Ref: VISION.SCOPE.COV)
 

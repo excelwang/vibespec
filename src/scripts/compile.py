@@ -55,6 +55,9 @@ def compile_specs(specs_dir: Path, output_file: Path):
     content.append("> 1. Always check `L1: Contracts` before writing code.\n")
     content.append("> 2. `L0: Vision` defines the scope. Do not hallucinate features.\n")
     content.append("> 3. `L1` overrides `L3` if there is a conflict.\n\n")
+    content.append("> **Annotation Legend**:\n")
+    content.append("> - `[system]`: Implementation details (Do not change unless you are the System Architect).\n")
+    content.append("> - `[standard]`: Design patterns and rules (Follow these strictures).\n\n")
 
     # 2. Table of Contents
     content.append("## 🗺️ INDEX\n")

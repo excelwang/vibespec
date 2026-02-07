@@ -3,11 +3,16 @@
 Auto-generated from L3-RUNTIME.md [decision] items.
 These tests require LLM verification - run with --llm flag.
 """
-import pytest
+import unittest
 
-pytestmark = pytest.mark.llm  # Mark all as LLM tests
+# pytestmark = pytest.mark.llm  # Mark all as LLM tests
 
-class TestLayerClassification:
+# Dummy decorator for test discovery
+def verify_spec(id):
+    return lambda f: f
+
+@verify_spec("LAYER_CLASSIFICATION")
+class TestLayerClassification(unittest.TestCase):
     """LLM verification for LAYER_CLASSIFICATION decision."""
     # Implements: ROLES.SPEC_MANAGEMENT.ARCHITECT
 
@@ -17,7 +22,7 @@ class TestLayerClassification:
         Expected: L1
         Reason: RFC2119
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_2(self):
         """
@@ -25,7 +30,7 @@ class TestLayerClassification:
         Expected: L2
         Reason: Component
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_3(self):
         """
@@ -33,7 +38,7 @@ class TestLayerClassification:
         Expected: L3
         Reason: Algorithm
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_4(self):
         """
@@ -41,7 +46,7 @@ class TestLayerClassification:
         Expected: L0
         Reason: Vision
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_5(self):
         """
@@ -49,10 +54,11 @@ class TestLayerClassification:
         Expected: L0 + clarify
         Reason: Ambiguous
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
 
-class TestConflictResolution:
+@verify_spec("CONFLICT_RESOLUTION")
+class TestConflictResolution(unittest.TestCase):
     """LLM verification for CONFLICT_RESOLUTION decision."""
     # Implements: ROLES.SPEC_MANAGEMENT.ARCHITECT
 
@@ -62,7 +68,7 @@ class TestConflictResolution:
         Expected: 10:05 wins
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_2(self):
         """
@@ -70,7 +76,7 @@ class TestConflictResolution:
         Expected: User decides
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_3(self):
         """
@@ -78,10 +84,11 @@ class TestConflictResolution:
         Expected: Merge proposal
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
 
-class TestRetryLogic:
+@verify_spec("RETRY_LOGIC")
+class TestRetryLogic(unittest.TestCase):
     """LLM verification for RETRY_LOGIC decision."""
     # Implements: ROLES.AUTOMATION.RECOVERY_AGENT
 
@@ -91,7 +98,7 @@ class TestRetryLogic:
         Expected: Retry(alt)
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_2(self):
         """
@@ -99,7 +106,7 @@ class TestRetryLogic:
         Expected: Retry(alt)
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_3(self):
         """
@@ -107,7 +114,7 @@ class TestRetryLogic:
         Expected: GiveUp
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_4(self):
         """
@@ -115,10 +122,11 @@ class TestRetryLogic:
         Expected: GiveUp
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
 
-class TestTypePurityCheck:
+@verify_spec("TYPE_PURITY_CHECK")
+class TestTypePurityCheck(unittest.TestCase):
     """LLM verification for TYPE_PURITY_CHECK decision."""
     # Implements: ROLES.SPEC_MANAGEMENT.REVIEWER
 
@@ -128,7 +136,7 @@ class TestTypePurityCheck:
         Expected: Pass (Agent)
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_2(self):
         """
@@ -136,7 +144,7 @@ class TestTypePurityCheck:
         Expected: Pass (Script)
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
     def test_fixture_3(self):
         """
@@ -144,5 +152,5 @@ class TestTypePurityCheck:
         Expected: Violation
         Reason: 
         """
-        pytest.skip("Requires LLM verification")
+        self.skipTest("Requires LLM verification")
 
