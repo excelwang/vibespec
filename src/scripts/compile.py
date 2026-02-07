@@ -56,8 +56,14 @@ def compile_specs(specs_dir: Path, output_file: Path):
     print(f"✅ Compiled {len(files)} specs to {output_file}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python compile.py <specs_dir> <output_file>")
-        sys.exit(1)
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Compile Vibe-Spec files into a unified document.',
+        epilog='Example: python compile.py specs/ vibe-spec-full.md'
+    )
+    parser.add_argument('specs_dir', help='Directory containing L*.md spec files')
+    parser.add_argument('output_file', help='Output file path for compiled spec')
+    args = parser.parse_args()
     
-    compile_specs(Path(sys.argv[1]), Path(sys.argv[2]))
+    compile_specs(Path(args.specs_dir), Path(args.output_file))
+

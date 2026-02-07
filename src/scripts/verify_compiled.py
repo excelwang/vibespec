@@ -108,7 +108,12 @@ def verify_compiled(file_path: Path):
         print(f"  - Semantics: OK ({len(defined_ids)} IDs defined, {len(referenced_ids)} Refs checked)")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python verify_compiled.py <vibe-specs-file>")
-        sys.exit(1)
-    verify_compiled(Path(sys.argv[1]))
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Verify structural integrity of compiled Vibe-Spec document.',
+        epilog='Example: python verify_compiled.py vibe-spec-full.md'
+    )
+    parser.add_argument('file', help='Compiled spec file to verify')
+    args = parser.parse_args()
+    verify_compiled(Path(args.file))
+

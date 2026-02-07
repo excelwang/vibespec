@@ -83,6 +83,9 @@ Standalone dependency-free automation tools for mechanical workflows.
 - **COMPILE**: Script `scripts/compile.py` assembles specification files into unified document. Generates `vibe-spec-full.md` with table of contents and anchors. Concatenates in strict topological order. Creates professional-grade navigable output.
   **Interface**: `compile.py <specs_path> <output_path>`
   (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
+- **HELP_VALIDATOR**: Validates all scripts implement `--help` flag. Scans script files for argparse or usage patterns. Flags scripts lacking help messages.
+  **Interface**: `validate_help(scripts_dir: Path) -> HelpResult`
+  (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE)
 ## [system] ARCHITECTURE.SKILL_DISTRIBUTION
 Manages skill packaging and distribution for AI agent consumption.
 **Intent**: Package vibe-spec as discoverable, version-controlled skill.

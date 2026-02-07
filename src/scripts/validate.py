@@ -355,6 +355,7 @@ def check_spec_health(filename: str, content: str) -> list:
     1. Atomicity: Max 50 words per statement.
     2. Depth: Max nesting level 2.
     3. RFC 2119: L1 must use keywords.
+    4. Type Annotation: L3 items must have [Type: X].
     """
     errors = []
     lines = content.split('\n')
@@ -363,6 +364,8 @@ def check_spec_health(filename: str, content: str) -> list:
     rfc_count = 0
     statement_count = 0
     is_l1 = 'L1' in filename
+    is_l3 = 'L3' in filename
+    l3_items_missing_type = []
     
     for i, line in enumerate(lines):
         stripped = line.strip()
@@ -402,12 +405,24 @@ def check_spec_health(filename: str, content: str) -> list:
                 statement_count += 1
                 if any(k in stripped for k in ['MUST', 'SHOULD', 'MAY', 'SHALL']):
                     rfc_count += 1
+            
+            # 4. Type Annotation Check (L3 Only, top-level items)
+            if is_l3 and stripped.startswith('- **') and indent == 0:
+                if '[Type:' not in stripped:
+                    # Extract key name for error message
+                    key_match = re.match(r'-\s*\*\*([A-Z0-9_]+)\*\*:', stripped)
+                    if key_match:
+                        l3_items_missing_type.append(f"{key_match.group(1)} (line {i+1})")
                     
     # L1 RFC Ratio Check
     if is_l1 and statement_count > 0:
         ratio = rfc_count / statement_count
         if ratio < 0.5:
             errors.append(f"{filename}: RFC 2119 Violation. Only {rfc_count}/{statement_count} ({ratio:.0%}) statements usage keywords (Target: 50%).")
+    
+    # L3 Type Annotation Summary
+    if l3_items_missing_type:
+        errors.append(f"{filename}: Missing [Type: X] annotation on {len(l3_items_missing_type)} items: {', '.join(l3_items_missing_type[:5])}{'...' if len(l3_items_missing_type) > 5 else ''}")
             
     return errors
 
@@ -553,6 +568,13 @@ def validate_specs(specs_dir: Path, schema_dir: Path = None) -> tuple[list, list
             if density < 0.05: # 5% Threshold
                 warnings.append(f"{data['file']}: Low Verb Density ({density:.1%}). Ensure action-oriented specs.")
 
+        # Formalism Scoring (L2 specs should use formal notation)
+        if data['layer'] == 2:
+            formal_blocks = len(re.findall(r'```(mermaid|json|yaml|pseudocode)', data['body']))
+            # L2 should have at least some formal notation
+            if formal_blocks == 0:
+                warnings.append(f"{data['file']}: No formal notation found. L2 specs SHOULD use diagrams, JSON schema, or pseudocode.")
+
 
         # Custom rules are applied below (after main validation loop)
 
@@ -642,15 +664,56 @@ def validate_specs(specs_dir: Path, schema_dir: Path = None) -> tuple[list, list
         errors.extend(custom_errors)
         warnings.extend(custom_warnings)
 
+    # 5. Test Coverage Tracking (@verify_spec scanning)
+    # INDEXER_IMPL: Index L3 testable items
+    l3_items = set()
+    for spec_id, data in specs.items():
+        if data['layer'] == 3:
+            for exp in data['exports']:
+                l3_items.add(exp)
+    
+    # SCANNER_IMPL: Scan test files for @verify_spec decorators
+    verified_specs = set()
+    tests_dir = specs_dir.parent / 'tests'
+    if tests_dir.exists():
+        for test_file in tests_dir.rglob('*.py'):
+            try:
+                content = test_file.read_text()
+                # Match @verify_spec("SPEC_ID") or @verify_spec('SPEC_ID')
+                matches = re.findall(r'@verify_spec\(["\']([A-Z0-9_.]+)["\']\)', content)
+                verified_specs.update(matches)
+            except Exception:
+                pass
+    
+    # GAP_IMPL: Report coverage gaps
+    if l3_items and tests_dir.exists():
+        uncovered = l3_items - verified_specs
+        coverage_pct = (len(l3_items) - len(uncovered)) / len(l3_items) * 100 if l3_items else 100
+        
+        # CALC_IMPL: Coverage metrics
+        if coverage_pct < 100:
+            warnings.append(f"Test Coverage: {coverage_pct:.0f}% ({len(l3_items) - len(uncovered)}/{len(l3_items)} L3 items verified)")
+        if uncovered and len(uncovered) <= 5:
+            for item in sorted(uncovered)[:5]:
+                warnings.append(f"  Uncovered L3: {item}")
+
     return errors, warnings
 
 
 def main():
-    # Default to ./specs/ if no argument provided
-    if len(sys.argv) < 2:
-        specs_dir = Path('./specs')
-    else:
-        specs_dir = Path(sys.argv[1])
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Validate Vibe-Spec specification files for structural correctness and traceability.',
+        epilog='Examples:\n  python validate.py specs/\n  python validate.py ./specs --verbose',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument('specs_dir', nargs='?', default='./specs',
+                        help='Directory containing L*.md spec files (default: ./specs)')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='Show detailed validation progress')
+    args = parser.parse_args()
+    
+    specs_dir = Path(args.specs_dir)
     
     if not specs_dir.exists():
         print(f'❌ Directory not found: {specs_dir}')
@@ -658,11 +721,9 @@ def main():
     
     # Auto-detect schema directory (sibling to specs_dir or inside project root)
     schema_dir = None
-    # Try: specs_dir/../schema/ (e.g., specs/ -> schema/)
     candidate = specs_dir.parent / 'schema'
     if candidate.exists():
         schema_dir = candidate
-    # Try: specs_dir/../../schema/ (e.g., src/specs/ -> schema/)
     if not schema_dir:
         candidate = specs_dir.parent.parent / 'schema'
         if candidate.exists():
@@ -690,3 +751,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

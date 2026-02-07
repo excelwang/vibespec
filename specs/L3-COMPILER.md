@@ -6,7 +6,7 @@ version: 2.0.0
 
 ## [system] COMPILER.CLI_INTERFACE
 CLI entry point for spec management commands.
-- **COMMANDS**: Distinct subcommands for each lifecycle phase. [PROMPT_FALLBACK]
+- **COMMANDS**: Distinct subcommands for each lifecycle phase. [Type: PROMPT_FALLBACK]
   - **VALIDATE**: `vibe-spec validate <path>` triggers comprehensive validation.
     ```pseudocode
     function validate(path: string) -> ExitCode:
@@ -48,7 +48,7 @@ CLI entry point for spec management commands.
 
 ## [system] COMPILER.IDEAS_IMPL
 Implementation of Ideas Processor pipeline.
-- **PROCESS_SESSION**: Unified ideas processing session. [PROMPT_NATIVE]
+- **PROCESS_SESSION**: Unified ideas processing session. [Type: PROMPT_NATIVE]
   > Read all idea files from `specs/ideas/` except those in `specs/ideas/archived/`, analyze each for scope adherence and target layer,
   > then apply changes to the appropriate spec file. Present diffs for human approval.
   
@@ -89,7 +89,7 @@ Implementation of Ideas Processor pipeline.
 
 ## [system] COMPILER.REFLECT_IMPL
 Implementation of Reflector based on current context.
-- **REFLECT_SESSION**: Unified reflection session. [PROMPT_NATIVE]
+- **REFLECT_SESSION**: Unified reflection session. [Type: PROMPT_NATIVE]
   > Analyze current conversation context, identify key insights and decisions,
   > distill them into actionable idea files for future processing.
   
@@ -231,7 +231,7 @@ Standalone scripts (zero third-party dependencies).
 
 ## [system] COMPILER.SKILL_DISTRIBUTION_IMPL
 Implementation of skill distribution.
-- **SKILL_MD_LOC**: `src/vibe-spec/SKILL.md`  [PROMPT_FALLBACK]
+- **SKILL_MD_LOC**: `src/vibe-spec/SKILL.md`  [Type: PROMPT_FALLBACK]
   - Hardcoded path in tooling
   - Inside `src/` to travel with source code
   - Single source of truth; no secondary definitions permitted
@@ -246,7 +246,7 @@ Implementation of skill distribution.
   - Change: "Update description of `compile.py`"
     → Instruct `skill-creator`: "Modify description field of tool `compile.py`"
   (Ref: ARCHITECTURE.SKILL_DISTRIBUTION.COMPLIANCE)
-- **TEST_FIXTURES**:  [PROMPT_FALLBACK]
+- **TEST_FIXTURES**:  [Type: PROMPT_FALLBACK]
   ```yaml
   - name: skill_md_exists
     input:
@@ -271,7 +271,7 @@ Implementation of bootstrap processor for first-time setup.
     return not path.exists(root + "/specs") or dir_empty(root + "/specs")
   ```
   (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.DETECTOR)
-- **BOOTSTRAP_SESSION**: Unified interactive session for project initialization. [PROMPT_NATIVE]
+- **BOOTSTRAP_SESSION**: Unified interactive session for project initialization. [Type: PROMPT_NATIVE]
   > Prompt user to describe their project, then reformulate into formal scope statements.
   > Create initial L0-VISION.md with In-Scope (SHALL) and Out-of-Scope (SHALL NOT) sections.
   
@@ -286,7 +286,7 @@ Implementation of bootstrap processor for first-time setup.
 
 ## [system] COMPILER.ROUTER_IMPL
 Implementation of trigger routing logic.
-- **PARSE_INVOCATION**: Lexical analysis of trigger string.  [PROMPT_FALLBACK]
+- **PARSE_INVOCATION**: Lexical analysis of trigger string.  [Type: PROMPT_FALLBACK]
   > Parse user input to identify vibe-spec command invocations.
   > Normalize input by lowercasing and removing hyphens/spaces.
   > Extract command arguments if present.
@@ -296,7 +296,7 @@ Implementation of trigger routing logic.
   - "VibeSpec" → {command: "vibespec", args: null}
   - "hello world" → null (not a vibe-spec invocation)
   (Ref: ARCHITECTURE.TRIGGER_ROUTER.PARSER)
-- **DISPATCH_LOGIC**: Decision tree for handler selection.  [PROMPT_FALLBACK]
+- **DISPATCH_LOGIC**: Decision tree for handler selection.  [Type: PROMPT_FALLBACK]
   > Determine appropriate handler based on system state and command context.
   > Priority: explicit args → pending ideas → existing project → bootstrap.
   
@@ -338,7 +338,7 @@ Implementation of validation execution during idle state.
 
 ## [system] COMPILER.OPTIMIZER_IMPL
 Implementation of self-optimization pattern detection.
-- **OPTIMIZER_SESSION**: Unified optimization session. [PROMPT_NATIVE]
+- **OPTIMIZER_SESSION**: Unified optimization session. [Type: PROMPT_NATIVE]
   > Analyze user's action history to detect repetitive patterns (>3 occurrences).
   > Propose automation scripts for these patterns to reduce cognitive load.
   
@@ -688,7 +688,7 @@ Implementation of conflict resolution.
 
 ## [system] COMPILER.APPROVAL_WORKFLOW_IMPL
 Implementation of approval workflow.
-- **APPROVAL_SESSION**: Unified approval workflow. [PROMPT_NATIVE]
+- **APPROVAL_SESSION**: Unified approval workflow. [Type: PROMPT_NATIVE]
   > Present proposed changes with context, prompt user for approval,
   > then commit or revert based on response. Track all decisions.
   
@@ -727,7 +727,7 @@ Implementation of semantic analysis.
     return matches.map(m => {id: m, valid: id_exists(m)})
   ```
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.REFERENCE_PARSER)
-- **SEMANTIC_IMPL**: Semantic matching. [PROMPT_NATIVE]
+- **SEMANTIC_IMPL**: Semantic matching. [Type: PROMPT_NATIVE]
   > Compare two spec items to determine semantic overlap and coverage.
   > Calculate how much of the parent's intent is covered by the child.
   
@@ -738,7 +738,7 @@ Implementation of semantic analysis.
     → Coverage: None (Unrelated concepts)
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.SEMANTIC_MATCHER)
 
-- **IDEA_CLASS_IMPL**: Idea classification. [PROMPT_NATIVE]
+- **IDEA_CLASS_IMPL**: Idea classification. [Type: PROMPT_NATIVE]
   > Analyze a raw idea to determine its target layer (L0-L3), action type (Add/Mod/Del),
   > and the specific target IDs it affects.
   
@@ -779,8 +779,8 @@ Implementation of L3 item type annotation enforcement.
   > Flag items that lack clear rationale documentation.
   
   **Examples**:
-  - Item with "[PROMPT_FALLBACK] (semantic parsing too complex)" → Valid
-  - Item with "[PROMPT_FALLBACK]" and no rationale → Flag for review
+  - Item with "[Type: PROMPT_FALLBACK] (semantic parsing too complex)" → Valid
+  - Item with "[Type: PROMPT_FALLBACK]" and no rationale → Flag for review
   (Ref: ARCHITECTURE.TYPE_ANNOTATION_ENFORCER.FALLBACK_AUDITOR)
 - **BATCH_ANALYSIS**: Suggests PROMPT_NATIVE batching opportunities. [Type: PROMPT_NATIVE]
   > Identify adjacent PROMPT_NATIVE items that could be combined into a single unified prompt.

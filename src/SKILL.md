@@ -123,7 +123,7 @@ Process the specific layer L(N) identified in Phase 2:
 3. **Compile Prompt**: 
    - IF (No pending ideas): Explicitly ask user: "Run compilation now?"
    - ELSE: Loop back to Phase 2.
-4. If yes: Run `python3 scripts/compile.py specs/ specs/spec-full.md`.
+4. If yes: Run `python3 scripts/compile.py specs/ vibe-spec-full.md`.
 
 ---
 
@@ -154,8 +154,8 @@ Process the specific layer L(N) identified in Phase 2:
 
 Use standalone scripts (zero dependencies) for mechanical operations:
 - `python3 scripts/validate.py specs/` - Structural validation.
-- `python3 scripts/compile.py specs/ specs/spec-full.md` - Compile to single doc.
-- `python3 scripts/verify_compiled.py specs/spec-full.md specs/` - Verify compiled doc matches sources.
+- `python3 scripts/compile.py specs/ vibe-spec-full.md` - Compile to single doc.
+- `python3 scripts/verify_compiled.py vibe-spec-full.md specs/` - Verify compiled doc matches sources.
 - `bash scripts/archive_ideas.sh` - Archive processed ideas.
 
 **IMPORTANT**: Run `python3 scripts/validate.py specs/` IMMEDIATELY after each layer modification, BEFORE presenting to human for review.
@@ -178,3 +178,31 @@ Use standalone scripts (zero dependencies) for mechanical operations:
   - L1: "Rules/Invariants". No architecture components, script logic.
   - L2: "Components/Data Flow". No class methods, variable names.
   - L3: "How". No vague vision statements.
+
+---
+
+## Behavior Guidelines
+
+The following behaviors are implemented by the you directly rather than scripts:
+
+### Content Classification (PROMPT_NATIVE)
+- **VOCAB_MATCHING**: Verify terminology follows `VISION.UBIQUITOUS_LANGUAGE`. Flag validate/verify, assert/error misuse.
+- **CLASSIFY_IMPL**: Analyze idea content to determine target layer (L0-L3). Use keyword heuristics.
+- **DRIFT_LOGIC**: Compare parent and child semantics. Flag potential staleness when parent changes.
+- **DETERMINISM_CHECK**: Review SCRIPT items for non-deterministic operations (random, network calls).
+- **GOAL_TRACKING**: Monitor repetitive workflows and propose script automation.
+
+### Session Workflows (PROMPT_NATIVE)
+- **BOOTSTRAP_SESSION**: Interactive project initialization dialogue.
+- **OPTIMIZER_SESSION**: Identify automation opportunities from action patterns.
+- **REFLECT_SESSION**: Distill current conversation into formal ideas.
+
+### Formatting (PROMPT_FALLBACK)
+- **FORMAT_IMPL**: Format validation errors with file paths and line numbers.
+- **SUMMARY_IMPL**: Build executive summaries of validation results.
+- **DIFF_IMPL**: Render before/after comparisons for spec changes.
+- **DASHBOARD_IMPL**: Compile metrics (item counts, coverage, ratios) into readable format.
+
+### Pattern Recognition (PROMPT_FALLBACK)
+- **REGISTRY_IMPL**: Maintain awareness of layer definitions and allowed content types.
+- **FOCUS_IMPL**: Enforce layer focus rules by recognizing out-of-scope content.

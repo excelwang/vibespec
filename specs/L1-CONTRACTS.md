@@ -119,6 +119,11 @@ invariants:
   > Rationale: Ensures portability and prevents supply chain attacks.
   (Ref: VISION.SCOPE.DEPS)
 
+## [standard] CONTRACTS.SCRIPT_USABILITY
+- **HELP_MESSAGE**: All scripts MUST implement a help message (e.g., via `--help`) to describe usage, arguments, and effects.
+  > Rationale: Improves discoverability and reduces cognitive load for both agents and humans.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+
 ## [system] CONTRACTS.BOOTSTRAP
 - **DETECTION**: Agent MUST detect missing `specs/` directory and trigger Bootstrap Phase.
   > Rationale: Prevents accidental operation on uninitialized projects.
