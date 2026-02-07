@@ -29,6 +29,11 @@ Manage the refinement of raw thoughts into traceable specifications.
    - Present summary for human approval.
    - Upon approval, save as timestamped idea files in `specs/ideas/`.
 
+### `vibe-spec build`
+1. Read `vibespec.yaml` to identify configured implementation skills.
+2. Synchronize project artifacts (e.g., source code, skill files) with `vibe-spec-full.md`.
+3. Report update status and any manual verification needed.
+
 ### `vibe-spec test [SPEC_ID]`
 
 **Test Directory Structure**:

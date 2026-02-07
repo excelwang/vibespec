@@ -377,3 +377,30 @@ interface TestReporter {
 | null coverage | ReportError | Error |
 
 (Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT)
+
+---
+
+## [interface] BUILDER
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.BUILDER]
+
+```typescript
+interface Builder {
+  build(compiled_spec: Path, skills: string[]): BuildResult
+}
+
+interface BuildResult {
+  status: 'SUCCESS' | 'PARTIAL' | 'CONFLICT' | 'ERROR'
+  updates: string[]
+  warnings: string[]
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| spec + [skill] | SUCCESS, [src/SKILL.md updated] | Normal |
+| spec + [no_skill] | PARTIAL, "Manual implementation required" | Edge |
+| invalid spec | ERROR, "Traceability broken" | Error |
+
+(Ref: VISION.VIBE_CODING.TRUTH)

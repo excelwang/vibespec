@@ -54,8 +54,8 @@ def verify_compiled(file_path: Path):
     for line in lines:
         stripped = line.strip()
         
-        # H2 Detection: ## ID
-        h2_match = re.match(r'^##\s+([A-Z_]+(?:\.[A-Z_]+)*)', stripped)
+        # H2 Detection: ## [tag] ID
+        h2_match = re.match(r'^##\s+(?:\[[\w]+\]\s+)?([A-Z_0-9]+(?:\.[A-Z_0-9]+)*)', stripped)
         if h2_match:
             current_h2 = h2_match.group(1)
             defined_ids.add(current_h2)

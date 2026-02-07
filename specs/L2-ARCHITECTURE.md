@@ -159,6 +159,16 @@ version: 3.0.0
 
 (Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST)
 
+#### IMPLEMENTER
+
+**Role**: Synchronizes project artifacts with specs
+
+- **Observes**: `vibe-spec-full.md` (compiled spec), `vibespec.yaml` (compile configuration)
+- **Decides**: Required updates for project files using specific automation skills
+- **Acts**: To coding the project acooring to `vibe-spec-full.md` 
+
+(Ref: VISION.VIBE_CODING.AI_ASSIST), (Ref: VISION.VIBE_CODING.TRUTH)
+
 ---
 
 ## [system] COMPONENTS
@@ -488,3 +498,12 @@ version: 3.0.0
 - Output: `string` (formatted report)
 
 (Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT)
+
+#### BUILDER
+
+**Component**: Orchestrates spec-to-implementation transformation
+
+- Input: `compiled_spec: Path, skills: string[]`
+- Output: `UpdateStatus`
+
+(Ref: VISION.VIBE_CODING.TRUTH), (Ref: VISION.AGENT_AS_DEVELOPER.PRIMARY_CONSUMER)
