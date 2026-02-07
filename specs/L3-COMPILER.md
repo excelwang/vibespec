@@ -711,6 +711,43 @@ Implementation of the smart test runner.
   - Input: `fixtures/prompts/empty_diff.yaml`
   - Expected: PASS
   (Ref: ARCHITECTURE.TEST_RUNNER.PROMPT_ENGINE)
+- **L1_AUDIT_IMPL**: L1 acceptance test audit reporting. [Type: SCRIPT]
+  ```pseudocode
+  function report_l1_audit(specs_dir: Path) -> AuditReport:
+    tests = find_l1_acceptance_tests(specs_dir)
+    by_type = group_by(tests, t -> t.test_type)
+    print("📋 L1 Acceptance Tests:", len(tests))
+    for type, items in by_type:
+      print(f"[{type}] {len(items)} tests")
+    return AuditReport{total: len(tests), by_type}
+  ```
+  **Fixtures**:
+  - Input: L1-CONTRACTS.md with 98 PROMPT tests
+  - Expected: `{total: 98, by_type: {PROMPT: 98}}`
+  (Ref: ARCHITECTURE.TEST_RUNNER.L1_AUDIT_REPORTER)
+- **L2_BRIDGE_IMPL**: L2 coverage analysis showing L1→L2→L3 bridge. [Type: SCRIPT]
+  ```pseudocode
+  function analyze_l2_coverage(l1, l2, l3) -> BridgeReport:
+    l2_refs = l2.items.flatMap(i -> i.refs)
+    l1_covered = l1.items.filter(i -> l2_refs.contains(i.id))
+    l3_refs = l3.items.flatMap(i -> i.refs)
+    l2_covered = l2.items.filter(i -> l3_refs.contains(i.id))
+    return {l1_coverage: len(l1_covered)/len(l1), l2_coverage: len(l2_covered)/len(l2)}
+  ```
+  **Fixtures**:
+  - Input: L1→L2→L3 with full refs
+  - Expected: `{l1_coverage: 100%, l2_coverage: 100%}`
+  (Ref: ARCHITECTURE.TEST_RUNNER.L2_BRIDGE_ANALYZER)
+- **L3_SCRIPT_IMPL**: L3 script test execution. [Type: SCRIPT]
+  ```pseudocode
+  function run_l3_tests(test_files: Path[]) -> TestResult[]:
+    framework = detect_framework(project_root)
+    return framework.run(test_files)
+  ```
+  **Fixtures**:
+  - Input: `tests/specs/scripts/*.py`
+  - Expected: pytest execution with @verify_spec decorators
+  (Ref: ARCHITECTURE.TEST_RUNNER.L3_SCRIPT_RUNNER)
 - **CALC_IMPL**: Coverage calculation. [Type: SCRIPT]
   ```pseudocode
   function calculate_coverage(specs: SpecIndex, tests: TestCoverageMap) -> CoverageMetrics:

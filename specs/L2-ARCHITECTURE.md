@@ -269,10 +269,18 @@ Orchestrates test execution across multiple languages and frameworks.
 - **DETECTOR**: Auto-detects project language and appropriate test runner (e.g., pytest, jest).
   **Interface**: `detect_framework(root: Path) -> FrameworkConfig`
   (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE)
-- **PROMPT_ENGINE**: Executes LLM-driven self-verification for prompt-based specifications.
+- **PROMPT_ENGINE**: Executes LLM-driven self-verification for prompt-based specifications. Agent self-checks behavior against L1 contracts and declares compliance.
   **Interface**: `verify_prompt(item: L3Item, fixtures: Fixture[]) -> TestResult`
-  (Ref: VISION.VIBE_CODING.AI_ASSIST)
-
+  (Ref: VISION.VIBE_CODING.AI_ASSIST), (Ref: CONTRACTS.TESTING_STRATEGY.L1_PROMPT_TESTS)
+- **L1_AUDIT_REPORTER**: Reports L1 acceptance test coverage by type (PROMPT/SCRIPT/MANUAL). Shows verification protocol instructions for agent.
+  **Interface**: `report_l1_audit(specs_dir: Path) -> AuditReport`
+  (Ref: CONTRACTS.TESTING_STRATEGY.L1_PROMPT_TESTS), (Ref: CONTRACTS.TESTING_STRATEGY.TEST_TYPE_ANNOTATION)
+- **L2_BRIDGE_ANALYZER**: Validates that L2 testable points are covered by L1 (intent) and L3 (implementation). L2 does not require independent tests.
+  **Interface**: `analyze_l2_coverage(l1: Spec[], l2: Spec[], l3: Spec[]) -> BridgeReport`
+  (Ref: CONTRACTS.TESTING_STRATEGY.L2_NO_INDEPENDENT_TESTS)
+- **L3_SCRIPT_RUNNER**: Executes automated unit tests for L3 items with Input/Expected fixtures using detected framework.
+  **Interface**: `run_l3_tests(tests: TestFile[]) -> TestResult[]`
+  (Ref: CONTRACTS.TESTING_STRATEGY.L3_SCRIPT_TESTS)
 
 ## [system] ARCHITECTURE.REPORT_GENERATOR
 Generates human-readable reports from validation and compilation results.

@@ -3,10 +3,42 @@
 Spec Compiler - Assembles specification layers into a unified document.
 
 Zero third-party dependencies - uses Python stdlib only.
-Version: 1.1.0
+Version: 2.0.0
+
+Configuration: Reads from vibespec.yaml if present.
 """
 import sys
 from pathlib import Path
+
+
+def load_config(project_root: Path) -> dict:
+    """Load configuration from vibespec.yaml if present."""
+    config_file = project_root / 'vibespec.yaml'
+    if not config_file.exists():
+        return {}
+    
+    # Simple YAML parsing for basic key-value structure (no external deps)
+    config = {}
+    current_section = None
+    content = config_file.read_text()
+    
+    for line in content.split('\n'):
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#'):
+            continue
+        
+        # Section header
+        if not line.startswith(' ') and stripped.endswith(':') and ':' not in stripped[:-1]:
+            current_section = stripped[:-1]
+            config[current_section] = {}
+        # Key-value in section
+        elif current_section and ':' in stripped:
+            key, value = stripped.split(':', 1)
+            value = value.strip().strip('"\'')
+            config[current_section][key.strip()] = value
+    
+    return config
+
 
 def compile_specs(specs_dir: Path, output_file: Path):
     """Concatenate all L*.md files into a single compiled spec with LLM-friendly structure."""
@@ -18,7 +50,7 @@ def compile_specs(specs_dir: Path, output_file: Path):
     files = sorted(specs_dir.glob("L*.md"))
 
     # 1. Preamble & System Context
-    content.append("# VIBE-SPECS SYSTEM CONTEXT (v1.6.0)\n")
+    content.append("# VIBE-SPECS SYSTEM CONTEXT (v2.0.0)\n")
     content.append("> 🚨 INSTRUCTION: You are an Agent reading the Project Bible.\n")
     content.append("> 1. Always check `L1: Contracts` before writing code.\n")
     content.append("> 2. `L0: Vision` defines the scope. Do not hallucinate features.\n")
@@ -36,7 +68,6 @@ def compile_specs(specs_dir: Path, output_file: Path):
         file_text = f.read_text()
         
         # Strip YAML Frontmatter (between first two '---')
-        # Simple regex-less approach: split by '---', take parts [2:] if frontmatter exists
         parts = file_text.split('---', 2)
         if len(parts) >= 3 and parts[0].strip() == "":
             body = parts[2].strip()
@@ -55,15 +86,24 @@ def compile_specs(specs_dir: Path, output_file: Path):
     output_file.write_text("".join(content))
     print(f"✅ Compiled {len(files)} specs to {output_file}")
 
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
         description='Compile Vibe-Spec files into a unified document.',
         epilog='Example: python compile.py specs/ vibe-spec-full.md'
     )
-    parser.add_argument('specs_dir', help='Directory containing L*.md spec files')
-    parser.add_argument('output_file', help='Output file path for compiled spec')
+    parser.add_argument('specs_dir', nargs='?', help='Directory containing L*.md spec files')
+    parser.add_argument('output_file', nargs='?', help='Output file path for compiled spec')
     args = parser.parse_args()
     
-    compile_specs(Path(args.specs_dir), Path(args.output_file))
+    # Load config from vibespec.yaml if arguments not provided
+    project_root = Path.cwd()
+    config = load_config(project_root)
+    
+    specs_dir = Path(args.specs_dir) if args.specs_dir else Path(config.get('build', {}).get('specs_dir', 'specs/'))
+    output_file = Path(args.output_file) if args.output_file else Path(config.get('build', {}).get('compiled_spec', 'vibe-spec-full.md'))
+    
+    compile_specs(specs_dir, output_file)
+
 
