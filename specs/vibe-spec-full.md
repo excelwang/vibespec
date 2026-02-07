@@ -112,7 +112,7 @@ RELIABILITY: AUTHORITATIVE
 
 # L1: Vibe-Spec Skill Behavior Contracts
 
-## [system] CONTRACTS.L3_TYPE_ANNOTATION
+## [standard] CONTRACTS.L3_TYPE_ANNOTATION
 - **TYPE_REQUIRED**: Each L3 item MUST include `[Type: X]` where X is PROMPT_NATIVE, SCRIPT, or PROMPT_FALLBACK.
   > Rationale: Enables skill-creator to route items to appropriate execution mechanism.
   (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION), (Ref: VISION.SCOPE.DEFINITION)
@@ -343,8 +343,10 @@ RELIABILITY: AUTHORITATIVE
 
 ## [system] CONTRACTS.SECTION_MARKERS
 - **H2_ANNOTATION**: All H2 section headers MUST be annotated with `[system]` or `[standard]`.
-- **SYSTEM_SEMANTICS**: `[system]` marks vibe-spec system logic or project-specific implementation details. Essential for AI code maintenance.
-- **STANDARD_SEMANTICS**: `[standard]` marks reusable design patterns, meta-rules, or user-facing specification standards.
+- **SYSTEM_SEMANTICS**: `[system]` marks vibe-spec system logic or project-specific implementation details (The "How"). Analogous to the **Executor** role.
+  > Example: "Use Shunting-yard algorithm" (Mechanism) or "Deploy via Docker" (Implementation).
+- **STANDARD_SEMANTICS**: `[standard]` marks reusable design patterns, meta-rules, or user-facing specification standards (The "Rules"). Analogous to the **Legislator** role.
+  > Example: "Must retain 4 decimal places" (Constraint) or "UI Must be Dark Mode" (Requirement).
 - **COMPILATION_BEHAVIOR**: `compile.py` MUST retain ALL sections (both markers) by default. Filtering is only for explicit `--public` mode.
 - **VALIDATION_CHECK**: `validate.py` SHOULD warn if H2 headers lack a marker annotation.
 
@@ -640,6 +642,7 @@ Manages layer definitions, focus rules, and layer-specific validation.
 **Intent**: Centralize layer semantics for consistent enforcement across tools.
 **Guarantees**: Layer violations are detected at validation time.
 - **LAYER_REGISTRY**: Maintains definitions for L0-L3 including allowed content types, forbidden terms, and structural requirements. Provides lookup interface for other components.
+  > Guidance: L0/L1 specs typically contain `[standard]` (Constraints), while L2/L3 specs typically contain `[system]` (Mechanisms).
   **Interface**: `get_layer_def(layer: int) -> LayerDefinition`
   (Ref: CONTRACTS.LAYER_DEFINITIONS)
 - **FOCUS_RULES**: Defines whitelist/blacklist for each layer. L0: no implementation details. L1: no class names. L2: no variable names. L3: no vague visions.
@@ -1268,14 +1271,14 @@ Implementation of layer management logic.
   - Layer 3 → whitelist: ["function", "script", "algorithm"], blacklist: ["vague"]
   (Ref: ARCHITECTURE.LAYER_MANAGER.FOCUS_RULES)
 - **CLASSIFY_IMPL**: Content layer classification. [Type: PROMPT_NATIVE]
-  > Analyze content and determine which specification layer (L0-L3) it belongs to.
-  > Consider abstraction level, vocabulary, and presence of implementation details.
+  > Analyze content to determine target layer (L0-L3) and semantic type (`[standard]` vs `[system]`).
+  > Use "MUST/SHOULD" keywords to identify Standards; use "IS/USES/IMPLEMENTS" to identify System details.
   
   **Examples**:
-  - "We need fast response times" → L0 (Vision: abstract goal)
-  - "System MUST respond within 100ms" → L1 (Contract: RFC2119 keyword)
-  - "API Gateway routes requests to UserService" → L2 (Architecture: components)
-  - "`function validate(spec)` checks frontmatter" → L3 (Implementation: code)
+  - "We need fast response times" → L0 [standard] (Vision: Goal)
+  - "System MUST respond within 100ms" → L1 [standard] (Contract: Constraint)
+  - "API Gateway routes requests to UserService" → L2 [system] (Architecture: Mechanism)
+  - "`function validate(spec)` checks frontmatter" → L3 [system] (Implementation: Code)
   (Ref: ARCHITECTURE.LAYER_MANAGER.CONTENT_CLASSIFIER)
 - **DEPTH_IMPL**: Nesting depth validation. [Type: SCRIPT]
   ```pseudocode

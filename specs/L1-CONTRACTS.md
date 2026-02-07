@@ -9,7 +9,7 @@ invariants:
 
 # L1: Vibe-Spec Skill Behavior Contracts
 
-## [system] CONTRACTS.L3_TYPE_ANNOTATION
+## [standard] CONTRACTS.L3_TYPE_ANNOTATION
 - **TYPE_REQUIRED**: Each L3 item MUST include `[Type: X]` where X is PROMPT_NATIVE, SCRIPT, or PROMPT_FALLBACK.
   > Rationale: Enables skill-creator to route items to appropriate execution mechanism.
   (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION), (Ref: VISION.SCOPE.DEFINITION)
@@ -240,8 +240,10 @@ invariants:
 
 ## [system] CONTRACTS.SECTION_MARKERS
 - **H2_ANNOTATION**: All H2 section headers MUST be annotated with `[system]` or `[standard]`.
-- **SYSTEM_SEMANTICS**: `[system]` marks vibe-spec system logic or project-specific implementation details. Essential for AI code maintenance.
-- **STANDARD_SEMANTICS**: `[standard]` marks reusable design patterns, meta-rules, or user-facing specification standards.
+- **SYSTEM_SEMANTICS**: `[system]` marks vibe-spec system logic or project-specific implementation details (The "How"). Analogous to the **Executor** role.
+  > Example: "Use Shunting-yard algorithm" (Mechanism) or "Deploy via Docker" (Implementation).
+- **STANDARD_SEMANTICS**: `[standard]` marks reusable design patterns, meta-rules, or user-facing specification standards (The "Rules"). Analogous to the **Legislator** role.
+  > Example: "Must retain 4 decimal places" (Constraint) or "UI Must be Dark Mode" (Requirement).
 - **COMPILATION_BEHAVIOR**: `compile.py` MUST retain ALL sections (both markers) by default. Filtering is only for explicit `--public` mode.
 - **VALIDATION_CHECK**: `validate.py` SHOULD warn if H2 headers lack a marker annotation.
 

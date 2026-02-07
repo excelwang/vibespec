@@ -221,6 +221,7 @@ Manages layer definitions, focus rules, and layer-specific validation.
 **Intent**: Centralize layer semantics for consistent enforcement across tools.
 **Guarantees**: Layer violations are detected at validation time.
 - **LAYER_REGISTRY**: Maintains definitions for L0-L3 including allowed content types, forbidden terms, and structural requirements. Provides lookup interface for other components.
+  > Guidance: L0/L1 specs typically contain `[standard]` (Constraints), while L2/L3 specs typically contain `[system]` (Mechanisms).
   **Interface**: `get_layer_def(layer: int) -> LayerDefinition`
   (Ref: CONTRACTS.LAYER_DEFINITIONS)
 - **FOCUS_RULES**: Defines whitelist/blacklist for each layer. L0: no implementation details. L1: no class names. L2: no variable names. L3: no vague visions.
