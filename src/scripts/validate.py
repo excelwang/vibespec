@@ -154,6 +154,58 @@ def parse_spec_file(spec_file: Path) -> dict:
         'body': body
     }
 
+
+def parse_schema_file(schema_file: Path) -> dict:
+    """Parse schema file for exports only (no layer/health checks).
+    
+    Schema files like USER_SPEC_FORMAT.md contain FORMAT.* exports
+    that can be referenced by L2/L3 specs.
+    """
+    content = schema_file.read_text()
+    
+    # Skip frontmatter
+    fm_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+    if fm_match:
+        body = content[fm_match.end():]
+    else:
+        body = content
+    
+    exports = []
+    current_h2 = None
+    lines = body.split('\n')
+    in_code_block = False
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Code Block Toggle
+        if stripped.startswith('```') or stripped.startswith('~~~'):
+            in_code_block = not in_code_block
+            continue
+        if in_code_block:
+            continue
+        
+        # H2 Detection (e.g., ## FORMAT.METADATA)
+        h2_match = re.match(r'^## ([\w.]+)', stripped)
+        if h2_match:
+            current_h2 = h2_match.group(1)
+            exports.append(current_h2)
+            continue
+        
+        # Semantic Key Detection: - **KEY**:
+        if current_h2 and stripped.startswith('- **'):
+            key_match = re.match(r'- \*\*([A-Z0-9_]+)\*\*:', stripped)
+            if key_match:
+                key = key_match.group(1)
+                full_id = f"{current_h2}.{key}"
+                exports.append(full_id)
+    
+    return {
+        'exports': exports,
+        'file': schema_file.name
+    }
+
+
 def check_spec_health(filename: str, content: str) -> list:
     """Enforce QUANTIFIED_VALIDATION metrics:
     1. Atomicity: Max 50 words per statement.
@@ -281,11 +333,17 @@ def check_statement_numbering(content: str, filename: str = '') -> list:
     return errors
 
 
-def validate_specs(specs_dir: Path) -> tuple[list, list]:
-    """Validate all specs in directory. Returns (errors, warnings)."""
+def validate_specs(specs_dir: Path, schema_dir: Path = None) -> tuple[list, list]:
+    """Validate all specs in directory. Returns (errors, warnings).
+    
+    Args:
+        specs_dir: Directory containing L*.md spec files
+        schema_dir: Optional directory containing schema files (e.g., FORMAT definitions)
+    """
     errors = []
     warnings = []
     specs = {}
+    schema_exports = {}  # Exports from schema files (not subject to coverage checks)
     
     # 1. Parsing & Local Checks
     for spec_file in sorted(specs_dir.glob('L*.md')):
@@ -305,6 +363,14 @@ def validate_specs(specs_dir: Path) -> tuple[list, list]:
     
     exports_map = {}
     layer_counts = {'L0': 0, 'L1': 0, 'L2': 0, 'L3': 0}
+    
+    # Collect exports from schema files (for reference resolution only)
+    if schema_dir and schema_dir.exists():
+        for schema_file in sorted(schema_dir.glob('*.md')):
+            result = parse_schema_file(schema_file)
+            if result:
+                for exp in result['exports']:
+                    schema_exports[exp] = f"schema:{result['file']}"
     
     # 2. Exports Collection & Health Metrics
     for spec_id, data in specs.items():
@@ -370,9 +436,13 @@ def validate_specs(specs_dir: Path) -> tuple[list, list]:
             target_id = ref['id']
             source_id = ref.get('source_id')
             
-            # Dangling Check
-            if target_id not in exports_map:
+            # Dangling Check (allow references to schema exports)
+            if target_id not in exports_map and target_id not in schema_exports:
                 errors.append(f"{data['file']}:{ref['line']}: Dangling Reference to `{target_id}` (not found).")
+                continue
+            
+            # Skip coverage tracking for schema references
+            if target_id in schema_exports:
                 continue
                 
             # Accumulate weight & Fan-Out
@@ -442,7 +512,19 @@ def main():
         print(f'❌ Directory not found: {specs_dir}')
         sys.exit(1)
     
-    errors, warnings = validate_specs(specs_dir)
+    # Auto-detect schema directory (sibling to specs_dir or inside project root)
+    schema_dir = None
+    # Try: specs_dir/../schema/ (e.g., specs/ -> schema/)
+    candidate = specs_dir.parent / 'schema'
+    if candidate.exists():
+        schema_dir = candidate
+    # Try: specs_dir/../../schema/ (e.g., src/specs/ -> schema/)
+    if not schema_dir:
+        candidate = specs_dir.parent.parent / 'schema'
+        if candidate.exists():
+            schema_dir = candidate
+    
+    errors, warnings = validate_specs(specs_dir, schema_dir)
     
     if errors:
         print('❌ ERRORS:')

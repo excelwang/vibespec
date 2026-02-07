@@ -39,7 +39,7 @@ Rule-based validation engine that enforces L1 contracts.
   (Ref: FORMAT.TRACEABILITY.COMPLETENESS), (Ref: FORMAT.ALGEBRAIC_VALIDATION.CONSERVATION)
 - **FOCUS_ENFORCER**: Scans layer content for strict focus adherence to whitelist/blacklist definitions. Uses keyword analysis to detect forbidden terms or concepts. Prevents implementation details leaking into high-level specs. Flags violations as architectural breaches.
   **Interface**: `check_focus(spec: Spec) -> FocusViolation[]`
-  (Ref: FORMAT.LAYER_DEFINITIONS.L0_VISION), (Ref: FORMAT.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: FORMAT.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: FORMAT.LAYER_DEFINITIONS.L3_COMPILER)
+  (Ref: FORMAT.LAYER_DEFINITIONS.L0_VISION), (Ref: FORMAT.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: FORMAT.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: FORMAT.LAYER_DEFINITIONS.L3_IMPLEMENTATION)
 
 ## ARCHITECTURE.IDEAS_PROCESSOR
 Transforms raw ideas into formal specifications through layered refinement.
@@ -86,6 +86,16 @@ Standalone dependency-free automation tools for mechanical workflows.
 - **COMPILE**: Script `scripts/compile.py` assembles specification files into unified document. Generates `spec-full.md` with table of contents and anchors. Concatenates in strict topological order. Creates professional-grade navigable output.
   **Interface**: `compile.py <specs_path> <output_path>`
   (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
+## ARCHITECTURE.SKILL_DISTRIBUTION
+Manages skill packaging and distribution for AI agent consumption.
+**Intent**: Package vibe-spec as discoverable, version-controlled skill.
+**Guarantees**: Single source of truth; ecosystem-compatible format.
+- **LOCATION**: `SKILL.md` resides within `src/` source directory. Physically isolates skill definition from generated artifacts. Immutable reference preventing shadow configuration.
+  **Interface**: `src/SKILL.md`
+  (Ref: VISION.SCOPE.SKILL)
+- **COMPLIANCE**: Updates validated against skill-creator schema. Integrates with CI pipeline for schema verification. Enforces compatibility with agent ecosystem.
+  **Interface**: `skill-creator validate <path>`
+  (Ref: VISION.SCOPE.SKILL)
 
 ## ARCHITECTURE.BOOTSTRAP_PROCESSOR
 Handles first-time project initialization when specification infrastructure does not exist.
@@ -282,7 +292,7 @@ Collects and aggregates specification health metrics.
   (Ref: FORMAT.QUANTIFIED_VALIDATION.RFC2119)
 - **VERB_COUNTER**: Analyzes statements for action-oriented language. Calculates verb density percentage. Flags passive or static descriptions (<10%).
   **Interface**: `count_verbs(spec: Spec) -> VerbDensityResult`
-  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.VERB_DENSITY)
+  (Ref: FORMAT.ALGEBRAIC_VALIDATION.VERB_DENSITY)
 
 ## ARCHITECTURE.CONFLICT_RESOLVER
 Handles conflicts between overlapping ideas and specification changes.
