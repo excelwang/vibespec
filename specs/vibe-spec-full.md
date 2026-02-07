@@ -19,7 +19,7 @@ RELIABILITY: Use for Context
 
 # L0: Vibe-Spec Vision
 
-## [internal] VISION.SCOPE
+## [system] VISION.SCOPE
 - **DEFINITION**: Vibe-Spec is a **specification management framework**, not a code generation engine itself.
 
 ### In-Scope
@@ -38,13 +38,13 @@ RELIABILITY: Use for Context
 * UI: UI design tools.
 * PM: Project management or ticketing systems.
 
-## [internal] VISION.AUTOMATION
+## [system] VISION.AUTOMATION
 - **SCRIPT_FIRST**: If a task CAN be formalized into a script, it MUST be.
 - **COGNITIVE_LOAD**: Minimize LLM/Human cognitive load by offloading mechanical work to deterministic scripts.
 - **EVOLUTION**: The system evolves by identifying patterns and rigidifying them into code.
 - **ITEM_CLASSIFICATION**: L3 items MUST be tagged with execution type: PROMPT_NATIVE (LLM), SCRIPT (automation), or PROMPT_FALLBACK (LLM when scripting too complex).
 
-## [internal] VISION.EXTENSIBILITY
+## [system] VISION.EXTENSIBILITY
 - **PROJECT_RULES**: Projects MAY define custom validation rules beyond core traceability.
 - **RULE_LOCATION**: Custom rules MUST be defined in the `CONTRACTS.CUSTOM_RULES` section of L1-CONTRACTS.
 - **CORE_VS_CUSTOM**: Core rules (traceability, anchors, refs) are universal; custom rules are project-specific.
@@ -52,44 +52,44 @@ RELIABILITY: Use for Context
 
 ---
 
-## [template] VISION.TRACEABILITY
+## [standard] VISION.TRACEABILITY
 - **CHAIN**: The system must support full-chain traceability from vague user requests to verified code.
 - **WORKFLOW**: **Workflow**: Vague Request -> Requirement Breakdown -> Specs -> Implementation -> Verification.
 - **GRANULARITY**: Every statement in a specification must be atomically addressable (numbered lines).
 - **GOAL**: Ensure every line of code exists to satisfy a specific requirement.
 
-## [template] VISION.VIBE_CODING
+## [standard] VISION.VIBE_CODING
 - **TRUTH**: The system must enable "Vibe Coding", where specifications are the primary source of truth.
 - **PARADIGM**: **Paradigm**: Human defines Spec -> AI writes code -> Human & AI verify.
 - **HUMAN_GATE**: Human approval is required before any specification change is persisted.
 - **AI_ASSIST**: AI agents assist in code generation, validation, and refinement.
 - **SHIFT_LEFT**: **Shift-Left**: Errors should be caught at the Spec level, not implementation.
 
-## [template] VISION.PHILOSOPHY
+## [standard] VISION.PHILOSOPHY
 - **HUMAN_CENTRIC**: Specs must be atomic and readable to minimize human context switching.
 - **LLM_CENTRIC**: Prompts must be concise and deterministic to prevent reasoning drift.
 - **SYSTEM_CENTRIC**: Complexity is managed by scripts, not by memory.
 
-## [internal] VISION.AGENT_AS_DEVELOPER
+## [system] VISION.AGENT_AS_DEVELOPER
 - **PRIMARY_CONSUMER**: The compiled `spec-full` is a **Developer's Bible** for AI Agents, not external documentation.
 - **FULL_CONTEXT**: AI as Core Developer requires "God's Eye View" of all internal details to maintain code.
-- **INTERNAL_PURPOSE**: `[internal]` marks implementation details essential for code maintenance and refactoring.
-- **TEMPLATE_PURPOSE**: `[template]` marks design patterns and meta-rules for ensuring new code aligns with project architecture.
+- **INTERNAL_PURPOSE**: `[system]` marks implementation details essential for code maintenance and refactoring.
+- **TEMPLATE_PURPOSE**: `[standard]` marks design patterns and meta-rules for ensuring new code aligns with project architecture.
 - **INFORMATION_COMPLETENESS**: Completeness of information (retaining all sections) is key to code quality and system stability.
-- **PUBLIC_EXPORT**: Filtering `[internal]` is ONLY valid for external/public documentation (future `compile.py --public` mode).
+- **PUBLIC_EXPORT**: Filtering `[system]` is ONLY valid for external/public documentation (future `compile.py --public` mode).
 
-## [template] VISION.COMPILATION_STRUCTURE
+## [system] VISION.COMPILATION_STRUCTURE
 - **LLM_FRIENDLY**: The compiled `VIBE-SPECS.md` must be optimized for Agent consumption.
 - **CONTEXT_ANCHORS**: Sections must have explicit HTML anchors for precise context retrieval.
 - **NAVIGATION**: A system preamble and table of contents are mandatory.
 - **NOISE_REDUCTION**: Individual file frontmatter must be stripped in the compilation.
 
-## [template] VISION.FORMAL_SYNTAX
+## [standard] VISION.FORMAL_SYNTAX
 - **PRECISION_OVER_PROSE**: Specifications SHALL prioritize formal notation over verbose text.
 - **FORMALISMS**: Preferred formats include Mermaid diagrams, JSON/TypeScript schemas, and pseudocode.
 - **MULTIPLIER**: Formal blocks (code fences, diagrams) carry higher information density than prose.
 
-## [template] VISION.UBIQUITOUS_LANGUAGE
+## [standard] VISION.UBIQUITOUS_LANGUAGE
 - **CONTROLLED_VOCABULARY**: The system SHALL use precise, unambiguous terminology.
 - **VALIDATE**: Structural/static checks performed by scripts or linters.
 - **VERIFY**: Dynamic/runtime checks performed by tests or manual review.
@@ -99,7 +99,7 @@ RELIABILITY: Use for Context
 - **VIOLATION**: Breaking a specification rule.
 - **ERROR**: A runtime crash or exception.
 
-## [template] VISION.TARGET_PROJECT
+## [standard] VISION.TARGET_PROJECT
 - **MAINTAINABILITY**: Code is read more than written; clarity over cleverness.
 - **OBSERVABILITY**: If you cannot see it, assume it is broken.
 - **DETERMINISM**: Stochastic behavior is a bug unless explicitly required.
@@ -112,7 +112,7 @@ RELIABILITY: AUTHORITATIVE
 
 # L1: Vibe-Spec Skill Behavior Contracts
 
-## [internal] CONTRACTS.L3_TYPE_ANNOTATION
+## [system] CONTRACTS.L3_TYPE_ANNOTATION
 - **TYPE_REQUIRED**: Each L3 item MUST include `[Type: X]` where X is PROMPT_NATIVE, SCRIPT, or PROMPT_FALLBACK.
   > Rationale: Enables skill-creator to route items to appropriate execution mechanism.
   (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION), (Ref: VISION.SCOPE.DEFINITION)
@@ -128,7 +128,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: Scripts are tools called by LLM; We have no api for script to call LLM.
   (Ref: VISION.AUTOMATION)
 
-## [internal] CONTRACTS.IDEAS_PIPELINE
+## [system] CONTRACTS.IDEAS_PIPELINE
 - **BATCH_READ**: All idea files MUST be read before analysis begins.
   > Rationale: Complete picture enables prioritization and merging.
   (Ref: VISION.SCOPE.IDEAS)
@@ -151,7 +151,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: Most recent user intent is current source of truth.
   (Ref: VISION.SCOPE.IDEAS)
 
-## [internal] CONTRACTS.REVIEW_PROTOCOL
+## [system] CONTRACTS.REVIEW_PROTOCOL
 - **SELF_AUDIT**: After revising a layer, the agent MUST read the full new content to verify internal consistency.
   > Rationale: Catches errors before wasting human review time.
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
@@ -183,7 +183,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: SKILL.md is L3-level artifact; changes must trace through hierarchy.
   (Ref: VISION.TRACEABILITY.CHAIN)
 
-## [internal] CONTRACTS.REJECTION_HANDLING
+## [system] CONTRACTS.REJECTION_HANDLING
 - **AUTOMATED_RETRY**: Agents MAY attempt self-correction up to 3 times for Validator errors.
   > Rationale: Recovers from minor syntax/formatting issues without human intervention.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
@@ -197,7 +197,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: Transactional integrity; no broken builds propagate.
   (Ref: VISION.VIBE_CODING.TRUTH)
 
-## [internal] CONTRACTS.REFLECT
+## [system] CONTRACTS.REFLECT
 - **CONTEXT_BASED**: Agent SHOULD rely on current conversation context to identify key ideas.
   > Rationale: LLM already has access to current context; external log access is unnecessary.
   (Ref: VISION.SCOPE.REFL)
@@ -205,7 +205,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: Prevents AI-generated insights from committing without verification.
   (Ref: VISION.VIBE_CODING.HUMAN_GATE)
 
-## [internal] CONTRACTS.SCRIPT_FIRST
+## [system] CONTRACTS.SCRIPT_FIRST
 - **TARGET**: File I/O, structural validation, archival, and formatting MUST be handled by scripts.
   > Rationale: Ensures 100% reliability for operations prone to LLM hallucination.
   (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
@@ -222,7 +222,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: Ensures portability and prevents supply chain attacks.
   (Ref: VISION.SCOPE.DEPS)
 
-## [internal] CONTRACTS.BOOTSTRAP
+## [system] CONTRACTS.BOOTSTRAP
 - **DETECTION**: Agent MUST detect missing `specs/` directory and trigger Bootstrap Phase.
   > Rationale: Prevents accidental operation on uninitialized projects.
   (Ref: VISION.SCOPE.IDEAS)
@@ -239,7 +239,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: Establishes minimum viable structure for spec management.
   (Ref: VISION.SCOPE.VAL)
 
-## [internal] CONTRACTS.TRIGGERS
+## [system] CONTRACTS.TRIGGERS
 - **TRIGGER_SCAN**: `vibe-spec` (no arguments) MUST scan `specs/ideas/` and begin refinement workflow.
   > Rationale: Default action is to process pending ideas.
   (Ref: VISION.SCOPE.IDEAS)
@@ -256,7 +256,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: Friendly onboarding for new empty projects.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
 
-## [internal] CONTRACTS.VALIDATION_MODE
+## [system] CONTRACTS.VALIDATION_MODE
 - **TRIGGER**: Validation Mode MUST be triggered when `specs/ideas/` is empty AND `SKILL.md` exists.
   > Rationale: Enables continuous health monitoring in self-hosting mode.
   (Ref: VISION.AUTOMATION.EVOLUTION)
@@ -273,7 +273,7 @@ RELIABILITY: AUTHORITATIVE
   > Rationale: Keeps compiled artifact in sync with source.
   (Ref: VISION.SCOPE.DOCS)
 
-## [internal] CONTRACTS.CUSTOM_RULES
+## [system] CONTRACTS.CUSTOM_RULES
 - **RULE_FILE**: Custom validation rules MUST be defined in `specs/.vibe-rules.yaml`.
   > Rationale: Separates project-specific rules from universal framework logic.
   (Ref: VISION.EXTENSIBILITY.RULE_LOCATION), (Ref: VISION.EXTENSIBILITY.CORE_VS_CUSTOM)
@@ -304,7 +304,7 @@ RELIABILITY: AUTHORITATIVE
   ```
   (Ref: VISION.EXTENSIBILITY.PROJECT_RULES)
 
-## [internal] CONTRACTS.SKILL_DISTRIBUTION
+## [system] CONTRACTS.SKILL_DISTRIBUTION
 - **SKILL_MD**: `SKILL.md` is the single source of truth for skill capabilities.
   > Rationale: Version-controlled, auditable; prevents configuration drift.
   (Ref: VISION.SCOPE.SKILL)
@@ -319,11 +319,11 @@ RELIABILITY: AUTHORITATIVE
 
 ---
 
-## [template] CONTRACTS.METADATA
+## [standard] CONTRACTS.METADATA
 - **FRONTMATTER**: Each spec file MUST contain valid YAML frontmatter with a `version` field.
   > Rationale: Machine-parseable metadata for automation pipelines.
 
-## [template] CONTRACTS.LAYER_DEFINITIONS
+## [standard] CONTRACTS.LAYER_DEFINITIONS
 - **L0_VISION**: L0 focuses on "Why" and "What". Implementation details, tool names, file paths are FORBIDDEN.
 - **L1_CONTRACTS**: L1 focuses on "Rules" and "Invariants". Architecture components, script logic are FORBIDDEN.
 - **L2_ARCHITECTURE**: L2 focuses on "Components" and "Data Flow". Class methods, variable names are FORBIDDEN.
@@ -331,7 +331,7 @@ RELIABILITY: AUTHORITATIVE
 
 (Ref: VISION.TRACEABILITY.WORKFLOW), (Ref: VISION.TRACEABILITY.GRANULARITY)
 
-## [template] CONTRACTS.TRACEABILITY
+## [standard] CONTRACTS.TRACEABILITY
 - **SEMANTIC_IDS**: Each statement MUST begin with a bold semantic key (`- **KEY**: ...`). Sequential numbering is FORBIDDEN.
 - **IN_PLACE_REFS**: Downstream items MUST explicitly reference parent IDs using `(Ref: PARENT_ID)`.
 - **DRIFT_DETECTION**: Referencing non-existent parent IDs is a BLOCKING error.
@@ -341,22 +341,22 @@ RELIABILITY: AUTHORITATIVE
 
 (Ref: VISION.TRACEABILITY.CHAIN), (Ref: VISION.TRACEABILITY.GOAL)
 
-## [internal] CONTRACTS.SECTION_MARKERS
-- **H2_ANNOTATION**: All H2 section headers MUST be annotated with `[internal]` or `[template]`.
-- **INTERNAL_SEMANTICS**: `[internal]` marks vibe-spec system logic or project-specific implementation details. Essential for AI code maintenance.
-- **TEMPLATE_SEMANTICS**: `[template]` marks reusable design patterns, meta-rules, or user-facing specification templates.
+## [system] CONTRACTS.SECTION_MARKERS
+- **H2_ANNOTATION**: All H2 section headers MUST be annotated with `[system]` or `[standard]`.
+- **SYSTEM_SEMANTICS**: `[system]` marks vibe-spec system logic or project-specific implementation details. Essential for AI code maintenance.
+- **STANDARD_SEMANTICS**: `[standard]` marks reusable design patterns, meta-rules, or user-facing specification standards.
 - **COMPILATION_BEHAVIOR**: `compile.py` MUST retain ALL sections (both markers) by default. Filtering is only for explicit `--public` mode.
 - **VALIDATION_CHECK**: `validate.py` SHOULD warn if H2 headers lack a marker annotation.
 
 (Ref: VISION.AGENT_AS_DEVELOPER.PRIMARY_CONSUMER), (Ref: VISION.AGENT_AS_DEVELOPER.FULL_CONTEXT), (Ref: VISION.AGENT_AS_DEVELOPER.INTERNAL_PURPOSE), (Ref: VISION.AGENT_AS_DEVELOPER.TEMPLATE_PURPOSE), (Ref: VISION.AGENT_AS_DEVELOPER.INFORMATION_COMPLETENESS), (Ref: VISION.AGENT_AS_DEVELOPER.PUBLIC_EXPORT)
 
-## [template] CONTRACTS.TRACEABILITY_MAINTENANCE
+## [standard] CONTRACTS.TRACEABILITY_MAINTENANCE
 - **IMMUTABLE_IDS**: Once published, ID semantics MUST NOT change unless explicitly versioned (e.g., `AUTH.LOGIN` → `AUTH.LOGIN_V2`).
 - **STALENESS_WARNING**: If `mtime(Parent) > mtime(Child)`, validator SHOULD warn that child may be stale.
 
 (Ref: VISION.TRACEABILITY.GOAL)
 
-## [template] CONTRACTS.QUANTIFIED_VALIDATION
+## [standard] CONTRACTS.QUANTIFIED_VALIDATION
 - **ATOMICITY**: (L0 only) Single Vision statement MUST NOT exceed 50 words.
 - **DEPTH**: Spec nesting MUST NOT exceed 2 levels.
 - **FORMAL_NOTATION**: Formal blocks (Mermaid, JSON, code blocks) SHOULD be preferred over prose.
@@ -366,7 +366,7 @@ RELIABILITY: AUTHORITATIVE
 
 (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC), (Ref: VISION.FORMAL_SYNTAX.MULTIPLIER)
 
-## [template] CONTRACTS.ALGEBRAIC_VALIDATION
+## [standard] CONTRACTS.ALGEBRAIC_VALIDATION
 - **MILLERS_LAW**: Downstream references per upstream requirement MUST NOT exceed 7 (Fan-Out <= 7).
 - **CONSERVATION**: Sum of coverage weights MUST be >= 100%.
 - **EXPANSION_RATIO**: Ratio of L(N) to L(N-1) item count MUST be between 1.0 and 10.0.
@@ -375,7 +375,7 @@ RELIABILITY: AUTHORITATIVE
 
 (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC), (Ref: VISION.SCOPE.COV)
 
-## [template] CONTRACTS.STRICT_TESTABILITY
+## [standard] CONTRACTS.STRICT_TESTABILITY
 - **DEFAULT_TESTABLE**: Each L1/L2/L3 item (bold key with MUST/SHOULD/MAY) is considered testable.
 - **RATIONALE_SEPARATION**: Explanatory text MUST use `> Rationale:` block separation.
 - **PROGRESSIVE_FORMAT**: Each layer SHOULD use format appropriate to its abstraction level.
@@ -383,7 +383,7 @@ RELIABILITY: AUTHORITATIVE
 
 (Ref: VISION.SCOPE.COV), (Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE), (Ref: VISION.VIBE_CODING.AI_ASSIST)
 
-## [template] CONTRACTS.COMPILATION
+## [system] CONTRACTS.COMPILATION
 - **LLM_OPTIMIZED**: Compiled output MUST be optimized for Agent consumption.
 - **ANCHORING**: Compiled output MUST include HTML anchors for each major section.
 - **NAVIGATION**: Compiled output MUST include system preamble and table of contents.
@@ -391,7 +391,7 @@ RELIABILITY: AUTHORITATIVE
 
 (Ref: VISION.COMPILATION_STRUCTURE.LLM_FRIENDLY), (Ref: VISION.COMPILATION_STRUCTURE.CONTEXT_ANCHORS), (Ref: VISION.COMPILATION_STRUCTURE.NAVIGATION), (Ref: VISION.COMPILATION_STRUCTURE.NOISE_REDUCTION)
 
-## [template] CONTRACTS.TERMINOLOGY_ENFORCEMENT
+## [standard] CONTRACTS.TERMINOLOGY_ENFORCEMENT
 
 ```yaml
 standard_terms:
@@ -411,7 +411,7 @@ standard_terms:
 
 (Ref: VISION.UBIQUITOUS_LANGUAGE.CONTROLLED_VOCABULARY), (Ref: VISION.UBIQUITOUS_LANGUAGE.VALIDATE), (Ref: VISION.UBIQUITOUS_LANGUAGE.VERIFY), (Ref: VISION.UBIQUITOUS_LANGUAGE.ASSERT), (Ref: VISION.UBIQUITOUS_LANGUAGE.PIPELINE), (Ref: VISION.UBIQUITOUS_LANGUAGE.FLOW), (Ref: VISION.UBIQUITOUS_LANGUAGE.VIOLATION), (Ref: VISION.UBIQUITOUS_LANGUAGE.ERROR)
 
-## [template] CONTRACTS.FORMAL_NOTATION
+## [standard] CONTRACTS.FORMAL_NOTATION
 - **PREFER_FORMALISMS**: L2 SHOULD prefer architecture diagrams, flowcharts, JSON schema; L3 SHOULD prefer pseudocode.
 
 (Ref: VISION.FORMAL_SYNTAX.FORMALISMS), (Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE)
@@ -423,7 +423,7 @@ RELIABILITY: AUTHORITATIVE
 
 # L2: Vibe-Spec Architecture
 
-## [internal] ARCHITECTURE.COMPILER_PIPELINE
+## [system] ARCHITECTURE.COMPILER_PIPELINE
 Multi-stage compilation pipeline that transforms source specs into a unified document.
 **Intent**: Compile fragmented specification files into single authoritative output.
 **Guarantees**: Only validated content reaches compilation; output is deterministically ordered.
@@ -438,9 +438,9 @@ Multi-stage compilation pipeline that transforms source specs into a unified doc
   (Ref: CONTRACTS.TRACEABILITY), (Ref: CONTRACTS.QUANTIFIED_VALIDATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION), (Ref: CONTRACTS.SECTION_MARKERS.H2_ANNOTATION), (Ref: CONTRACTS.SECTION_MARKERS.VALIDATION_CHECK)
 - **ASSEMBLER**: Merges all verified specification fragments into single authoritative `vibe-spec-full.md` document. Strictly preserves hierarchical order defined by layer metadata, generates table of contents and cross-reference anchors.
   **Interface**: `assemble(specs: ParsedSpec[]) -> Document`
-  (Ref: CONTRACTS.TRACEABILITY.SEMANTIC_IDS), (Ref: CONTRACTS.TRACEABILITY.ANCHORING), (Ref: CONTRACTS.TRACEABILITY.REDUNDANCY), (Ref: CONTRACTS.SECTION_MARKERS.COMPILATION_BEHAVIOR), (Ref: CONTRACTS.SECTION_MARKERS.INTERNAL_SEMANTICS), (Ref: CONTRACTS.SECTION_MARKERS.TEMPLATE_SEMANTICS)
+  (Ref: CONTRACTS.TRACEABILITY.SEMANTIC_IDS), (Ref: CONTRACTS.TRACEABILITY.ANCHORING), (Ref: CONTRACTS.TRACEABILITY.REDUNDANCY), (Ref: CONTRACTS.SECTION_MARKERS.COMPILATION_BEHAVIOR), (Ref: CONTRACTS.SECTION_MARKERS.SYSTEM_SEMANTICS), (Ref: CONTRACTS.SECTION_MARKERS.STANDARD_SEMANTICS)
 
-## [internal] ARCHITECTURE.VALIDATOR_CORE
+## [system] ARCHITECTURE.VALIDATOR_CORE
 Rule-based validation engine that enforces L1 contracts.
 **Intent**: Systematically verify specification health against quantified metrics.
 **Guarantees**: All violations are reported with actionable locations.
@@ -457,7 +457,7 @@ Rule-based validation engine that enforces L1 contracts.
   **Interface**: `check_focus(spec: Spec) -> FocusViolation[]`
   (Ref: CONTRACTS.LAYER_DEFINITIONS.L0_VISION), (Ref: CONTRACTS.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: CONTRACTS.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: CONTRACTS.LAYER_DEFINITIONS.L3_IMPLEMENTATION)
 
-## [internal] ARCHITECTURE.IDEAS_PROCESSOR
+## [system] ARCHITECTURE.IDEAS_PROCESSOR
 Transforms raw ideas into formal specifications through layered refinement.
 **Intent**: Convert unstructured thoughts into validated specification changes.
 **Guarantees**: All changes approved before persistence; temporal order preserved.
@@ -477,7 +477,7 @@ Transforms raw ideas into formal specifications through layered refinement.
   **Interface**: `archive(ideas: Idea[]) -> void`
   (Ref: CONTRACTS.IDEAS_PIPELINE.COMPILE_PROMPT)
 
-## [internal] ARCHITECTURE.REFLECTOR
+## [system] ARCHITECTURE.REFLECTOR
 Distills conversation history into formal specification ideas.
 **Intent**: Extract insights from current conversation context.
 **Guarantees**: No distilled content saved without explicit human approval.
@@ -488,7 +488,7 @@ Distills conversation history into formal specification ideas.
   **Interface**: `present(ideas: Idea[]) -> ApprovalRequest`
   (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW)
 
-## [internal] ARCHITECTURE.SCRIPTS
+## [system] ARCHITECTURE.SCRIPTS
 Standalone dependency-free automation tools for mechanical workflows.
 **Intent**: Encapsulate deterministic operations in code rather than LLM generation.
 **Guarantees**: 100% reliable execution; no stochastic behavior; zero external dependencies.
@@ -502,7 +502,7 @@ Standalone dependency-free automation tools for mechanical workflows.
 - **COMPILE**: Script `scripts/compile.py` assembles specification files into unified document. Generates `vibe-spec-full.md` with table of contents and anchors. Concatenates in strict topological order. Creates professional-grade navigable output.
   **Interface**: `compile.py <specs_path> <output_path>`
   (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
-## [internal] ARCHITECTURE.SKILL_DISTRIBUTION
+## [system] ARCHITECTURE.SKILL_DISTRIBUTION
 Manages skill packaging and distribution for AI agent consumption.
 **Intent**: Package vibe-spec as discoverable, version-controlled skill.
 **Guarantees**: Single source of truth; ecosystem-compatible format.
@@ -513,7 +513,7 @@ Manages skill packaging and distribution for AI agent consumption.
   **Interface**: `skill-creator validate <path>`
   (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE), (Ref: CONTRACTS.SKILL_DISTRIBUTION.TRIGGER_WORDS), (Ref: VISION.SCOPE.SKILL)
 
-## [internal] ARCHITECTURE.BOOTSTRAP_PROCESSOR
+## [system] ARCHITECTURE.BOOTSTRAP_PROCESSOR
 Handles first-time project initialization when specification infrastructure does not exist.
 **Intent**: Guide user through scope definition and create minimal spec structure.
 **Guarantees**: No files created without explicit user approval.
@@ -530,7 +530,7 @@ Handles first-time project initialization when specification infrastructure does
   **Interface**: `initialize(scope: ScopeResult) -> void`
   (Ref: CONTRACTS.BOOTSTRAP.INITIALIZATION), (Ref: CONTRACTS.BOOTSTRAP.APPROVAL_GATE)
 
-## [internal] ARCHITECTURE.TRIGGER_ROUTER
+## [system] ARCHITECTURE.TRIGGER_ROUTER
 Routes skill invocations to appropriate handlers based on context analysis.
 **Intent**: Parse invocation context and dispatch to correct workflow.
 **Guarantees**: Every invocation maps to exactly one handler; no ambiguity.
@@ -541,7 +541,7 @@ Routes skill invocations to appropriate handlers based on context analysis.
   **Interface**: `dispatch(parsed: ParsedCommand) -> Handler`
   (Ref: CONTRACTS.TRIGGERS.TRIGGER_SCAN), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE), (Ref: CONTRACTS.TRIGGERS.IDLE_BEHAVIOR), (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT)
 
-## [internal] ARCHITECTURE.VALIDATION_RUNNER
+## [system] ARCHITECTURE.VALIDATION_RUNNER
 Executes specification health validations when system is idle (no pending ideas).
 **Intent**: Continuously monitor spec integrity between active development sessions.
 **Guarantees**: All findings are actionable and traceable to source.
@@ -555,7 +555,7 @@ Executes specification health validations when system is idle (no pending ideas)
   **Interface**: `propose_fixes(errors: Error[]) -> Idea[]`
   (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL), (Ref: CONTRACTS.VALIDATION_MODE.COMPILE_PROMPT)
 
-## [internal] ARCHITECTURE.SELF_OPTIMIZER
+## [system] ARCHITECTURE.SELF_OPTIMIZER
 Identifies repetitive patterns and proposes automation opportunities.
 **Intent**: Convert repeated manual tasks into deterministic scripts.
 **Guarantees**: No script created without idea approval through standard pipeline.
@@ -566,7 +566,7 @@ Identifies repetitive patterns and proposes automation opportunities.
   **Interface**: `propose_script(pattern: Pattern) -> Idea`
   (Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE)
 
-## [internal] ARCHITECTURE.TRACEABILITY_ENGINE
+## [system] ARCHITECTURE.TRACEABILITY_ENGINE
 Manages ID lifecycle and detects semantic drift in specifications.
 **Intent**: Enforce ID immutability and detect stale specifications.
 **Guarantees**: All drift and staleness issues are reported before they cause failures.
@@ -577,7 +577,7 @@ Manages ID lifecycle and detects semantic drift in specifications.
   **Interface**: `detect_drift(parent_id: string, child_ids: string[]) -> DriftResult`
   (Ref: CONTRACTS.TRACEABILITY_MAINTENANCE.STALENESS_WARNING)
 
-## [internal] ARCHITECTURE.TESTABILITY_ENFORCER
+## [system] ARCHITECTURE.TESTABILITY_ENFORCER
 Validates specification testability and format compliance.
 **Intent**: Ensure all specifications are machine-verifiable.
 **Guarantees**: Untestable specifications are rejected before they enter the system.
@@ -588,7 +588,7 @@ Validates specification testability and format compliance.
   **Interface**: `validate_format(spec: Spec) -> FormatResult`
   (Ref: CONTRACTS.STRICT_TESTABILITY.RATIONALE_SEPARATION), (Ref: CONTRACTS.STRICT_TESTABILITY.PROGRESSIVE_FORMAT)
 
-## [internal] ARCHITECTURE.COMPILATION_ENGINE
+## [system] ARCHITECTURE.COMPILATION_ENGINE
 Produces optimized compilation output for agent consumption.
 **Intent**: Generate LLM-friendly compiled specifications.
 **Guarantees**: Compiled output is navigable, anchored, and noise-free.
@@ -608,7 +608,7 @@ Produces optimized compilation output for agent consumption.
 
 > Components that **manage and validate user project specs**.
 
-## [internal] ARCHITECTURE.TERMINOLOGY_CHECKER
+## [system] ARCHITECTURE.TERMINOLOGY_CHECKER
 Enforces controlled vocabulary compliance across specifications.
 **Intent**: Ensure consistent, unambiguous terminology usage.
 **Guarantees**: Terminology violations are caught during validation.
@@ -616,7 +616,7 @@ Enforces controlled vocabulary compliance across specifications.
   **Interface**: `check_vocabulary(content: string) -> VocabResult`
   (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VALIDATE_VS_VERIFY), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.ASSERT_VS_ERROR), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.PIPELINE_VS_FLOW), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VIOLATION_VS_ERROR)
 
-## [internal] ARCHITECTURE.FORMAL_NOTATION_ENFORCER
+## [system] ARCHITECTURE.FORMAL_NOTATION_ENFORCER
 Promotes formal notation over prose in specifications.
 **Intent**: Maximize information density through structured formats.
 **Guarantees**: Agents receive content optimized for parsing.
@@ -624,7 +624,7 @@ Promotes formal notation over prose in specifications.
   **Interface**: `score_formalism(spec: Spec) -> FormalismScore`
   (Ref: CONTRACTS.FORMAL_NOTATION.PREFER_FORMALISMS), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.FORMAL_NOTATION)
 
-## [internal] ARCHITECTURE.SCRIPT_AUTOMATION
+## [system] ARCHITECTURE.SCRIPT_AUTOMATION
 Implements script-first automation philosophy.
 **Intent**: Convert mechanical patterns into deterministic scripts.
 **Guarantees**: Scripts are dependency-free and self-contained.
@@ -635,7 +635,7 @@ Implements script-first automation philosophy.
   **Interface**: `validate_determinism(script: Script) -> DeterminismResult`
   (Ref: CONTRACTS.SCRIPT_FIRST.DETERMINISM)
 
-## [internal] ARCHITECTURE.LAYER_MANAGER
+## [system] ARCHITECTURE.LAYER_MANAGER
 Manages layer definitions, focus rules, and layer-specific validation.
 **Intent**: Centralize layer semantics for consistent enforcement across tools.
 **Guarantees**: Layer violations are detected at validation time.
@@ -652,7 +652,7 @@ Manages layer definitions, focus rules, and layer-specific validation.
   **Interface**: `check_depth(spec: Spec) -> DepthResult`
   (Ref: CONTRACTS.QUANTIFIED_VALIDATION.DEPTH)
 
-## [internal] ARCHITECTURE.COVERAGE_TRACKER
+## [system] ARCHITECTURE.COVERAGE_TRACKER
 Tracks specification-to-test coverage and reports gaps.
 **Intent**: Ensure every specification has corresponding verification.
 **Guarantees**: Untested specifications are flagged before release.
@@ -670,7 +670,7 @@ Tracks specification-to-test coverage and reports gaps.
   (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION)
 
 
-## [internal] ARCHITECTURE.REPORT_GENERATOR
+## [system] ARCHITECTURE.REPORT_GENERATOR
 Generates human-readable reports from validation and compilation results.
 **Intent**: Present findings in actionable format for human review.
 **Guarantees**: Reports include file locations and remediation guidance.
@@ -687,7 +687,7 @@ Generates human-readable reports from validation and compilation results.
   **Interface**: `render_dashboard(metrics: Metrics) -> Dashboard`
   (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
 
-## [internal] ARCHITECTURE.METRICS_COLLECTOR
+## [system] ARCHITECTURE.METRICS_COLLECTOR
 Collects and aggregates specification health metrics.
 **Intent**: Provide quantitative insight into specification quality.
 **Guarantees**: Metrics are accurate and reproducible.
@@ -710,7 +710,7 @@ Collects and aggregates specification health metrics.
   **Interface**: `count_verbs(spec: Spec) -> VerbDensityResult`
   (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.VERB_DENSITY)
 
-## [internal] ARCHITECTURE.CONFLICT_RESOLVER
+## [system] ARCHITECTURE.CONFLICT_RESOLVER
 Handles conflicts between overlapping ideas and specification changes.
 **Intent**: Deterministically resolve conflicts based on timestamp priority.
 **Guarantees**: Later ideas supersede earlier ones; no silent data loss.
@@ -727,7 +727,7 @@ Handles conflicts between overlapping ideas and specification changes.
   **Interface**: `log_resolution(conflict: Conflict, resolution: Resolution) -> void`
   (Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION)
 
-## [internal] ARCHITECTURE.APPROVAL_WORKFLOW
+## [system] ARCHITECTURE.APPROVAL_WORKFLOW
 Manages human approval gates for specification changes.
 **Intent**: Enforce human-in-the-loop for all persistent changes.
 **Guarantees**: No changes committed without explicit approval.
@@ -744,7 +744,7 @@ Manages human approval gates for specification changes.
   **Interface**: `present_context(changes: Change[]) -> ContextPresentation`
   (Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION)
 
-## [internal] ARCHITECTURE.SEMANTIC_ANALYZER
+## [system] ARCHITECTURE.SEMANTIC_ANALYZER
 Performs semantic analysis of specification content.
 **Intent**: Extract meaning and relationships from specification text.
 **Guarantees**: Analysis is reproducible and deterministic.
@@ -761,7 +761,7 @@ Performs semantic analysis of specification content.
   **Interface**: `classify_idea(idea: Idea) -> Classification`
   (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION)
 
-## [internal] ARCHITECTURE.TYPE_ANNOTATION_ENFORCER
+## [system] ARCHITECTURE.TYPE_ANNOTATION_ENFORCER
 Enforces L3 item type annotation compliance.
 **Intent**: Ensure every L3 implementation item has proper execution type classification.
 **Guarantees**: Type violations are caught before compilation; execution routing is unambiguous.
@@ -785,7 +785,7 @@ RELIABILITY: AUTHORITATIVE
 
 # L3: Vibe-Spec Implementation
 
-## [internal] COMPILER.CLI_INTERFACE
+## [system] COMPILER.CLI_INTERFACE
 CLI entry point for spec management commands.
 - **COMMANDS**: Distinct subcommands for each lifecycle phase. [PROMPT_FALLBACK]
   - **VALIDATE**: `vibe-spec validate <path>` triggers comprehensive validation.
@@ -827,7 +827,7 @@ CLI entry point for spec management commands.
 - **FEEDBACK**: Compiler-grade error messages with file paths, line numbers, contract IDs. [Type: SCRIPT]
   (Ref: ARCHITECTURE.VALIDATOR_CORE)
 
-## [internal] COMPILER.IDEAS_IMPL
+## [system] COMPILER.IDEAS_IMPL
 Implementation of Ideas Processor pipeline.
 - **PROCESS_SESSION**: Unified ideas processing session. [PROMPT_NATIVE]
   > Read all idea files from `specs/ideas/` except those in `specs/ideas/archived/`, analyze each for scope adherence and target layer,
@@ -868,7 +868,7 @@ Implementation of Ideas Processor pipeline.
       winner: "2026-02-06T1200-new.md"
   ```
 
-## [internal] COMPILER.REFLECT_IMPL
+## [system] COMPILER.REFLECT_IMPL
 Implementation of Reflector based on current context.
 - **REFLECT_SESSION**: Unified reflection session. [PROMPT_NATIVE]
   > Analyze current conversation context, identify key insights and decisions,
@@ -906,7 +906,7 @@ Implementation of Reflector based on current context.
   ```
 
 
-## [internal] COMPILER.SCRIPTS_IMPL
+## [system] COMPILER.SCRIPTS_IMPL
 Standalone scripts (zero third-party dependencies).
 - **VALIDATE_PY**: `scripts/validate.py` - Primary enforcement mechanism. [Type: SCRIPT]
   ```pseudocode
@@ -1010,7 +1010,7 @@ Standalone scripts (zero third-party dependencies).
       section_order: ["L0", "L1"]
   ```
 
-## [internal] COMPILER.SKILL_DISTRIBUTION_IMPL
+## [system] COMPILER.SKILL_DISTRIBUTION_IMPL
 Implementation of skill distribution.
 - **SKILL_MD_LOC**: `src/vibe-spec/SKILL.md`  [PROMPT_FALLBACK]
   - Hardcoded path in tooling
@@ -1044,7 +1044,7 @@ Implementation of skill distribution.
       error_type: SchemaError
   ```
 
-## [internal] COMPILER.BOOTSTRAP_IMPL
+## [system] COMPILER.BOOTSTRAP_IMPL
 Implementation of bootstrap processor for first-time setup.
 - **DETECTOR_LOGIC**: Checks filesystem for specs directory presence. [Type: SCRIPT]
   ```pseudocode
@@ -1065,7 +1065,7 @@ Implementation of bootstrap processor for first-time setup.
     → Out-of-Scope: "Tool SHALL NOT provide GUI interface"
   (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_COLLECTOR), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_REFORMER), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.INITIALIZER)
 
-## [internal] COMPILER.ROUTER_IMPL
+## [system] COMPILER.ROUTER_IMPL
 Implementation of trigger routing logic.
 - **PARSE_INVOCATION**: Lexical analysis of trigger string.  [PROMPT_FALLBACK]
   > Parse user input to identify vibe-spec command invocations.
@@ -1088,7 +1088,7 @@ Implementation of trigger routing logic.
   - No args, new project → BootstrapHandler
   (Ref: ARCHITECTURE.TRIGGER_ROUTER.DISPATCHER)
 
-## [internal] COMPILER.VALIDATION_RUNNER_IMPL
+## [system] COMPILER.VALIDATION_RUNNER_IMPL
 Implementation of validation execution during idle state.
 - **EXECUTOR_LOGIC**: Spawns validation subprocess and captures output. [Type: SCRIPT]
   ```pseudocode
@@ -1117,7 +1117,7 @@ Implementation of validation execution during idle state.
     → Idea: "Add reference to AUTH.LOGIN in L2 architecture component"
   (Ref: ARCHITECTURE.VALIDATION_RUNNER.FIX_PROPOSER)
 
-## [internal] COMPILER.OPTIMIZER_IMPL
+## [system] COMPILER.OPTIMIZER_IMPL
 Implementation of self-optimization pattern detection.
 - **OPTIMIZER_SESSION**: Unified optimization session. [PROMPT_NATIVE]
   > Analyze user's action history to detect repetitive patterns (>3 occurrences).
@@ -1131,7 +1131,7 @@ Implementation of self-optimization pattern detection.
   (Ref: ARCHITECTURE.SELF_OPTIMIZER.PATTERN_DETECTOR), (Ref: ARCHITECTURE.SELF_OPTIMIZER.SCRIPT_PROPOSER)
 
 
-## [internal] COMPILER.TRACEABILITY_IMPL
+## [system] COMPILER.TRACEABILITY_IMPL
 Implementation of traceability engine.
 - **REGISTRY_LOGIC**: Maintains ID registry. [Type: SCRIPT]
   ```pseudocode
@@ -1151,7 +1151,7 @@ Implementation of traceability engine.
   - Parent/Child timestamps aligned, concepts consistent → **Stable**
   (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.DRIFT_DETECTOR)
 
-## [internal] COMPILER.TESTABILITY_IMPL
+## [system] COMPILER.TESTABILITY_IMPL
 Implementation of testability enforcement.
 - **ASSERTION_SCANNING**: Scans for RFC2119 keywords. [Type: SCRIPT]
   ```pseudocode
@@ -1171,7 +1171,7 @@ Implementation of testability enforcement.
   ```
   (Ref: ARCHITECTURE.TESTABILITY_ENFORCER.FORMAT_VALIDATOR)
 
-## [internal] COMPILER.COMPILATION_IMPL
+## [system] COMPILER.COMPILATION_IMPL
 Implementation of compilation engine.
 - **ANCHOR_LOGIC**: Generates HTML anchors. [Type: SCRIPT]
   ```pseudocode
@@ -1200,7 +1200,7 @@ Implementation of compilation engine.
   ```
   (Ref: ARCHITECTURE.COMPILATION_ENGINE.NOISE_STRIPPER)
 
-## [internal] COMPILER.TERMINOLOGY_IMPL
+## [system] COMPILER.TERMINOLOGY_IMPL
 Implementation of terminology enforcement.
 - **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: PROMPT_NATIVE]
   > Analyze content for terms that violate controlled vocabulary rules.
@@ -1212,7 +1212,7 @@ Implementation of terminology enforcement.
   - "If error occurs, crash" → Suggest "If **Error** occurs" (vs Violation)
   (Ref: ARCHITECTURE.TERMINOLOGY_CHECKER.VOCAB_MATCHER)
 
-## [internal] COMPILER.FORMALISM_IMPL
+## [system] COMPILER.FORMALISM_IMPL
 Implementation of formal notation enforcement.
 - **FORMALISM_SCORING**: Counts formal blocks. [Type: SCRIPT]
   ```pseudocode
@@ -1225,7 +1225,7 @@ Implementation of formal notation enforcement.
   ```
   (Ref: ARCHITECTURE.FORMAL_NOTATION_ENFORCER.FORMALISM_SCORER)
 
-## [internal] COMPILER.SCRIPT_AUTOMATION_IMPL
+## [system] COMPILER.SCRIPT_AUTOMATION_IMPL
 Implementation of script automation tracking.
 - **GOAL_TRACKING**: Monitors for scriptable tasks. [Type: PROMPT_NATIVE]
   > Identify repetitive manual operations that are deterministic and frequent enough to warrant scripting.
@@ -1247,7 +1247,7 @@ Implementation of script automation tracking.
   - Pure data transformation functions → **Deterministic**
   (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.DETERMINISM_VALIDATOR)
 
-## [internal] COMPILER.LAYER_MANAGER_IMPL
+## [system] COMPILER.LAYER_MANAGER_IMPL
 Implementation of layer management logic.
 - **REGISTRY_IMPL**: Layer definitions lookup. [Type: PROMPT_FALLBACK] (pattern recognition)
   > Provides layer metadata including name, focus area, and forbidden terms.
@@ -1288,7 +1288,7 @@ Implementation of layer management logic.
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.DEPTH_CHECKER)
 
-## [internal] COMPILER.COVERAGE_TRACKER_IMPL
+## [system] COMPILER.COVERAGE_TRACKER_IMPL
 Implementation of coverage tracking.
 - **INDEXER_IMPL**: Spec indexing logic. [Type: SCRIPT]
   ```pseudocode
@@ -1334,7 +1334,7 @@ Implementation of coverage tracking.
   (Ref: ARCHITECTURE.COVERAGE_TRACKER.COVERAGE_CALCULATOR)
 
 
-## [internal] COMPILER.REPORT_GENERATOR_IMPL
+## [system] COMPILER.REPORT_GENERATOR_IMPL
 Implementation of report generation.
 - **FORMAT_IMPL**: Error formatting logic. [Type: PROMPT_FALLBACK]
   > Format validation errors into human-readable output lines.
@@ -1370,7 +1370,7 @@ Implementation of report generation.
   - Coverage: 98%
   (Ref: ARCHITECTURE.REPORT_GENERATOR.METRICS_DASHBOARD)
 
-## [internal] COMPILER.METRICS_COLLECTOR_IMPL
+## [system] COMPILER.METRICS_COLLECTOR_IMPL
 Implementation of metrics collection.
 - **COUNT_IMPL**: Item counting. [Type: SCRIPT]
   ```pseudocode
@@ -1430,7 +1430,7 @@ Implementation of metrics collection.
   ```
   (Ref: ARCHITECTURE.METRICS_COLLECTOR.VERB_COUNTER)
 
-## [internal] COMPILER.CONFLICT_RESOLVER_IMPL
+## [system] COMPILER.CONFLICT_RESOLVER_IMPL
 Implementation of conflict resolution.
 - **DETECT_IMPL**: Conflict detection. [Type: PROMPT_NATIVE]
   > Analyze a batch of ideas to identify conflicting intents or contradictory requirements.
@@ -1467,7 +1467,7 @@ Implementation of conflict resolution.
   ```
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.AUDIT_LOGGER)
 
-## [internal] COMPILER.APPROVAL_WORKFLOW_IMPL
+## [system] COMPILER.APPROVAL_WORKFLOW_IMPL
 Implementation of approval workflow.
 - **APPROVAL_SESSION**: Unified approval workflow. [PROMPT_NATIVE]
   > Present proposed changes with context, prompt user for approval,
@@ -1488,7 +1488,7 @@ Implementation of approval workflow.
   ```
   (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_TRACKER)
 
-## [internal] COMPILER.SEMANTIC_ANALYZER_IMPL
+## [system] COMPILER.SEMANTIC_ANALYZER_IMPL
 Implementation of semantic analysis.
 - **KEYWORD_IMPL**: Keyword extraction. [Type: PROMPT_NATIVE]
   > Extract semantically significant keywords from content, ignoring stopwords.
@@ -1530,7 +1530,7 @@ Implementation of semantic analysis.
     → Layer: L2, Action: Delete, Target: ARCHITECTURE.AUTH.LEGACY
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.IDEA_CLASSIFIER)
 
-## [internal] COMPILER.TYPE_ANNOTATION_IMPL
+## [system] COMPILER.TYPE_ANNOTATION_IMPL
 Implementation of L3 item type annotation enforcement.
 - **TYPE_SCANNING**: Scans L3 items for `[Type: X]` annotations. [Type: SCRIPT]
   ```pseudocode

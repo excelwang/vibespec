@@ -218,15 +218,15 @@ def parse_spec_file(spec_file: Path) -> dict:
         clean_line = re.sub(r'`[^`]+`', '', stripped)
         
         # Check for ID Transition BEFORE counting text content
-        # H2 Detection - supports optional [internal]/[template] tags
-        h2_match = re.match(r'^## (?:\[(internal|template)\] )?([\w.]+)', stripped)
+        # H2 Detection - supports optional [system]/[standard] tags
+        h2_match = re.match(r'^## (?:\[(system|standard)\] )?([\w.]+)', stripped)
         if h2_match:
-            h2_tag = h2_match.group(1)  # 'internal', 'template', or None
+            h2_tag = h2_match.group(1)  # 'system', 'standard', or None
             current_h2 = h2_match.group(2)
             
-            # Warn if H2 lacks [internal]/[template] tag
+            # Warn if H2 lacks [system]/[standard] tag
             if h2_tag is None and current_h2.startswith(f'{spec_id}.'):
-                h2_missing_tags.append(f"Line {i+1}: H2 `{current_h2}` missing [internal] or [template] tag.")
+                h2_missing_tags.append(f"Line {i+1}: H2 `{current_h2}` missing [system] or [standard] tag.")
             
             if current_h2.startswith(f'{spec_id}.'):
                 exports.append(current_h2)

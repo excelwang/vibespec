@@ -4,7 +4,7 @@ version: 2.0.0
 
 # L3: Vibe-Spec Implementation
 
-## [internal] COMPILER.CLI_INTERFACE
+## [system] COMPILER.CLI_INTERFACE
 CLI entry point for spec management commands.
 - **COMMANDS**: Distinct subcommands for each lifecycle phase. [PROMPT_FALLBACK]
   - **VALIDATE**: `vibe-spec validate <path>` triggers comprehensive validation.
@@ -46,7 +46,7 @@ CLI entry point for spec management commands.
 - **FEEDBACK**: Compiler-grade error messages with file paths, line numbers, contract IDs. [Type: SCRIPT]
   (Ref: ARCHITECTURE.VALIDATOR_CORE)
 
-## [internal] COMPILER.IDEAS_IMPL
+## [system] COMPILER.IDEAS_IMPL
 Implementation of Ideas Processor pipeline.
 - **PROCESS_SESSION**: Unified ideas processing session. [PROMPT_NATIVE]
   > Read all idea files from `specs/ideas/` except those in `specs/ideas/archived/`, analyze each for scope adherence and target layer,
@@ -87,7 +87,7 @@ Implementation of Ideas Processor pipeline.
       winner: "2026-02-06T1200-new.md"
   ```
 
-## [internal] COMPILER.REFLECT_IMPL
+## [system] COMPILER.REFLECT_IMPL
 Implementation of Reflector based on current context.
 - **REFLECT_SESSION**: Unified reflection session. [PROMPT_NATIVE]
   > Analyze current conversation context, identify key insights and decisions,
@@ -125,7 +125,7 @@ Implementation of Reflector based on current context.
   ```
 
 
-## [internal] COMPILER.SCRIPTS_IMPL
+## [system] COMPILER.SCRIPTS_IMPL
 Standalone scripts (zero third-party dependencies).
 - **VALIDATE_PY**: `scripts/validate.py` - Primary enforcement mechanism. [Type: SCRIPT]
   ```pseudocode
@@ -229,7 +229,7 @@ Standalone scripts (zero third-party dependencies).
       section_order: ["L0", "L1"]
   ```
 
-## [internal] COMPILER.SKILL_DISTRIBUTION_IMPL
+## [system] COMPILER.SKILL_DISTRIBUTION_IMPL
 Implementation of skill distribution.
 - **SKILL_MD_LOC**: `src/vibe-spec/SKILL.md`  [PROMPT_FALLBACK]
   - Hardcoded path in tooling
@@ -263,7 +263,7 @@ Implementation of skill distribution.
       error_type: SchemaError
   ```
 
-## [internal] COMPILER.BOOTSTRAP_IMPL
+## [system] COMPILER.BOOTSTRAP_IMPL
 Implementation of bootstrap processor for first-time setup.
 - **DETECTOR_LOGIC**: Checks filesystem for specs directory presence. [Type: SCRIPT]
   ```pseudocode
@@ -284,7 +284,7 @@ Implementation of bootstrap processor for first-time setup.
     → Out-of-Scope: "Tool SHALL NOT provide GUI interface"
   (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_COLLECTOR), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_REFORMER), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.INITIALIZER)
 
-## [internal] COMPILER.ROUTER_IMPL
+## [system] COMPILER.ROUTER_IMPL
 Implementation of trigger routing logic.
 - **PARSE_INVOCATION**: Lexical analysis of trigger string.  [PROMPT_FALLBACK]
   > Parse user input to identify vibe-spec command invocations.
@@ -307,7 +307,7 @@ Implementation of trigger routing logic.
   - No args, new project → BootstrapHandler
   (Ref: ARCHITECTURE.TRIGGER_ROUTER.DISPATCHER)
 
-## [internal] COMPILER.VALIDATION_RUNNER_IMPL
+## [system] COMPILER.VALIDATION_RUNNER_IMPL
 Implementation of validation execution during idle state.
 - **EXECUTOR_LOGIC**: Spawns validation subprocess and captures output. [Type: SCRIPT]
   ```pseudocode
@@ -336,7 +336,7 @@ Implementation of validation execution during idle state.
     → Idea: "Add reference to AUTH.LOGIN in L2 architecture component"
   (Ref: ARCHITECTURE.VALIDATION_RUNNER.FIX_PROPOSER)
 
-## [internal] COMPILER.OPTIMIZER_IMPL
+## [system] COMPILER.OPTIMIZER_IMPL
 Implementation of self-optimization pattern detection.
 - **OPTIMIZER_SESSION**: Unified optimization session. [PROMPT_NATIVE]
   > Analyze user's action history to detect repetitive patterns (>3 occurrences).
@@ -350,7 +350,7 @@ Implementation of self-optimization pattern detection.
   (Ref: ARCHITECTURE.SELF_OPTIMIZER.PATTERN_DETECTOR), (Ref: ARCHITECTURE.SELF_OPTIMIZER.SCRIPT_PROPOSER)
 
 
-## [internal] COMPILER.TRACEABILITY_IMPL
+## [system] COMPILER.TRACEABILITY_IMPL
 Implementation of traceability engine.
 - **REGISTRY_LOGIC**: Maintains ID registry. [Type: SCRIPT]
   ```pseudocode
@@ -370,7 +370,7 @@ Implementation of traceability engine.
   - Parent/Child timestamps aligned, concepts consistent → **Stable**
   (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.DRIFT_DETECTOR)
 
-## [internal] COMPILER.TESTABILITY_IMPL
+## [system] COMPILER.TESTABILITY_IMPL
 Implementation of testability enforcement.
 - **ASSERTION_SCANNING**: Scans for RFC2119 keywords. [Type: SCRIPT]
   ```pseudocode
@@ -390,7 +390,7 @@ Implementation of testability enforcement.
   ```
   (Ref: ARCHITECTURE.TESTABILITY_ENFORCER.FORMAT_VALIDATOR)
 
-## [internal] COMPILER.COMPILATION_IMPL
+## [system] COMPILER.COMPILATION_IMPL
 Implementation of compilation engine.
 - **ANCHOR_LOGIC**: Generates HTML anchors. [Type: SCRIPT]
   ```pseudocode
@@ -419,7 +419,7 @@ Implementation of compilation engine.
   ```
   (Ref: ARCHITECTURE.COMPILATION_ENGINE.NOISE_STRIPPER)
 
-## [internal] COMPILER.TERMINOLOGY_IMPL
+## [system] COMPILER.TERMINOLOGY_IMPL
 Implementation of terminology enforcement.
 - **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: PROMPT_NATIVE]
   > Analyze content for terms that violate controlled vocabulary rules.
@@ -431,7 +431,7 @@ Implementation of terminology enforcement.
   - "If error occurs, crash" → Suggest "If **Error** occurs" (vs Violation)
   (Ref: ARCHITECTURE.TERMINOLOGY_CHECKER.VOCAB_MATCHER)
 
-## [internal] COMPILER.FORMALISM_IMPL
+## [system] COMPILER.FORMALISM_IMPL
 Implementation of formal notation enforcement.
 - **FORMALISM_SCORING**: Counts formal blocks. [Type: SCRIPT]
   ```pseudocode
@@ -444,7 +444,7 @@ Implementation of formal notation enforcement.
   ```
   (Ref: ARCHITECTURE.FORMAL_NOTATION_ENFORCER.FORMALISM_SCORER)
 
-## [internal] COMPILER.SCRIPT_AUTOMATION_IMPL
+## [system] COMPILER.SCRIPT_AUTOMATION_IMPL
 Implementation of script automation tracking.
 - **GOAL_TRACKING**: Monitors for scriptable tasks. [Type: PROMPT_NATIVE]
   > Identify repetitive manual operations that are deterministic and frequent enough to warrant scripting.
@@ -466,7 +466,7 @@ Implementation of script automation tracking.
   - Pure data transformation functions → **Deterministic**
   (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.DETERMINISM_VALIDATOR)
 
-## [internal] COMPILER.LAYER_MANAGER_IMPL
+## [system] COMPILER.LAYER_MANAGER_IMPL
 Implementation of layer management logic.
 - **REGISTRY_IMPL**: Layer definitions lookup. [Type: PROMPT_FALLBACK] (pattern recognition)
   > Provides layer metadata including name, focus area, and forbidden terms.
@@ -507,7 +507,7 @@ Implementation of layer management logic.
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.DEPTH_CHECKER)
 
-## [internal] COMPILER.COVERAGE_TRACKER_IMPL
+## [system] COMPILER.COVERAGE_TRACKER_IMPL
 Implementation of coverage tracking.
 - **INDEXER_IMPL**: Spec indexing logic. [Type: SCRIPT]
   ```pseudocode
@@ -553,7 +553,7 @@ Implementation of coverage tracking.
   (Ref: ARCHITECTURE.COVERAGE_TRACKER.COVERAGE_CALCULATOR)
 
 
-## [internal] COMPILER.REPORT_GENERATOR_IMPL
+## [system] COMPILER.REPORT_GENERATOR_IMPL
 Implementation of report generation.
 - **FORMAT_IMPL**: Error formatting logic. [Type: PROMPT_FALLBACK]
   > Format validation errors into human-readable output lines.
@@ -589,7 +589,7 @@ Implementation of report generation.
   - Coverage: 98%
   (Ref: ARCHITECTURE.REPORT_GENERATOR.METRICS_DASHBOARD)
 
-## [internal] COMPILER.METRICS_COLLECTOR_IMPL
+## [system] COMPILER.METRICS_COLLECTOR_IMPL
 Implementation of metrics collection.
 - **COUNT_IMPL**: Item counting. [Type: SCRIPT]
   ```pseudocode
@@ -649,7 +649,7 @@ Implementation of metrics collection.
   ```
   (Ref: ARCHITECTURE.METRICS_COLLECTOR.VERB_COUNTER)
 
-## [internal] COMPILER.CONFLICT_RESOLVER_IMPL
+## [system] COMPILER.CONFLICT_RESOLVER_IMPL
 Implementation of conflict resolution.
 - **DETECT_IMPL**: Conflict detection. [Type: PROMPT_NATIVE]
   > Analyze a batch of ideas to identify conflicting intents or contradictory requirements.
@@ -686,7 +686,7 @@ Implementation of conflict resolution.
   ```
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.AUDIT_LOGGER)
 
-## [internal] COMPILER.APPROVAL_WORKFLOW_IMPL
+## [system] COMPILER.APPROVAL_WORKFLOW_IMPL
 Implementation of approval workflow.
 - **APPROVAL_SESSION**: Unified approval workflow. [PROMPT_NATIVE]
   > Present proposed changes with context, prompt user for approval,
@@ -707,7 +707,7 @@ Implementation of approval workflow.
   ```
   (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_TRACKER)
 
-## [internal] COMPILER.SEMANTIC_ANALYZER_IMPL
+## [system] COMPILER.SEMANTIC_ANALYZER_IMPL
 Implementation of semantic analysis.
 - **KEYWORD_IMPL**: Keyword extraction. [Type: PROMPT_NATIVE]
   > Extract semantically significant keywords from content, ignoring stopwords.
@@ -749,7 +749,7 @@ Implementation of semantic analysis.
     → Layer: L2, Action: Delete, Target: ARCHITECTURE.AUTH.LEGACY
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.IDEA_CLASSIFIER)
 
-## [internal] COMPILER.TYPE_ANNOTATION_IMPL
+## [system] COMPILER.TYPE_ANNOTATION_IMPL
 Implementation of L3 item type annotation enforcement.
 - **TYPE_SCANNING**: Scans L3 items for `[Type: X]` annotations. [Type: SCRIPT]
   ```pseudocode

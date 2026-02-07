@@ -9,7 +9,7 @@ invariants:
 
 # L1: Vibe-Spec Skill Behavior Contracts
 
-## [internal] CONTRACTS.L3_TYPE_ANNOTATION
+## [system] CONTRACTS.L3_TYPE_ANNOTATION
 - **TYPE_REQUIRED**: Each L3 item MUST include `[Type: X]` where X is PROMPT_NATIVE, SCRIPT, or PROMPT_FALLBACK.
   > Rationale: Enables skill-creator to route items to appropriate execution mechanism.
   (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION), (Ref: VISION.SCOPE.DEFINITION)
@@ -25,7 +25,7 @@ invariants:
   > Rationale: Scripts are tools called by LLM; We have no api for script to call LLM.
   (Ref: VISION.AUTOMATION)
 
-## [internal] CONTRACTS.IDEAS_PIPELINE
+## [system] CONTRACTS.IDEAS_PIPELINE
 - **BATCH_READ**: All idea files MUST be read before analysis begins.
   > Rationale: Complete picture enables prioritization and merging.
   (Ref: VISION.SCOPE.IDEAS)
@@ -48,7 +48,7 @@ invariants:
   > Rationale: Most recent user intent is current source of truth.
   (Ref: VISION.SCOPE.IDEAS)
 
-## [internal] CONTRACTS.REVIEW_PROTOCOL
+## [system] CONTRACTS.REVIEW_PROTOCOL
 - **SELF_AUDIT**: After revising a layer, the agent MUST read the full new content to verify internal consistency.
   > Rationale: Catches errors before wasting human review time.
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
@@ -80,7 +80,7 @@ invariants:
   > Rationale: SKILL.md is L3-level artifact; changes must trace through hierarchy.
   (Ref: VISION.TRACEABILITY.CHAIN)
 
-## [internal] CONTRACTS.REJECTION_HANDLING
+## [system] CONTRACTS.REJECTION_HANDLING
 - **AUTOMATED_RETRY**: Agents MAY attempt self-correction up to 3 times for Validator errors.
   > Rationale: Recovers from minor syntax/formatting issues without human intervention.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
@@ -94,7 +94,7 @@ invariants:
   > Rationale: Transactional integrity; no broken builds propagate.
   (Ref: VISION.VIBE_CODING.TRUTH)
 
-## [internal] CONTRACTS.REFLECT
+## [system] CONTRACTS.REFLECT
 - **CONTEXT_BASED**: Agent SHOULD rely on current conversation context to identify key ideas.
   > Rationale: LLM already has access to current context; external log access is unnecessary.
   (Ref: VISION.SCOPE.REFL)
@@ -102,7 +102,7 @@ invariants:
   > Rationale: Prevents AI-generated insights from committing without verification.
   (Ref: VISION.VIBE_CODING.HUMAN_GATE)
 
-## [internal] CONTRACTS.SCRIPT_FIRST
+## [system] CONTRACTS.SCRIPT_FIRST
 - **TARGET**: File I/O, structural validation, archival, and formatting MUST be handled by scripts.
   > Rationale: Ensures 100% reliability for operations prone to LLM hallucination.
   (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
@@ -119,7 +119,7 @@ invariants:
   > Rationale: Ensures portability and prevents supply chain attacks.
   (Ref: VISION.SCOPE.DEPS)
 
-## [internal] CONTRACTS.BOOTSTRAP
+## [system] CONTRACTS.BOOTSTRAP
 - **DETECTION**: Agent MUST detect missing `specs/` directory and trigger Bootstrap Phase.
   > Rationale: Prevents accidental operation on uninitialized projects.
   (Ref: VISION.SCOPE.IDEAS)
@@ -136,7 +136,7 @@ invariants:
   > Rationale: Establishes minimum viable structure for spec management.
   (Ref: VISION.SCOPE.VAL)
 
-## [internal] CONTRACTS.TRIGGERS
+## [system] CONTRACTS.TRIGGERS
 - **TRIGGER_SCAN**: `vibe-spec` (no arguments) MUST scan `specs/ideas/` and begin refinement workflow.
   > Rationale: Default action is to process pending ideas.
   (Ref: VISION.SCOPE.IDEAS)
@@ -153,7 +153,7 @@ invariants:
   > Rationale: Friendly onboarding for new empty projects.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
 
-## [internal] CONTRACTS.VALIDATION_MODE
+## [system] CONTRACTS.VALIDATION_MODE
 - **TRIGGER**: Validation Mode MUST be triggered when `specs/ideas/` is empty AND `SKILL.md` exists.
   > Rationale: Enables continuous health monitoring in self-hosting mode.
   (Ref: VISION.AUTOMATION.EVOLUTION)
@@ -170,7 +170,7 @@ invariants:
   > Rationale: Keeps compiled artifact in sync with source.
   (Ref: VISION.SCOPE.DOCS)
 
-## [internal] CONTRACTS.CUSTOM_RULES
+## [system] CONTRACTS.CUSTOM_RULES
 - **RULE_FILE**: Custom validation rules MUST be defined in `specs/.vibe-rules.yaml`.
   > Rationale: Separates project-specific rules from universal framework logic.
   (Ref: VISION.EXTENSIBILITY.RULE_LOCATION), (Ref: VISION.EXTENSIBILITY.CORE_VS_CUSTOM)
@@ -201,7 +201,7 @@ invariants:
   ```
   (Ref: VISION.EXTENSIBILITY.PROJECT_RULES)
 
-## [internal] CONTRACTS.SKILL_DISTRIBUTION
+## [system] CONTRACTS.SKILL_DISTRIBUTION
 - **SKILL_MD**: `SKILL.md` is the single source of truth for skill capabilities.
   > Rationale: Version-controlled, auditable; prevents configuration drift.
   (Ref: VISION.SCOPE.SKILL)
@@ -216,11 +216,11 @@ invariants:
 
 ---
 
-## [template] CONTRACTS.METADATA
+## [standard] CONTRACTS.METADATA
 - **FRONTMATTER**: Each spec file MUST contain valid YAML frontmatter with a `version` field.
   > Rationale: Machine-parseable metadata for automation pipelines.
 
-## [template] CONTRACTS.LAYER_DEFINITIONS
+## [standard] CONTRACTS.LAYER_DEFINITIONS
 - **L0_VISION**: L0 focuses on "Why" and "What". Implementation details, tool names, file paths are FORBIDDEN.
 - **L1_CONTRACTS**: L1 focuses on "Rules" and "Invariants". Architecture components, script logic are FORBIDDEN.
 - **L2_ARCHITECTURE**: L2 focuses on "Components" and "Data Flow". Class methods, variable names are FORBIDDEN.
@@ -228,7 +228,7 @@ invariants:
 
 (Ref: VISION.TRACEABILITY.WORKFLOW), (Ref: VISION.TRACEABILITY.GRANULARITY)
 
-## [template] CONTRACTS.TRACEABILITY
+## [standard] CONTRACTS.TRACEABILITY
 - **SEMANTIC_IDS**: Each statement MUST begin with a bold semantic key (`- **KEY**: ...`). Sequential numbering is FORBIDDEN.
 - **IN_PLACE_REFS**: Downstream items MUST explicitly reference parent IDs using `(Ref: PARENT_ID)`.
 - **DRIFT_DETECTION**: Referencing non-existent parent IDs is a BLOCKING error.
@@ -238,22 +238,22 @@ invariants:
 
 (Ref: VISION.TRACEABILITY.CHAIN), (Ref: VISION.TRACEABILITY.GOAL)
 
-## [internal] CONTRACTS.SECTION_MARKERS
-- **H2_ANNOTATION**: All H2 section headers MUST be annotated with `[internal]` or `[template]`.
-- **INTERNAL_SEMANTICS**: `[internal]` marks vibe-spec system logic or project-specific implementation details. Essential for AI code maintenance.
-- **TEMPLATE_SEMANTICS**: `[template]` marks reusable design patterns, meta-rules, or user-facing specification templates.
+## [system] CONTRACTS.SECTION_MARKERS
+- **H2_ANNOTATION**: All H2 section headers MUST be annotated with `[system]` or `[standard]`.
+- **SYSTEM_SEMANTICS**: `[system]` marks vibe-spec system logic or project-specific implementation details. Essential for AI code maintenance.
+- **STANDARD_SEMANTICS**: `[standard]` marks reusable design patterns, meta-rules, or user-facing specification standards.
 - **COMPILATION_BEHAVIOR**: `compile.py` MUST retain ALL sections (both markers) by default. Filtering is only for explicit `--public` mode.
 - **VALIDATION_CHECK**: `validate.py` SHOULD warn if H2 headers lack a marker annotation.
 
 (Ref: VISION.AGENT_AS_DEVELOPER.PRIMARY_CONSUMER), (Ref: VISION.AGENT_AS_DEVELOPER.FULL_CONTEXT), (Ref: VISION.AGENT_AS_DEVELOPER.INTERNAL_PURPOSE), (Ref: VISION.AGENT_AS_DEVELOPER.TEMPLATE_PURPOSE), (Ref: VISION.AGENT_AS_DEVELOPER.INFORMATION_COMPLETENESS), (Ref: VISION.AGENT_AS_DEVELOPER.PUBLIC_EXPORT)
 
-## [template] CONTRACTS.TRACEABILITY_MAINTENANCE
+## [standard] CONTRACTS.TRACEABILITY_MAINTENANCE
 - **IMMUTABLE_IDS**: Once published, ID semantics MUST NOT change unless explicitly versioned (e.g., `AUTH.LOGIN` → `AUTH.LOGIN_V2`).
 - **STALENESS_WARNING**: If `mtime(Parent) > mtime(Child)`, validator SHOULD warn that child may be stale.
 
 (Ref: VISION.TRACEABILITY.GOAL)
 
-## [template] CONTRACTS.QUANTIFIED_VALIDATION
+## [standard] CONTRACTS.QUANTIFIED_VALIDATION
 - **ATOMICITY**: (L0 only) Single Vision statement MUST NOT exceed 50 words.
 - **DEPTH**: Spec nesting MUST NOT exceed 2 levels.
 - **FORMAL_NOTATION**: Formal blocks (Mermaid, JSON, code blocks) SHOULD be preferred over prose.
@@ -263,7 +263,7 @@ invariants:
 
 (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC), (Ref: VISION.FORMAL_SYNTAX.MULTIPLIER)
 
-## [template] CONTRACTS.ALGEBRAIC_VALIDATION
+## [standard] CONTRACTS.ALGEBRAIC_VALIDATION
 - **MILLERS_LAW**: Downstream references per upstream requirement MUST NOT exceed 7 (Fan-Out <= 7).
 - **CONSERVATION**: Sum of coverage weights MUST be >= 100%.
 - **EXPANSION_RATIO**: Ratio of L(N) to L(N-1) item count MUST be between 1.0 and 10.0.
@@ -272,7 +272,7 @@ invariants:
 
 (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC), (Ref: VISION.SCOPE.COV)
 
-## [template] CONTRACTS.STRICT_TESTABILITY
+## [standard] CONTRACTS.STRICT_TESTABILITY
 - **DEFAULT_TESTABLE**: Each L1/L2/L3 item (bold key with MUST/SHOULD/MAY) is considered testable.
 - **RATIONALE_SEPARATION**: Explanatory text MUST use `> Rationale:` block separation.
 - **PROGRESSIVE_FORMAT**: Each layer SHOULD use format appropriate to its abstraction level.
@@ -280,7 +280,7 @@ invariants:
 
 (Ref: VISION.SCOPE.COV), (Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE), (Ref: VISION.VIBE_CODING.AI_ASSIST)
 
-## [template] CONTRACTS.COMPILATION
+## [system] CONTRACTS.COMPILATION
 - **LLM_OPTIMIZED**: Compiled output MUST be optimized for Agent consumption.
 - **ANCHORING**: Compiled output MUST include HTML anchors for each major section.
 - **NAVIGATION**: Compiled output MUST include system preamble and table of contents.
@@ -288,7 +288,7 @@ invariants:
 
 (Ref: VISION.COMPILATION_STRUCTURE.LLM_FRIENDLY), (Ref: VISION.COMPILATION_STRUCTURE.CONTEXT_ANCHORS), (Ref: VISION.COMPILATION_STRUCTURE.NAVIGATION), (Ref: VISION.COMPILATION_STRUCTURE.NOISE_REDUCTION)
 
-## [template] CONTRACTS.TERMINOLOGY_ENFORCEMENT
+## [standard] CONTRACTS.TERMINOLOGY_ENFORCEMENT
 
 ```yaml
 standard_terms:
@@ -308,7 +308,7 @@ standard_terms:
 
 (Ref: VISION.UBIQUITOUS_LANGUAGE.CONTROLLED_VOCABULARY), (Ref: VISION.UBIQUITOUS_LANGUAGE.VALIDATE), (Ref: VISION.UBIQUITOUS_LANGUAGE.VERIFY), (Ref: VISION.UBIQUITOUS_LANGUAGE.ASSERT), (Ref: VISION.UBIQUITOUS_LANGUAGE.PIPELINE), (Ref: VISION.UBIQUITOUS_LANGUAGE.FLOW), (Ref: VISION.UBIQUITOUS_LANGUAGE.VIOLATION), (Ref: VISION.UBIQUITOUS_LANGUAGE.ERROR)
 
-## [template] CONTRACTS.FORMAL_NOTATION
+## [standard] CONTRACTS.FORMAL_NOTATION
 - **PREFER_FORMALISMS**: L2 SHOULD prefer architecture diagrams, flowcharts, JSON schema; L3 SHOULD prefer pseudocode.
 
 (Ref: VISION.FORMAL_SYNTAX.FORMALISMS), (Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE)
