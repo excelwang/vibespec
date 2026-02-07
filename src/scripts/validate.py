@@ -5,13 +5,149 @@ Standalone Spec Validator
 Zero third-party dependencies - uses Python stdlib only.
 Validates spec files for structural correctness and traceability.
 
-Version: 1.1.0 - Removed INFO_GAIN, simplified content checks
+Version: 1.2.0 - Configurable custom rules via .vibe-rules.yaml
 """
 import re
 import sys
 from pathlib import Path
 
 
+def extract_rules_from_l1(specs: dict) -> list:
+    """Extract custom validation rules from L1 spec embedded YAML.
+    
+    Looks for CONTRACTS.CUSTOM_RULES.VIBE_SPEC_RULES in L1-CONTRACTS.
+    Returns list of rule dicts.
+    """
+    # Find L1 spec
+    l1_spec = None
+    for spec in specs.values():
+        if spec['layer'] == 1:
+            l1_spec = spec
+            break
+            
+    if not l1_spec:
+        return []
+
+    # Find the specific rule item
+    # The ID might be CONTRACTS.CUSTOM_RULES.VIBE_SPEC_RULES or similar depending on parsing
+    # Inspect items keys
+    rule_item = None
+    target_key = 'CONTRACTS.CUSTOM_RULES.VIBE_SPEC_RULES'
+    
+    # In parse_spec_file, H2 is prefix, keys are suffixes. 
+    # But parse_spec_file returns items keyed by FULL ID.
+    if target_key in l1_spec['items']:
+        rule_item = l1_spec['items'][target_key]
+    
+    if not rule_item:
+        return []
+        
+    body = rule_item['body']
+    
+    
+    # Extract YAML block: ```yaml ... ```
+    # Use greedy match to handle nested backticks (e.g. pattern: "```")
+    match = re.search(r'```yaml\n(.*)```', body, re.DOTALL)
+    if not match:
+        return []
+        
+    yaml_content = match.group(1)
+    
+    # Simple YAML parser (subset for rules)
+    rules = []
+    current_rule = None
+    
+    for line in yaml_content.split('\n'):
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#'):
+            continue
+            
+        if stripped.startswith('- id:'):
+            if current_rule:
+                rules.append(current_rule)
+            current_rule = {'id': stripped.split(':', 1)[1].strip()}
+            continue
+            
+        if current_rule is None:
+            continue
+            
+        if ':' in stripped and not stripped.startswith('-'):
+            key, value = stripped.split(':', 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            
+            # Handle list values like ["a", "b"]
+            if value.startswith('[') and value.endswith(']'):
+                items = value[1:-1].split(',')
+                value = [item.strip().strip('"').strip("'") for item in items if item.strip()]
+            elif key == 'layer' and value.isdigit():
+                value = int(value)
+                
+            current_rule[key] = value
+            
+    if current_rule:
+        rules.append(current_rule)
+        
+    return rules
+
+
+def apply_custom_rules(rules: list, specs: dict) -> tuple[list, list]:
+    """Apply custom rules to parsed specs. Returns (errors, warnings)."""
+    errors = []
+    warnings = []
+    
+    for rule in rules:
+        rule_id = rule.get('id', 'UNKNOWN')
+        layer = rule.get('layer')
+        rule_type = rule.get('type')
+        severity = rule.get('severity', 'warning')
+        message = rule.get('description', f"Rule {rule_id} violation")
+        
+        for spec_id, data in specs.items():
+            # Layer filter
+            if layer != 'all' and data['layer'] != layer:
+                continue
+            
+            for item_id, item_data in data.get('items', {}).items():
+                header = item_data.get('header', '')
+                body = item_data.get('body', '')
+                
+                # Header match filter
+                match_header = rule.get('match_header')
+                if match_header and not re.search(match_header, header):
+                    continue
+                
+                violation = False
+                
+                # forbidden_terms: check if any forbidden term is in body
+                if rule_type == 'forbidden_terms':
+                    terms = rule.get('terms', [])
+                    body_lower = body.lower()
+                    for term in terms:
+                        if term.lower() in body_lower:
+                            violation = True
+                            break
+                
+                # forbidden_pattern: check if pattern exists in body
+                elif rule_type == 'forbidden_pattern':
+                    pattern = rule.get('pattern', '')
+                    if pattern and pattern in body:
+                        violation = True
+                
+                # required_pattern: check if pattern is missing
+                elif rule_type == 'required_pattern':
+                    pattern = rule.get('pattern', '')
+                    if pattern and pattern not in body:
+                        violation = True
+                
+                if violation:
+                    msg = f"{spec_id}: {message}. Item `{item_id}`."
+                    if severity == 'error':
+                        errors.append(msg)
+                    else:
+                        warnings.append(msg)
+    
+    return errors, warnings
 
 
 
@@ -49,6 +185,7 @@ def parse_spec_file(spec_file: Path) -> dict:
     raw_lengths = {} # {id: {'text': 0, 'formal': 0}}
     
     references = []
+    h2_missing_tags = []  # Collect H2 headers without [internal]/[template] tags
     current_h2 = None
     current_statement_id = None
     items = {} # {id: {'header': str, 'body': str}}
@@ -81,10 +218,16 @@ def parse_spec_file(spec_file: Path) -> dict:
         clean_line = re.sub(r'`[^`]+`', '', stripped)
         
         # Check for ID Transition BEFORE counting text content
-        # H2 Detection
-        h2_match = re.match(r'^## ([\w.]+)', stripped)
+        # H2 Detection - supports optional [internal]/[template] tags
+        h2_match = re.match(r'^## (?:\[(internal|template)\] )?([\w.]+)', stripped)
         if h2_match:
-            current_h2 = h2_match.group(1)
+            h2_tag = h2_match.group(1)  # 'internal', 'template', or None
+            current_h2 = h2_match.group(2)
+            
+            # Warn if H2 lacks [internal]/[template] tag
+            if h2_tag is None and current_h2.startswith(f'{spec_id}.'):
+                h2_missing_tags.append(f"Line {i+1}: H2 `{current_h2}` missing [internal] or [template] tag.")
+            
             if current_h2.startswith(f'{spec_id}.'):
                 exports.append(current_h2)
                 current_statement_id = current_h2
@@ -151,7 +294,8 @@ def parse_spec_file(spec_file: Path) -> dict:
         'references': references,
         'file': spec_file.name,
         'items': items,
-        'body': body
+        'body': body,
+        'h2_missing_tags': h2_missing_tags
     }
 
 
@@ -389,8 +533,10 @@ def validate_specs(specs_dir: Path, schema_dir: Path = None) -> tuple[list, list
         health_errors = check_spec_health(data['file'], data['body'])
         if health_errors:
             errors.extend(health_errors)
-            
-        # Verb Density Check (Heuristic)
+        
+        # H2 Missing Tag Warnings
+        for tag_warning in data.get('h2_missing_tags', []):
+            warnings.append(f"{data['file']}: {tag_warning}")
         content_words = [w.lower() for w in re.findall(r'\w+', data['body'])]
         if content_words:
             common_verbs = {
@@ -408,17 +554,7 @@ def validate_specs(specs_dir: Path, schema_dir: Path = None) -> tuple[list, list
                 warnings.append(f"{data['file']}: Low Verb Density ({density:.1%}). Ensure action-oriented specs.")
 
 
-
-        # L3 SCRIPT_NO_LLM Check
-        if data['layer'] == 3:
-            for item_id, item_data in data['items'].items():
-                header = item_data['header']
-                if '[Type: SCRIPT]' in header:
-                    forbidden = ['prompt(', 'llm.', 'ai.', 'openai', 'anthropic', 'gemini']
-                    body_lower = item_data['body'].lower()
-                    for term in forbidden:
-                        if term in body_lower:
-                            errors.append(f"{spec_id}: SCRIPT Violation. Item `{item_id}` is [Type: SCRIPT] but contains forbidden LLM term `{term}`.")
+        # Custom rules are applied below (after main validation loop)
 
 
 
@@ -499,15 +635,23 @@ def validate_specs(specs_dir: Path, schema_dir: Path = None) -> tuple[list, list
              if len(data['exports']) > 0 and len(data['references']) == 0:
                  errors.append(f"Anchoring Violation: {data['file']} (L{data['layer']}) defines exports but has NO upstream references.")
 
+    # 4. Apply Custom Rules from L1
+    custom_rules = extract_rules_from_l1(specs)
+    if custom_rules:
+        custom_errors, custom_warnings = apply_custom_rules(custom_rules, specs)
+        errors.extend(custom_errors)
+        warnings.extend(custom_warnings)
+
     return errors, warnings
 
 
 def main():
+    # Default to ./specs/ if no argument provided
     if len(sys.argv) < 2:
-        print('Usage: python validate.py <specs_dir>')
-        sys.exit(1)
+        specs_dir = Path('./specs')
+    else:
+        specs_dir = Path(sys.argv[1])
     
-    specs_dir = Path(sys.argv[1])
     if not specs_dir.exists():
         print(f'❌ Directory not found: {specs_dir}')
         sys.exit(1)

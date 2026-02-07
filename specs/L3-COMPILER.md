@@ -4,7 +4,7 @@ version: 2.0.0
 
 # L3: Vibe-Spec Implementation
 
-## COMPILER.CLI_INTERFACE
+## [internal] COMPILER.CLI_INTERFACE
 CLI entry point for spec management commands.
 - **COMMANDS**: Distinct subcommands for each lifecycle phase. [PROMPT_FALLBACK]
   - **VALIDATE**: `vibe-spec validate <path>` triggers comprehensive validation.
@@ -46,7 +46,7 @@ CLI entry point for spec management commands.
 - **FEEDBACK**: Compiler-grade error messages with file paths, line numbers, contract IDs. [Type: SCRIPT]
   (Ref: ARCHITECTURE.VALIDATOR_CORE)
 
-## COMPILER.IDEAS_IMPL
+## [internal] COMPILER.IDEAS_IMPL
 Implementation of Ideas Processor pipeline.
 - **PROCESS_SESSION**: Unified ideas processing session. [PROMPT_NATIVE]
   > Read all idea files from `specs/ideas/` except those in `specs/ideas/archived/`, analyze each for scope adherence and target layer,
@@ -87,7 +87,7 @@ Implementation of Ideas Processor pipeline.
       winner: "2026-02-06T1200-new.md"
   ```
 
-## COMPILER.REFLECT_IMPL
+## [internal] COMPILER.REFLECT_IMPL
 Implementation of Reflector based on current context.
 - **REFLECT_SESSION**: Unified reflection session. [PROMPT_NATIVE]
   > Analyze current conversation context, identify key insights and decisions,
@@ -125,7 +125,7 @@ Implementation of Reflector based on current context.
   ```
 
 
-## COMPILER.SCRIPTS_IMPL
+## [internal] COMPILER.SCRIPTS_IMPL
 Standalone scripts (zero third-party dependencies).
 - **VALIDATE_PY**: `scripts/validate.py` - Primary enforcement mechanism. [Type: SCRIPT]
   ```pseudocode
@@ -229,7 +229,7 @@ Standalone scripts (zero third-party dependencies).
       section_order: ["L0", "L1"]
   ```
 
-## COMPILER.SKILL_DISTRIBUTION_IMPL
+## [internal] COMPILER.SKILL_DISTRIBUTION_IMPL
 Implementation of skill distribution.
 - **SKILL_MD_LOC**: `src/vibe-spec/SKILL.md`  [PROMPT_FALLBACK]
   - Hardcoded path in tooling
@@ -263,7 +263,7 @@ Implementation of skill distribution.
       error_type: SchemaError
   ```
 
-## COMPILER.BOOTSTRAP_IMPL
+## [internal] COMPILER.BOOTSTRAP_IMPL
 Implementation of bootstrap processor for first-time setup.
 - **DETECTOR_LOGIC**: Checks filesystem for specs directory presence. [Type: SCRIPT]
   ```pseudocode
@@ -284,29 +284,30 @@ Implementation of bootstrap processor for first-time setup.
     → Out-of-Scope: "Tool SHALL NOT provide GUI interface"
   (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_COLLECTOR), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.SCOPE_REFORMER), (Ref: ARCHITECTURE.BOOTSTRAP_PROCESSOR.INITIALIZER)
 
-## COMPILER.ROUTER_IMPL
+## [internal] COMPILER.ROUTER_IMPL
 Implementation of trigger routing logic.
 - **PARSE_INVOCATION**: Lexical analysis of trigger string.  [PROMPT_FALLBACK]
-  ```pseudocode
-  function parse(input: string) -> ParsedCommand:
-    normalized = input.lower().replace("-", "").replace(" ", "")
-    if "vibespec" in normalized:
-      args = input.split(maxsplit=1)[1] if " " in input else null
-      return {command: "vibespec", args}
-    return null
-  ```
+  > Parse user input to identify vibe-spec command invocations.
+  > Normalize input by lowercasing and removing hyphens/spaces.
+  > Extract command arguments if present.
+  
+  **Examples**:
+  - "vibe-spec add auth feature" → {command: "vibespec", args: "add auth feature"}
+  - "VibeSpec" → {command: "vibespec", args: null}
+  - "hello world" → null (not a vibe-spec invocation)
   (Ref: ARCHITECTURE.TRIGGER_ROUTER.PARSER)
 - **DISPATCH_LOGIC**: Decision tree for handler selection.  [PROMPT_FALLBACK]
-  ```pseudocode
-  function dispatch(cmd: ParsedCommand) -> Handler:
-    if cmd.args: return IdeaCaptureHandler
-    if glob("specs/ideas/*.md").non_empty(): return IdeasProcessorHandler
-    if path.exists("src/SKILL.md"): return ValidationRunnerHandler
-    return BootstrapHandler
-  ```
+  > Determine appropriate handler based on system state and command context.
+  > Priority: explicit args → pending ideas → existing project → bootstrap.
+  
+  **Examples**:
+  - Command with args → IdeaCaptureHandler
+  - No args, ideas/*.md exists → IdeasProcessorHandler
+  - No args, SKILL.md exists → ValidationRunnerHandler
+  - No args, new project → BootstrapHandler
   (Ref: ARCHITECTURE.TRIGGER_ROUTER.DISPATCHER)
 
-## COMPILER.VALIDATION_RUNNER_IMPL
+## [internal] COMPILER.VALIDATION_RUNNER_IMPL
 Implementation of validation execution during idle state.
 - **EXECUTOR_LOGIC**: Spawns validation subprocess and captures output. [Type: SCRIPT]
   ```pseudocode
@@ -335,7 +336,7 @@ Implementation of validation execution during idle state.
     → Idea: "Add reference to AUTH.LOGIN in L2 architecture component"
   (Ref: ARCHITECTURE.VALIDATION_RUNNER.FIX_PROPOSER)
 
-## COMPILER.OPTIMIZER_IMPL
+## [internal] COMPILER.OPTIMIZER_IMPL
 Implementation of self-optimization pattern detection.
 - **OPTIMIZER_SESSION**: Unified optimization session. [PROMPT_NATIVE]
   > Analyze user's action history to detect repetitive patterns (>3 occurrences).
@@ -349,7 +350,7 @@ Implementation of self-optimization pattern detection.
   (Ref: ARCHITECTURE.SELF_OPTIMIZER.PATTERN_DETECTOR), (Ref: ARCHITECTURE.SELF_OPTIMIZER.SCRIPT_PROPOSER)
 
 
-## COMPILER.TRACEABILITY_IMPL
+## [internal] COMPILER.TRACEABILITY_IMPL
 Implementation of traceability engine.
 - **REGISTRY_LOGIC**: Maintains ID registry. [Type: SCRIPT]
   ```pseudocode
@@ -369,7 +370,7 @@ Implementation of traceability engine.
   - Parent/Child timestamps aligned, concepts consistent → **Stable**
   (Ref: ARCHITECTURE.TRACEABILITY_ENGINE.DRIFT_DETECTOR)
 
-## COMPILER.TESTABILITY_IMPL
+## [internal] COMPILER.TESTABILITY_IMPL
 Implementation of testability enforcement.
 - **ASSERTION_SCANNING**: Scans for RFC2119 keywords. [Type: SCRIPT]
   ```pseudocode
@@ -389,7 +390,7 @@ Implementation of testability enforcement.
   ```
   (Ref: ARCHITECTURE.TESTABILITY_ENFORCER.FORMAT_VALIDATOR)
 
-## COMPILER.COMPILATION_IMPL
+## [internal] COMPILER.COMPILATION_IMPL
 Implementation of compilation engine.
 - **ANCHOR_LOGIC**: Generates HTML anchors. [Type: SCRIPT]
   ```pseudocode
@@ -418,7 +419,7 @@ Implementation of compilation engine.
   ```
   (Ref: ARCHITECTURE.COMPILATION_ENGINE.NOISE_STRIPPER)
 
-## COMPILER.TERMINOLOGY_IMPL
+## [internal] COMPILER.TERMINOLOGY_IMPL
 Implementation of terminology enforcement.
 - **VOCAB_MATCHING**: Checks controlled vocabulary. [Type: PROMPT_NATIVE]
   > Analyze content for terms that violate controlled vocabulary rules.
@@ -430,7 +431,7 @@ Implementation of terminology enforcement.
   - "If error occurs, crash" → Suggest "If **Error** occurs" (vs Violation)
   (Ref: ARCHITECTURE.TERMINOLOGY_CHECKER.VOCAB_MATCHER)
 
-## COMPILER.FORMALISM_IMPL
+## [internal] COMPILER.FORMALISM_IMPL
 Implementation of formal notation enforcement.
 - **FORMALISM_SCORING**: Counts formal blocks. [Type: SCRIPT]
   ```pseudocode
@@ -443,7 +444,7 @@ Implementation of formal notation enforcement.
   ```
   (Ref: ARCHITECTURE.FORMAL_NOTATION_ENFORCER.FORMALISM_SCORER)
 
-## COMPILER.SCRIPT_AUTOMATION_IMPL
+## [internal] COMPILER.SCRIPT_AUTOMATION_IMPL
 Implementation of script automation tracking.
 - **GOAL_TRACKING**: Monitors for scriptable tasks. [Type: PROMPT_NATIVE]
   > Identify repetitive manual operations that are deterministic and frequent enough to warrant scripting.
@@ -465,26 +466,25 @@ Implementation of script automation tracking.
   - Pure data transformation functions → **Deterministic**
   (Ref: ARCHITECTURE.SCRIPT_AUTOMATION.DETERMINISM_VALIDATOR)
 
-## COMPILER.LAYER_MANAGER_IMPL
+## [internal] COMPILER.LAYER_MANAGER_IMPL
 Implementation of layer management logic.
 - **REGISTRY_IMPL**: Layer definitions lookup. [Type: PROMPT_FALLBACK] (pattern recognition)
-  ```pseudocode
-  LAYER_DEFS = {
-    0: {name: "VISION", focus: "Why/What", forbidden: ["class", "function", "script"]},
-    1: {name: "CONTRACTS", focus: "Rules", forbidden: ["class", "method", "variable"]},
-    2: {name: "ARCHITECTURE", focus: "Components", forbidden: ["variable", "line_number"]},
-    3: {name: "COMPILER", focus: "How", forbidden: ["vague", "vision"]}
-  }
-  function get_layer_def(layer: int) -> LayerDefinition:
-    return LAYER_DEFS[layer]
-  ```
+  > Provides layer metadata including name, focus area, and forbidden terms.
+  > Each layer has specific vocabulary constraints to maintain abstraction boundaries.
+  
+  **Layer Definitions**:
+  - L0 VISION: Focus "Why/What", forbidden: [class, function, script]
+  - L1 CONTRACTS: Focus "Rules", forbidden: [class, method, variable]
+  - L2 ARCHITECTURE: Focus "Components", forbidden: [variable, line_number]
+  - L3 COMPILER: Focus "How", forbidden: [vague, vision]
   (Ref: ARCHITECTURE.LAYER_MANAGER.LAYER_REGISTRY)
 - **FOCUS_IMPL**: Focus rules enforcement. [Type: PROMPT_FALLBACK] (pattern recognition)
-  ```pseudocode
-  function get_focus_rules(layer: int) -> FocusRules:
-    def = get_layer_def(layer)
-    return {whitelist: def.focus_keywords, blacklist: def.forbidden}
-  ```
+  > Retrieve focus rules (whitelist/blacklist) for a given layer.
+  > Whitelist defines expected vocabulary; blacklist defines forbidden terms.
+  
+  **Examples**:
+  - Layer 0 → whitelist: ["goal", "vision", "why"], blacklist: ["class", "function"]
+  - Layer 3 → whitelist: ["function", "script", "algorithm"], blacklist: ["vague"]
   (Ref: ARCHITECTURE.LAYER_MANAGER.FOCUS_RULES)
 - **CLASSIFY_IMPL**: Content layer classification. [Type: PROMPT_NATIVE]
   > Analyze content and determine which specification layer (L0-L3) it belongs to.
@@ -507,7 +507,7 @@ Implementation of layer management logic.
   ```
   (Ref: ARCHITECTURE.LAYER_MANAGER.DEPTH_CHECKER)
 
-## COMPILER.COVERAGE_TRACKER_IMPL
+## [internal] COMPILER.COVERAGE_TRACKER_IMPL
 Implementation of coverage tracking.
 - **INDEXER_IMPL**: Spec indexing logic. [Type: SCRIPT]
   ```pseudocode
@@ -553,47 +553,43 @@ Implementation of coverage tracking.
   (Ref: ARCHITECTURE.COVERAGE_TRACKER.COVERAGE_CALCULATOR)
 
 
-## COMPILER.REPORT_GENERATOR_IMPL
+## [internal] COMPILER.REPORT_GENERATOR_IMPL
 Implementation of report generation.
 - **FORMAT_IMPL**: Error formatting logic. [Type: PROMPT_FALLBACK]
-  ```pseudocode
-  function format_errors(errors: Error[]) -> string:
-    lines = []
-    for e in errors:
-      lines.push(e.file + ":" + e.line + ": " + e.type + " - " + e.message)
-    return lines.join("\n")
-  ```
+  > Format validation errors into human-readable output lines.
+  > Each error shows: file path, line number, error type, and message.
+  
+  **Examples**:
+  - Error {file: "L1.md", line: 42, type: "Orphan", message: "No downstream refs"}
+    → "L1.md:42: Orphan - No downstream refs"
   (Ref: ARCHITECTURE.REPORT_GENERATOR.ERROR_FORMATTER)
 - **SUMMARY_IMPL**: Summary building. [Type: PROMPT_FALLBACK]
-  ```pseudocode
-  function build_summary(result: ValidationResult) -> Summary:
-    return {
-      total_errors: len(result.errors),
-      total_warnings: len(result.warnings),
-      blocking: result.errors.filter(e => e.blocking),
-      passed: len(result.errors) == 0
-    }
-  ```
+  > Build validation summary with total counts and pass/fail status.
+  > Identify blocking errors that prevent successful compilation.
+  
+  **Examples**:
+  - 3 errors, 2 warnings, 1 blocking → {passed: false, blocking: 1}
+  - 0 errors, 1 warning → {passed: true, blocking: 0}
   (Ref: ARCHITECTURE.REPORT_GENERATOR.SUMMARY_BUILDER)
 - **DIFF_IMPL**: Diff rendering. [Type: PROMPT_FALLBACK]
-  ```pseudocode
-  function render_diff(before: Spec, after: Spec) -> string:
-    diff = compute_diff(before.content, after.content)
-    return diff.map(line => (line.type == "+" ? "+" : "-") + line.text).join("\n")
-  ```
+  > Render before/after differences between spec versions.
+  > Show additions with "+" prefix, deletions with "-" prefix.
+  
+  **Examples**:
+  - Added line → "+- **NEW_KEY**: new content"
+  - Removed line → "-- **OLD_KEY**: removed content"
   (Ref: ARCHITECTURE.REPORT_GENERATOR.DIFF_RENDERER)
 - **DASHBOARD_IMPL**: Metrics dashboard. [Type: PROMPT_FALLBACK]
-  ```pseudocode
-  function render_dashboard(metrics: Metrics) -> Dashboard:
-    return {
-      item_counts: format_table(metrics.counts),
-      ratios: format_table(metrics.ratios),
-      coverage: format_percentage(metrics.coverage)
-    }
-  ```
+  > Render metrics dashboard with item counts, ratios, and coverage.
+  > Format as tables for easy scanning.
+  
+  **Examples**:
+  - Item counts: L0=5, L1=20, L2=40, L3=35
+  - Ratios: L1/L0=4.0✓, L2/L1=2.0✓, L3/L2=0.9⚠
+  - Coverage: 98%
   (Ref: ARCHITECTURE.REPORT_GENERATOR.METRICS_DASHBOARD)
 
-## COMPILER.METRICS_COLLECTOR_IMPL
+## [internal] COMPILER.METRICS_COLLECTOR_IMPL
 Implementation of metrics collection.
 - **COUNT_IMPL**: Item counting. [Type: SCRIPT]
   ```pseudocode
@@ -653,7 +649,7 @@ Implementation of metrics collection.
   ```
   (Ref: ARCHITECTURE.METRICS_COLLECTOR.VERB_COUNTER)
 
-## COMPILER.CONFLICT_RESOLVER_IMPL
+## [internal] COMPILER.CONFLICT_RESOLVER_IMPL
 Implementation of conflict resolution.
 - **DETECT_IMPL**: Conflict detection. [Type: PROMPT_NATIVE]
   > Analyze a batch of ideas to identify conflicting intents or contradictory requirements.
@@ -675,16 +671,12 @@ Implementation of conflict resolution.
   ```
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.PRIORITY_RESOLVER)
 - **MERGE_IMPL**: Automatic merge attempt. [Type: PROMPT_FALLBACK] (semantic merging complex)
-  ```pseudocode
-  function merge(ideas: Idea[]) -> MergeResult:
-    merged = {}
-    for idea in ideas:
-      if idea.target_id in merged:
-        merged[idea.target_id] = combine(merged[idea.target_id], idea)
-      else:
-        merged[idea.target_id] = idea
-    return {merged_ideas: values(merged), conflicts_resolved: len(ideas) - len(merged)}
-  ```
+  > Attempt to merge multiple ideas targeting the same spec item.
+  > Combine compatible changes; report conflicts for manual resolution.
+  
+  **Examples**:
+  - Ideas A1, A2 both target L1.AUTH → Merge into single unified idea
+  - Ideas conflict semantically → Report as unresolvable, require manual choice
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.MERGE_ENGINE)
 - **AUDIT_IMPL**: Audit logging. [Type: SCRIPT]
   ```pseudocode
@@ -694,7 +686,7 @@ Implementation of conflict resolution.
   ```
   (Ref: ARCHITECTURE.CONFLICT_RESOLVER.AUDIT_LOGGER)
 
-## COMPILER.APPROVAL_WORKFLOW_IMPL
+## [internal] COMPILER.APPROVAL_WORKFLOW_IMPL
 Implementation of approval workflow.
 - **APPROVAL_SESSION**: Unified approval workflow. [PROMPT_NATIVE]
   > Present proposed changes with context, prompt user for approval,
@@ -715,7 +707,7 @@ Implementation of approval workflow.
   ```
   (Ref: ARCHITECTURE.APPROVAL_WORKFLOW.APPROVAL_TRACKER)
 
-## COMPILER.SEMANTIC_ANALYZER_IMPL
+## [internal] COMPILER.SEMANTIC_ANALYZER_IMPL
 Implementation of semantic analysis.
 - **KEYWORD_IMPL**: Keyword extraction. [Type: PROMPT_NATIVE]
   > Extract semantically significant keywords from content, ignoring stopwords.
@@ -756,5 +748,47 @@ Implementation of semantic analysis.
   - Idea: "Remove the legacy auth component"
     → Layer: L2, Action: Delete, Target: ARCHITECTURE.AUTH.LEGACY
   (Ref: ARCHITECTURE.SEMANTIC_ANALYZER.IDEA_CLASSIFIER)
+
+## [internal] COMPILER.TYPE_ANNOTATION_IMPL
+Implementation of L3 item type annotation enforcement.
+- **TYPE_SCANNING**: Scans L3 items for `[Type: X]` annotations. [Type: SCRIPT]
+  ```pseudocode
+  function scan_types(spec: L3Spec) -> TypeResult:
+    items = spec.items.filter(i => i.layer == 3)
+    results = []
+    for item in items:
+      type_match = regex.search(r"\[Type:\s*(PROMPT_NATIVE|SCRIPT|PROMPT_FALLBACK)\]", item.content)
+      if not type_match:
+        results.append({id: item.id, error: "Missing type annotation"})
+      else:
+        results.append({id: item.id, type: type_match.group(1)})
+    return results
+  ```
+  (Ref: ARCHITECTURE.TYPE_ANNOTATION_ENFORCER), (Ref: ARCHITECTURE.TYPE_ANNOTATION_ENFORCER.TYPE_SCANNER)
+- **SCRIPT_VALIDATION**: Validates SCRIPT items for forbidden LLM terms. [Type: PROMPT_FALLBACK] (contains LLM term list)
+  > Scan SCRIPT-typed items for references to LLM/AI APIs.
+  > Forbidden terms include: prompt(, llm., ai., openai, anthropic, gemini.
+  > Flag violations as SCRIPT items must be deterministic and self-contained.
+  
+  **Examples**:
+  - Item body contains "result = llm.complete()" → Violation flagged
+  - Item body contains "result = parse(input)" → Valid SCRIPT
+  (Ref: ARCHITECTURE.TYPE_ANNOTATION_ENFORCER.SCRIPT_VALIDATOR)
+- **FALLBACK_AUDIT**: Checks PROMPT_FALLBACK items for rationale. [Type: PROMPT_NATIVE]
+  > Analyze PROMPT_FALLBACK items to verify they include justification for why scripting was not feasible.
+  > Flag items that lack clear rationale documentation.
+  
+  **Examples**:
+  - Item with "[PROMPT_FALLBACK] (semantic parsing too complex)" → Valid
+  - Item with "[PROMPT_FALLBACK]" and no rationale → Flag for review
+  (Ref: ARCHITECTURE.TYPE_ANNOTATION_ENFORCER.FALLBACK_AUDITOR)
+- **BATCH_ANALYSIS**: Suggests PROMPT_NATIVE batching opportunities. [Type: PROMPT_NATIVE]
+  > Identify adjacent PROMPT_NATIVE items that could be combined into a single unified prompt.
+  > Calculate potential token savings from batching.
+  
+  **Examples**:
+  - Items A, B, C all PROMPT_NATIVE and sequential → Suggest batch
+  - Items separated by SCRIPT items → No batch opportunity
+  (Ref: ARCHITECTURE.TYPE_ANNOTATION_ENFORCER.BATCH_OPTIMIZER)
 
 

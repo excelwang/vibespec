@@ -4,44 +4,41 @@ version: 2.0.0
 
 # L2: Vibe-Spec Architecture
 
----
-
-# (SKILL INTERNAL) 技能内部组件
-
-> Components that form the **internal implementation** of the vibe-spec skill.
-
-## ARCHITECTURE.COMPILER_PIPELINE
+## [internal] ARCHITECTURE.COMPILER_PIPELINE
 Multi-stage compilation pipeline that transforms source specs into a unified document.
 **Intent**: Compile fragmented specification files into single authoritative output.
 **Guarantees**: Only validated content reaches compilation; output is deterministically ordered.
 - **SCANNER**: Recursively traverses source directory to identify all specification files matching the `L*.md` pattern. Ensures no relevant metadata is overlooked during compilation discovery phase as the foundation of the pipeline's input collection mechanism.
   **Interface**: `scan(path: string) -> File[]`
-  (Ref: FORMAT.METADATA.FRONTMATTER)
+  (Ref: CONTRACTS.METADATA.FRONTMATTER)
 - **PARSER**: Extracts and validates YAML frontmatter from each file while separating Markdown body content. Provides structured representation with typed metadata for downstream consumption, enabling consistent access patterns across all processing layers.
   **Interface**: `parse(file: File) -> {metadata: Frontmatter, body: string}`
-  (Ref: FORMAT.METADATA.FRONTMATTER)
+  (Ref: CONTRACTS.METADATA.FRONTMATTER)
 - **VALIDATOR**: Executes comprehensive suite of structural and semantic checks before compilation. Ensures layer dependencies are respected, all IDs are unique across the project, and no blocking errors exist. Acts as the quality gate preventing invalid content from propagating.
   **Interface**: `validate(specs: ParsedSpec[]) -> ValidationResult`
-  (Ref: FORMAT.TRACEABILITY), (Ref: FORMAT.QUANTIFIED_VALIDATION), (Ref: FORMAT.ALGEBRAIC_VALIDATION)
-- **ASSEMBLER**: Merges all verified specification fragments into single authoritative `spec-full.md` document. Strictly preserves hierarchical order defined by layer metadata, generates table of contents and cross-reference anchors.
+  (Ref: CONTRACTS.TRACEABILITY), (Ref: CONTRACTS.QUANTIFIED_VALIDATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION), (Ref: CONTRACTS.SECTION_MARKERS.H2_ANNOTATION), (Ref: CONTRACTS.SECTION_MARKERS.VALIDATION_CHECK)
+- **ASSEMBLER**: Merges all verified specification fragments into single authoritative `vibe-spec-full.md` document. Strictly preserves hierarchical order defined by layer metadata, generates table of contents and cross-reference anchors.
   **Interface**: `assemble(specs: ParsedSpec[]) -> Document`
-  (Ref: FORMAT.TRACEABILITY)
+  (Ref: CONTRACTS.TRACEABILITY.SEMANTIC_IDS), (Ref: CONTRACTS.TRACEABILITY.ANCHORING), (Ref: CONTRACTS.TRACEABILITY.REDUNDANCY), (Ref: CONTRACTS.SECTION_MARKERS.COMPILATION_BEHAVIOR), (Ref: CONTRACTS.SECTION_MARKERS.INTERNAL_SEMANTICS), (Ref: CONTRACTS.SECTION_MARKERS.TEMPLATE_SEMANTICS)
 
-## ARCHITECTURE.VALIDATOR_CORE
+## [internal] ARCHITECTURE.VALIDATOR_CORE
 Rule-based validation engine that enforces L1 contracts.
 **Intent**: Systematically verify specification health against quantified metrics.
 **Guarantees**: All violations are reported with actionable locations.
 - **RULE_ENGINE**: Architecturally decoupled validation rule system that allows dynamic injection of extensible rules. Enables new quality metrics without modifying core parsing logic. Executes rules in parallel where dependencies permit.
   **Interface**: `execute(rules: Rule[], input: Spec[]) -> Violation[]`
-  (Ref: FORMAT.QUANTIFIED_VALIDATION), (Ref: FORMAT.ALGEBRAIC_VALIDATION)
+  (Ref: CONTRACTS.QUANTIFIED_VALIDATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION)
+- **CUSTOM_RULES_LOADER**: Loads project-specific validation rules from `.vibe-rules.yaml`. Parses rule definitions including type, layer filter, match patterns, and severity. Enables project-specific validation without framework changes.
+  **Interface**: `load_rules(specs_dir: Path) -> Rule[]`
+  (Ref: CONTRACTS.CUSTOM_RULES.RULE_FILE), (Ref: CONTRACTS.CUSTOM_RULES.RULE_SCHEMA), (Ref: CONTRACTS.CUSTOM_RULES.RULE_TYPES), (Ref: CONTRACTS.CUSTOM_RULES.VIBE_SPEC_RULES)
 - **RESPONSIVENESS_CHECKER**: Validates specification completeness through graph traversal. Verifies every upstream requirement has aggregate downstream coverage of at least 100%. Flags gaps as blocking errors. Calculates coverage sums and asserts conservation threshold.
   **Interface**: `check_responsiveness(graph: SpecGraph) -> CoverageResult`
-  (Ref: FORMAT.TRACEABILITY.COMPLETENESS), (Ref: FORMAT.ALGEBRAIC_VALIDATION.CONSERVATION)
+  (Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.TEST_COVERAGE)
 - **FOCUS_ENFORCER**: Scans layer content for strict focus adherence to whitelist/blacklist definitions. Uses keyword analysis to detect forbidden terms or concepts. Prevents implementation details leaking into high-level specs. Flags violations as architectural breaches.
   **Interface**: `check_focus(spec: Spec) -> FocusViolation[]`
-  (Ref: FORMAT.LAYER_DEFINITIONS.L0_VISION), (Ref: FORMAT.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: FORMAT.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: FORMAT.LAYER_DEFINITIONS.L3_IMPLEMENTATION)
+  (Ref: CONTRACTS.LAYER_DEFINITIONS.L0_VISION), (Ref: CONTRACTS.LAYER_DEFINITIONS.L1_CONTRACTS), (Ref: CONTRACTS.LAYER_DEFINITIONS.L2_ARCHITECTURE), (Ref: CONTRACTS.LAYER_DEFINITIONS.L3_IMPLEMENTATION)
 
-## ARCHITECTURE.IDEAS_PROCESSOR
+## [internal] ARCHITECTURE.IDEAS_PROCESSOR
 Transforms raw ideas into formal specifications through layered refinement.
 **Intent**: Convert unstructured thoughts into validated specification changes.
 **Guarantees**: All changes approved before persistence; temporal order preserved.
@@ -61,7 +58,7 @@ Transforms raw ideas into formal specifications through layered refinement.
   **Interface**: `archive(ideas: Idea[]) -> void`
   (Ref: CONTRACTS.IDEAS_PIPELINE.COMPILE_PROMPT)
 
-## ARCHITECTURE.REFLECTOR
+## [internal] ARCHITECTURE.REFLECTOR
 Distills conversation history into formal specification ideas.
 **Intent**: Extract insights from current conversation context.
 **Guarantees**: No distilled content saved without explicit human approval.
@@ -72,7 +69,7 @@ Distills conversation history into formal specification ideas.
   **Interface**: `present(ideas: Idea[]) -> ApprovalRequest`
   (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW)
 
-## ARCHITECTURE.SCRIPTS
+## [internal] ARCHITECTURE.SCRIPTS
 Standalone dependency-free automation tools for mechanical workflows.
 **Intent**: Encapsulate deterministic operations in code rather than LLM generation.
 **Guarantees**: 100% reliable execution; no stochastic behavior; zero external dependencies.
@@ -83,21 +80,21 @@ Standalone dependency-free automation tools for mechanical workflows.
 - **VALIDATE**: Script `scripts/validate.py` performs comprehensive structural validation. Verifies syntax, links, expansion ratios, contract compliance. Automated quality gatekeeper. Provides detailed error messages with locations.
   **Interface**: `validate.py <specs_path>`
   (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
-- **COMPILE**: Script `scripts/compile.py` assembles specification files into unified document. Generates `spec-full.md` with table of contents and anchors. Concatenates in strict topological order. Creates professional-grade navigable output.
+- **COMPILE**: Script `scripts/compile.py` assembles specification files into unified document. Generates `vibe-spec-full.md` with table of contents and anchors. Concatenates in strict topological order. Creates professional-grade navigable output.
   **Interface**: `compile.py <specs_path> <output_path>`
   (Ref: CONTRACTS.SCRIPT_FIRST.TARGET)
-## ARCHITECTURE.SKILL_DISTRIBUTION
+## [internal] ARCHITECTURE.SKILL_DISTRIBUTION
 Manages skill packaging and distribution for AI agent consumption.
 **Intent**: Package vibe-spec as discoverable, version-controlled skill.
 **Guarantees**: Single source of truth; ecosystem-compatible format.
 - **LOCATION**: `SKILL.md` resides within `src/` source directory. Physically isolates skill definition from generated artifacts. Immutable reference preventing shadow configuration.
   **Interface**: `src/SKILL.md`
-  (Ref: VISION.SCOPE.SKILL)
+  (Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD), (Ref: CONTRACTS.SKILL_DISTRIBUTION.ENTRY_POINT), (Ref: VISION.SCOPE.SKILL)
 - **COMPLIANCE**: Updates validated against skill-creator schema. Integrates with CI pipeline for schema verification. Enforces compatibility with agent ecosystem.
   **Interface**: `skill-creator validate <path>`
-  (Ref: VISION.SCOPE.SKILL)
+  (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE), (Ref: CONTRACTS.SKILL_DISTRIBUTION.TRIGGER_WORDS), (Ref: VISION.SCOPE.SKILL)
 
-## ARCHITECTURE.BOOTSTRAP_PROCESSOR
+## [internal] ARCHITECTURE.BOOTSTRAP_PROCESSOR
 Handles first-time project initialization when specification infrastructure does not exist.
 **Intent**: Guide user through scope definition and create minimal spec structure.
 **Guarantees**: No files created without explicit user approval.
@@ -114,7 +111,7 @@ Handles first-time project initialization when specification infrastructure does
   **Interface**: `initialize(scope: ScopeResult) -> void`
   (Ref: CONTRACTS.BOOTSTRAP.INITIALIZATION), (Ref: CONTRACTS.BOOTSTRAP.APPROVAL_GATE)
 
-## ARCHITECTURE.TRIGGER_ROUTER
+## [internal] ARCHITECTURE.TRIGGER_ROUTER
 Routes skill invocations to appropriate handlers based on context analysis.
 **Intent**: Parse invocation context and dispatch to correct workflow.
 **Guarantees**: Every invocation maps to exactly one handler; no ambiguity.
@@ -125,7 +122,7 @@ Routes skill invocations to appropriate handlers based on context analysis.
   **Interface**: `dispatch(parsed: ParsedCommand) -> Handler`
   (Ref: CONTRACTS.TRIGGERS.TRIGGER_SCAN), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE), (Ref: CONTRACTS.TRIGGERS.IDLE_BEHAVIOR), (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT)
 
-## ARCHITECTURE.VALIDATION_RUNNER
+## [internal] ARCHITECTURE.VALIDATION_RUNNER
 Executes specification health validations when system is idle (no pending ideas).
 **Intent**: Continuously monitor spec integrity between active development sessions.
 **Guarantees**: All findings are actionable and traceable to source.
@@ -139,7 +136,7 @@ Executes specification health validations when system is idle (no pending ideas)
   **Interface**: `propose_fixes(errors: Error[]) -> Idea[]`
   (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL), (Ref: CONTRACTS.VALIDATION_MODE.COMPILE_PROMPT)
 
-## ARCHITECTURE.SELF_OPTIMIZER
+## [internal] ARCHITECTURE.SELF_OPTIMIZER
 Identifies repetitive patterns and proposes automation opportunities.
 **Intent**: Convert repeated manual tasks into deterministic scripts.
 **Guarantees**: No script created without idea approval through standard pipeline.
@@ -150,41 +147,41 @@ Identifies repetitive patterns and proposes automation opportunities.
   **Interface**: `propose_script(pattern: Pattern) -> Idea`
   (Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE)
 
-## ARCHITECTURE.TRACEABILITY_ENGINE
+## [internal] ARCHITECTURE.TRACEABILITY_ENGINE
 Manages ID lifecycle and detects semantic drift in specifications.
 **Intent**: Enforce ID immutability and detect stale specifications.
 **Guarantees**: All drift and staleness issues are reported before they cause failures.
 - **ID_REGISTRY**: Maintains mapping of all published IDs with their creation timestamps and semantic definitions. Detects attempts to reuse or redefine existing IDs. Enforces versioning protocol for breaking changes.
   **Interface**: `register(id: string, definition: string) -> void`
-  (Ref: FORMAT.TRACEABILITY_MAINTENANCE.IMMUTABLE_IDS)
+  (Ref: CONTRACTS.TRACEABILITY_MAINTENANCE.IMMUTABLE_IDS), (Ref: VISION.SCOPE.TRACE)
 - **DRIFT_DETECTOR**: Monitors parent requirement changes and flags children that may be semantically stale. Compares modification timestamps and content hashes. Prompts for explicit compatibility decisions.
   **Interface**: `detect_drift(parent_id: string, child_ids: string[]) -> DriftResult`
-  (Ref: FORMAT.TRACEABILITY_MAINTENANCE.STALENESS_WARNING)
+  (Ref: CONTRACTS.TRACEABILITY_MAINTENANCE.STALENESS_WARNING)
 
-## ARCHITECTURE.TESTABILITY_ENFORCER
+## [internal] ARCHITECTURE.TESTABILITY_ENFORCER
 Validates specification testability and format compliance.
 **Intent**: Ensure all specifications are machine-verifiable.
 **Guarantees**: Untestable specifications are rejected before they enter the system.
 - **ASSERTION_SCANNER**: Scans L1/L2/L3 items for RFC2119 keywords and testable assertions. Flags items lacking testability markers. Counts keyword density for compliance checks.
   **Interface**: `scan_assertions(spec: Spec) -> AssertionResult`
-  (Ref: FORMAT.STRICT_TESTABILITY.DEFAULT_TESTABLE), (Ref: FORMAT.STRICT_TESTABILITY.RFC2119_ENFORCEMENT)
+  (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE), (Ref: CONTRACTS.STRICT_TESTABILITY.RFC2119_ENFORCEMENT)
 - **FORMAT_VALIDATOR**: Validates layer-appropriate formatting. Checks L0 for natural language, L1 for RFC2119, L2 for Intent/Guarantees, L3 for pseudocode/fixtures. Enforces rationale separation.
   **Interface**: `validate_format(spec: Spec) -> FormatResult`
-  (Ref: FORMAT.STRICT_TESTABILITY.RATIONALE_SEPARATION), (Ref: FORMAT.STRICT_TESTABILITY.PROGRESSIVE_FORMAT)
+  (Ref: CONTRACTS.STRICT_TESTABILITY.RATIONALE_SEPARATION), (Ref: CONTRACTS.STRICT_TESTABILITY.PROGRESSIVE_FORMAT)
 
-## ARCHITECTURE.COMPILATION_ENGINE
+## [internal] ARCHITECTURE.COMPILATION_ENGINE
 Produces optimized compilation output for agent consumption.
 **Intent**: Generate LLM-friendly compiled specifications.
 **Guarantees**: Compiled output is navigable, anchored, and noise-free.
 - **ANCHOR_GENERATOR**: Creates HTML anchor tags for each major section during compilation. Enables precise context retrieval by agents navigating the compiled document.
   **Interface**: `generate_anchors(doc: Document) -> Document`
-  (Ref: FORMAT.COMPILATION.ANCHORING)
+  (Ref: CONTRACTS.COMPILATION.ANCHORING)
 - **TOC_BUILDER**: Constructs table of contents with links to anchored sections. Adds system preamble with usage instructions for agent orientation.
   **Interface**: `build_toc(doc: Document) -> Document`
-  (Ref: FORMAT.COMPILATION.NAVIGATION), (Ref: FORMAT.COMPILATION.LLM_OPTIMIZED)
+  (Ref: CONTRACTS.COMPILATION.NAVIGATION), (Ref: CONTRACTS.COMPILATION.LLM_OPTIMIZED)
 - **NOISE_STRIPPER**: Removes individual file frontmatter during assembly. Strips redundant metadata preserving only compiled document structure.
   **Interface**: `strip_noise(doc: Document) -> Document`
-  (Ref: FORMAT.COMPILATION.NOISE_REDUCTION)
+  (Ref: CONTRACTS.COMPILATION.NOISE_REDUCTION)
 
 ---
 
@@ -192,69 +189,69 @@ Produces optimized compilation output for agent consumption.
 
 > Components that **manage and validate user project specs**.
 
-## ARCHITECTURE.TERMINOLOGY_CHECKER
+## [internal] ARCHITECTURE.TERMINOLOGY_CHECKER
 Enforces controlled vocabulary compliance across specifications.
 **Intent**: Ensure consistent, unambiguous terminology usage.
 **Guarantees**: Terminology violations are caught during validation.
 - **VOCAB_MATCHER**: Scans content for controlled vocabulary terms. Flags incorrect usage of validate/verify, assert/error, pipeline/flow, violation/error. Provides remediation suggestions.
   **Interface**: `check_vocabulary(content: string) -> VocabResult`
-  (Ref: FORMAT.TERMINOLOGY_ENFORCEMENT.VALIDATE_VS_VERIFY), (Ref: FORMAT.TERMINOLOGY_ENFORCEMENT.ASSERT_VS_ERROR), (Ref: FORMAT.TERMINOLOGY_ENFORCEMENT.PIPELINE_VS_FLOW), (Ref: FORMAT.TERMINOLOGY_ENFORCEMENT.VIOLATION_VS_ERROR)
+  (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VALIDATE_VS_VERIFY), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.ASSERT_VS_ERROR), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.PIPELINE_VS_FLOW), (Ref: CONTRACTS.TERMINOLOGY_ENFORCEMENT.VIOLATION_VS_ERROR)
 
-## ARCHITECTURE.FORMAL_NOTATION_ENFORCER
+## [internal] ARCHITECTURE.FORMAL_NOTATION_ENFORCER
 Promotes formal notation over prose in specifications.
 **Intent**: Maximize information density through structured formats.
 **Guarantees**: Agents receive content optimized for parsing.
 - **FORMALISM_SCORER**: Analyzes specification content for formal notation usage. Counts Mermaid diagrams, JSON schemas, pseudocode blocks. Recommends formalization opportunities.
   **Interface**: `score_formalism(spec: Spec) -> FormalismScore`
-  (Ref: FORMAT.FORMAL_NOTATION.PREFER_FORMALISMS)
+  (Ref: CONTRACTS.FORMAL_NOTATION.PREFER_FORMALISMS), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.FORMAL_NOTATION)
 
-## ARCHITECTURE.SCRIPT_AUTOMATION
+## [internal] ARCHITECTURE.SCRIPT_AUTOMATION
 Implements script-first automation philosophy.
 **Intent**: Convert mechanical patterns into deterministic scripts.
 **Guarantees**: Scripts are dependency-free and self-contained.
 - **GOAL_TRACKER**: Monitors for formalizeable tasks. Identifies operations that could be scripted based on repetition and determinism. Tracks automation coverage.
   **Interface**: `track_goals(operations: Operation[]) -> GoalResult`
-  (Ref: CONTRACTS.SCRIPT_FIRST.GOAL)
+  (Ref: CONTRACTS.SCRIPT_FIRST.GOAL), (Ref: VISION.SCOPE.AUTO)
 - **DETERMINISM_VALIDATOR**: Verifies scripts are fully deterministic. Checks for random operations, external dependencies, non-reproducible behavior. Rejects non-deterministic candidates.
   **Interface**: `validate_determinism(script: Script) -> DeterminismResult`
   (Ref: CONTRACTS.SCRIPT_FIRST.DETERMINISM)
 
-## ARCHITECTURE.LAYER_MANAGER
+## [internal] ARCHITECTURE.LAYER_MANAGER
 Manages layer definitions, focus rules, and layer-specific validation.
 **Intent**: Centralize layer semantics for consistent enforcement across tools.
 **Guarantees**: Layer violations are detected at validation time.
 - **LAYER_REGISTRY**: Maintains definitions for L0-L3 including allowed content types, forbidden terms, and structural requirements. Provides lookup interface for other components.
   **Interface**: `get_layer_def(layer: int) -> LayerDefinition`
-  (Ref: FORMAT.LAYER_DEFINITIONS)
+  (Ref: CONTRACTS.LAYER_DEFINITIONS)
 - **FOCUS_RULES**: Defines whitelist/blacklist for each layer. L0: no implementation details. L1: no class names. L2: no variable names. L3: no vague visions.
   **Interface**: `get_focus_rules(layer: int) -> FocusRules`
-  (Ref: FORMAT.LAYER_DEFINITIONS.L0_VISION), (Ref: FORMAT.LAYER_DEFINITIONS.L1_CONTRACTS)
+  (Ref: CONTRACTS.LAYER_DEFINITIONS.L0_VISION), (Ref: CONTRACTS.LAYER_DEFINITIONS.L1_CONTRACTS)
 - **CONTENT_CLASSIFIER**: Analyzes content to determine appropriate layer. Uses keyword heuristics and structural patterns. Enables automatic layer detection for ideas.
   **Interface**: `classify_content(content: string) -> LayerClassification`
   (Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING)
 - **DEPTH_CHECKER**: Validates nesting depth does not exceed 2 levels. Scans document structure for deep hierarchies. Reports violations with locations.
   **Interface**: `check_depth(spec: Spec) -> DepthResult`
-  (Ref: FORMAT.QUANTIFIED_VALIDATION.DEPTH)
+  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.DEPTH)
 
-## ARCHITECTURE.COVERAGE_TRACKER
+## [internal] ARCHITECTURE.COVERAGE_TRACKER
 Tracks specification-to-test coverage and reports gaps.
 **Intent**: Ensure every specification has corresponding verification.
 **Guarantees**: Untested specifications are flagged before release.
 - **SPEC_INDEXER**: Builds index of all testable specifications across layers. Extracts MUST/SHOULD/MAY statements. Assigns unique IDs for tracking.
   **Interface**: `index_specs(specs: Spec[]) -> SpecIndex`
-  (Ref: FORMAT.STRICT_TESTABILITY.DEFAULT_TESTABLE)
+  (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE)
 - **TEST_SCANNER**: Scans test files for @verify_spec decorators. Extracts referenced spec IDs. Builds test coverage map.
   **Interface**: `scan_tests(test_dir: string) -> TestCoverageMap`
   (Ref: VISION.SCOPE.COV)
 - **GAP_REPORTER**: Compares spec index against test coverage. Identifies untested specifications. Generates coverage report with percentages.
   **Interface**: `report_gaps(specs: SpecIndex, tests: TestCoverageMap) -> GapReport`
-  (Ref: FORMAT.TRACEABILITY.COMPLETENESS)
+  (Ref: CONTRACTS.TRACEABILITY.COMPLETENESS)
 - **COVERAGE_CALCULATOR**: Computes coverage metrics per layer and overall. Tracks trends over time. Alerts on coverage regression.
   **Interface**: `calculate_coverage(specs: SpecIndex, tests: TestCoverageMap) -> CoverageMetrics`
-  (Ref: FORMAT.ALGEBRAIC_VALIDATION.CONSERVATION)
+  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION)
 
 
-## ARCHITECTURE.REPORT_GENERATOR
+## [internal] ARCHITECTURE.REPORT_GENERATOR
 Generates human-readable reports from validation and compilation results.
 **Intent**: Present findings in actionable format for human review.
 **Guarantees**: Reports include file locations and remediation guidance.
@@ -269,32 +266,32 @@ Generates human-readable reports from validation and compilation results.
   (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED)
 - **METRICS_DASHBOARD**: Compiles key metrics: item counts, coverage percentages, expansion ratios. Visualizes trends. Identifies regressions.
   **Interface**: `render_dashboard(metrics: Metrics) -> Dashboard`
-  (Ref: FORMAT.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
+  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
 
-## ARCHITECTURE.METRICS_COLLECTOR
+## [internal] ARCHITECTURE.METRICS_COLLECTOR
 Collects and aggregates specification health metrics.
 **Intent**: Provide quantitative insight into specification quality.
 **Guarantees**: Metrics are accurate and reproducible.
 - **ITEM_COUNTER**: Counts items per layer and section. Distinguishes headers, keys, sub-items. Provides breakdown for analysis.
   **Interface**: `count_items(specs: Spec[]) -> ItemCounts`
-  (Ref: FORMAT.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
+  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
 - **RATIO_CALCULATOR**: Computes expansion ratios between adjacent layers. Validates against target range 1.0-10.0. Flags violations.
   **Interface**: `calculate_ratios(counts: ItemCounts) -> RatioResult`
-  (Ref: FORMAT.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
+  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO)
 - **FANOUT_ANALYZER**: Measures downstream reference counts per upstream item. Detects Miller's Law violations (>7 refs). Suggests splits.
   **Interface**: `analyze_fanout(graph: SpecGraph) -> FanoutResult`
-  (Ref: FORMAT.ALGEBRAIC_VALIDATION.MILLERS_LAW)
+  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.MILLERS_LAW)
 - **WORD_COUNTER**: Counts words in L0 statements. Validates atomicity constraint (<50 words). Reports violations with locations.
   **Interface**: `count_words(spec: Spec) -> WordCountResult`
-  (Ref: FORMAT.QUANTIFIED_VALIDATION.ATOMICITY)
+  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.ATOMICITY)
 - **KEYWORD_DENSITY**: Measures RFC2119 keyword usage in L1. Calculates percentage of statements with keywords. Flags low density.
   **Interface**: `measure_density(spec: Spec) -> DensityResult`
-  (Ref: FORMAT.QUANTIFIED_VALIDATION.RFC2119)
+  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.RFC2119)
 - **VERB_COUNTER**: Analyzes statements for action-oriented language. Calculates verb density percentage. Flags passive or static descriptions (<10%).
   **Interface**: `count_verbs(spec: Spec) -> VerbDensityResult`
-  (Ref: FORMAT.ALGEBRAIC_VALIDATION.VERB_DENSITY)
+  (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.VERB_DENSITY)
 
-## ARCHITECTURE.CONFLICT_RESOLVER
+## [internal] ARCHITECTURE.CONFLICT_RESOLVER
 Handles conflicts between overlapping ideas and specification changes.
 **Intent**: Deterministically resolve conflicts based on timestamp priority.
 **Guarantees**: Later ideas supersede earlier ones; no silent data loss.
@@ -311,7 +308,7 @@ Handles conflicts between overlapping ideas and specification changes.
   **Interface**: `log_resolution(conflict: Conflict, resolution: Resolution) -> void`
   (Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION)
 
-## ARCHITECTURE.APPROVAL_WORKFLOW
+## [internal] ARCHITECTURE.APPROVAL_WORKFLOW
 Manages human approval gates for specification changes.
 **Intent**: Enforce human-in-the-loop for all persistent changes.
 **Guarantees**: No changes committed without explicit approval.
@@ -328,21 +325,38 @@ Manages human approval gates for specification changes.
   **Interface**: `present_context(changes: Change[]) -> ContextPresentation`
   (Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION)
 
-## ARCHITECTURE.SEMANTIC_ANALYZER
+## [internal] ARCHITECTURE.SEMANTIC_ANALYZER
 Performs semantic analysis of specification content.
 **Intent**: Extract meaning and relationships from specification text.
 **Guarantees**: Analysis is reproducible and deterministic.
 - **KEYWORD_EXTRACTOR**: Identifies key terms and concepts from specification text. Builds vocabulary index. Supports terminology enforcement.
   **Interface**: `extract_keywords(content: string) -> Keyword[]`
-  (Ref: FORMAT.QUANTIFIED_VALIDATION.TERMINOLOGY)
+  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.TERMINOLOGY)
 - **REFERENCE_PARSER**: Parses `(Ref: ID)` patterns from content. Builds reference graph. Validates referenced IDs exist.
   **Interface**: `parse_references(content: string) -> Reference[]`
-  (Ref: FORMAT.TRACEABILITY.IN_PLACE_REFS)
+  (Ref: CONTRACTS.TRACEABILITY.IN_PLACE_REFS)
 - **SEMANTIC_MATCHER**: Compares child content against parent semantics. Verifies key concepts are expanded. Flags semantic gaps.
   **Interface**: `match_semantics(parent: Spec, child: Spec) -> SemanticMatch`
-  (Ref: FORMAT.QUANTIFIED_VALIDATION.SEMANTIC_COVERAGE)
+  (Ref: CONTRACTS.QUANTIFIED_VALIDATION.SEMANTIC_COVERAGE)
 - **IDEA_CLASSIFIER**: Classifies idea content by intended layer and action type. Supports multi-layer decomposition.
   **Interface**: `classify_idea(idea: Idea) -> Classification`
   (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION)
+
+## [internal] ARCHITECTURE.TYPE_ANNOTATION_ENFORCER
+Enforces L3 item type annotation compliance.
+**Intent**: Ensure every L3 implementation item has proper execution type classification.
+**Guarantees**: Type violations are caught before compilation; execution routing is unambiguous.
+- **TYPE_SCANNER**: Scans L3 items for `[Type: X]` annotations where X is PROMPT_NATIVE, SCRIPT, or PROMPT_FALLBACK. Flags missing or invalid type annotations. Ensures every item has explicit execution routing.
+  **Interface**: `scan_types(spec: L3Spec) -> TypeResult`
+  (Ref: CONTRACTS.L3_TYPE_ANNOTATION.TYPE_REQUIRED)
+- **SCRIPT_VALIDATOR**: Validates items typed as SCRIPT meet determinism and complexity thresholds. Checks for forbidden LLM invocations. Ensures scripts are self-contained automation.
+  **Interface**: `validate_script(item: L3Item) -> ScriptValidation`
+  (Ref: CONTRACTS.L3_TYPE_ANNOTATION.SCRIPT_THRESHOLD), (Ref: CONTRACTS.L3_TYPE_ANNOTATION.SCRIPT_NO_LLM)
+- **FALLBACK_AUDITOR**: Reviews PROMPT_FALLBACK items for rationale documentation. Ensures developers justify why scripting was not feasible. Prevents lazy fallback to LLM.
+  **Interface**: `audit_fallback(item: L3Item) -> FallbackAudit`
+  (Ref: CONTRACTS.L3_TYPE_ANNOTATION.FALLBACK_RATIONALE)
+- **BATCH_OPTIMIZER**: Analyzes adjacent PROMPT_NATIVE items for batching opportunities. Suggests grouping to reduce LLM call overhead. Optimizes prompt efficiency.
+  **Interface**: `optimize_batching(items: L3Item[]) -> BatchSuggestion`
+  (Ref: CONTRACTS.L3_TYPE_ANNOTATION.PROMPT_BATCHING)
 
 
