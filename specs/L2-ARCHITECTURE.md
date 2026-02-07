@@ -262,6 +262,17 @@ Tracks specification-to-test coverage and reports gaps.
   **Interface**: `calculate_coverage(specs: SpecIndex, tests: TestCoverageMap) -> CoverageMetrics`
   (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION)
 
+## [system] ARCHITECTURE.TEST_RUNNER
+Orchestrates test execution across multiple languages and frameworks.
+**Intent**: Provide a unified interface for all specification verification.
+**Guarantees**: Correct framework detection and reliable LLM self-verification.
+- **DETECTOR**: Auto-detects project language and appropriate test runner (e.g., pytest, jest).
+  **Interface**: `detect_framework(root: Path) -> FrameworkConfig`
+  (Ref: CONTRACTS.STRICT_TESTABILITY.DEFAULT_TESTABLE)
+- **PROMPT_ENGINE**: Executes LLM-driven self-verification for prompt-based specifications.
+  **Interface**: `verify_prompt(item: L3Item, fixtures: Fixture[]) -> TestResult`
+  (Ref: VISION.VIBE_CODING.AI_ASSIST)
+
 
 ## [system] ARCHITECTURE.REPORT_GENERATOR
 Generates human-readable reports from validation and compilation results.
