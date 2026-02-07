@@ -1,6 +1,6 @@
 ---
 name: vibe-spec
-description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications. Use when user says "vibe-spec", "vibe spec", "vibespec", "refine specs", or wants to capture a new idea for later processing.
+description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates. Use when user says "vibe-spec", "vibe spec", "vibespec", "refine specs", wants to capture a new idea, or wants to validate existing specifications. Supports (1) idea capture with `vibe-spec <content>`, (2) idea refinement with `vibe-spec`, (3) project bootstrapping when specs/ is missing, and (4) validation mode for self-hosting projects.
 ---
 
 # Vibe-Spec Skill
@@ -95,7 +95,15 @@ Process the specific layer L(N) identified in Phase 2:
 │    ├─ FAIL (<3x) → Return to step 2 (Self-fix)  │
 │    ├─ FAIL (>3x) → **REVERT** changes & STOP    │
 │    └─ PASS → Continue to step 4                 │
-│ 4. **Self-Review**: Read L(N+1) AND L(N). Audit.   │
+│ 4. **Self-Review** (REVIEW_PROTOCOL):           │
+│    ├─ HIERARCHY_CHECK: Load L(N-1), verify full │
+│    │  implementation of parent requirements.    │
+│    ├─ OMISSION_CHECK: Every key in L(N-1) must  │
+│    │  be represented in L(N). Missing = BLOCK.  │
+│    ├─ REDUNDANCY: Flag duplicate keys/sections. │
+│    ├─ CONTRADICTION: Flag conflicts with L(N-1).│
+│    └─ FOCUS_CHECK: Verify L(N) content matches  │
+│       layer focus (no impl details in L0/L1).   │
 │ 5. ⛔ MANDATORY STOP ⛔                         │
 │    - Call notify_user with findings             │
 │    - WAIT for explicit human approval           │
@@ -147,6 +155,7 @@ Process the specific layer L(N) identified in Phase 2:
 Use standalone scripts (zero dependencies) for mechanical operations:
 - `python3 scripts/validate.py specs/` - Structural validation.
 - `python3 scripts/compile.py specs/ specs/spec-full.md` - Compile to single doc.
+- `python3 scripts/verify_compiled.py specs/spec-full.md specs/` - Verify compiled doc matches sources.
 - `bash scripts/archive_ideas.sh` - Archive processed ideas.
 
 **IMPORTANT**: Run `python3 scripts/validate.py specs/` IMMEDIATELY after each layer modification, BEFORE presenting to human for review.
@@ -159,5 +168,13 @@ Use standalone scripts (zero dependencies) for mechanical operations:
 - **Reformulation**: Natural language → Declarative, unambiguous statements.
 - **Validate-Before-Review**: Human sees only passing specs.
 - **Strict Sequencing**: L(N) must be approved before L(N+1) begins. Simultaneous multi-layer edits are FORBIDDEN.
-- **Traceability**: All lists in specs MUST be numbered (`1. `) for addressability. Bullet points (`- `) are forbidden in spec bodes.
+- **Traceability**: All lists in specs MUST be numbered (`1. `) for addressability. Bullet points (`- `) are forbidden in spec bodies.
 - **Automation-First**: Use CLI tools for file operations, not raw LLM output.
+- **Marker Semantics**: H2 headers MUST use `[system]` or `[standard]` markers.
+  - `[system]` = Implementation details (Executor). Mutable, refactorable.
+  - `[standard]` = Rules/Constraints (Legislator). Immutable, must be followed.
+- **Layer Focus**:
+  - L0: "Why/What". No implementation details, tool names, file paths.
+  - L1: "Rules/Invariants". No architecture components, script logic.
+  - L2: "Components/Data Flow". No class methods, variable names.
+  - L3: "How". No vague vision statements.
