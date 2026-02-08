@@ -79,88 +79,56 @@ def extract_l1_rule_details(text):
     }
 
 def generate_meta_tests(specs_dir: Path, tests_dir: Path):
-    """Generate Meta-Tests in structured directories."""
-    unit_tests_dir = tests_dir / "specs" / "script" / "unit"
-    unit_tests_dir.mkdir(parents=True, exist_ok=True)
+    """Generate Meta-Tests in structured directories by type.
     
-    agent_dir = tests_dir / "specs" / "agent"
-    agent_dir.mkdir(parents=True, exist_ok=True)
+    New structure:
+    - tests/specs/agent/       # L1 Agent contracts (answer_key by Agent)
+    - tests/specs/role/        # L3 Decisions (answer_key by Role)  
+    - tests/specs/interface/   # L3 Interface tests
+    - tests/specs/algorithm/   # L3 Algorithm tests
+    - tests/specs/workflow/    # L3 Workflow integration tests
+    """
+    base_dir = tests_dir / "specs"
+    
+    # Create type-based directories
+    agent_dir = base_dir / "agent"
+    role_dir = base_dir / "role"
+    interface_dir = base_dir / "interface"
+    algorithm_dir = base_dir / "algorithm"
+    workflow_dir = base_dir / "workflow"
+    
+    for d in [agent_dir, role_dir, interface_dir, algorithm_dir, workflow_dir]:
+        d.mkdir(parents=True, exist_ok=True)
     
     generated_count = 0
-    existing_tests = set(unit_tests_dir.glob("test_*.py"))
-    existing_agent = set(agent_dir.glob("test_*.yaml"))
-    
     generated_files = set()
+    
+    # Collect existing tests for orphan detection
+    existing_tests = set()
+    for d in [interface_dir, algorithm_dir, workflow_dir]:
+        existing_tests.update(d.glob("test_*.py"))
+    existing_agent = set(agent_dir.glob("answer_key_*.md"))
+    existing_role = set(role_dir.glob("answer_key_*.md"))
 
     # Process L1 Contracts
     for f in specs_dir.glob("L1*.md"):
         content = f.read_text()
-        spec_prefix = f.name.split('-')[0].lower()
         
-        # Advanced L1 regex to capture body for Responsibility/Verification
-        rules = re.finditer(r'^- \*\*(?P<id>[A-Z0-9_]+)\*\*: (?P<subject>Agent|Script|Agent/Script|Script/Agent) (?P<priority>MUST|SHOULD|MAY)(?P<body>.*?)(?=\n-|\n#|\n---|\Z)', content, re.DOTALL | re.MULTILINE)
+        # L1 tests are covered by L3 workflows (L1_WORKFLOW_COVERAGE contract)
+        # Agent-type L1 items: Agent generates answer_key in agent/ directory
+        # Script-type L1 items: Covered by L3 workflow tests
+        rules = re.finditer(r'^- \*\*(?P<id>[A-Z0-9_]+)\*\*: (?P<subject>Agent|Script|Agent/Script|Script/Agent)', content, re.MULTILINE)
         
         for match in rules:
             f_id = match.group('id')
             subject = match.group('subject')
-            body = match.group('body')
-            details = extract_l1_rule_details(body)
             safe_id = f_id.lower()
             
             if 'Agent' in subject and 'Script' not in subject:
-                test_file = agent_dir / f"test_{spec_prefix}_{safe_id}.yaml"
-                generated_files.add(test_file)
-                if not test_file.exists():
-                    test_content = f"""# Acceptance Test for L1 Contract: {f_id}
-# ref: {f_id}
-# Responsibility: {details['responsibility']}
-# Verification: {details['verification']}
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: {details['verification']}"
-"""
-                    test_file.write_text(test_content)
-                    generated_count += 1
-            else:
-                test_file = unit_tests_dir / f"test_{spec_prefix}_{safe_id}.py"
-                generated_files.add(test_file)
-                if not test_file.exists():
-                    test_content = f"""# Unit Test for L1 Contract: {f_id}
-# @verify_spec("{f_id}")
-# Responsibility: {details['responsibility']}
-# Verification: {details['verification']}
-
-import os
-import unittest
-
-def verify_spec(spec_id):
-    \"\"\"Decorator for spec coverage tracking.\"\"\"  
-    def decorator(func):
-        func._verify_spec_id = spec_id
-        return func
-    return decorator
-
-def get_test_env():
-    return os.environ.get('TEST_ENV', 'MOCK')
-
-class Test{f_id.replace('_', '')}(unittest.TestCase):
-    @verify_spec(\"{f_id}\")
-    def test_compliance(self):
-        \"\"\"Check compliance: {details['verification']}\"\"\"
-        env = get_test_env()
-        if env == 'MOCK':
-            # MOCK: Validate spec logic
-            pass  # TODO: Add mock assertion
-        elif env == 'REAL':
-            # REAL: Test actual implementation
-            self.skipTest(\"REAL adapter not implemented\")
-
-if __name__ == '__main__':
-    unittest.main()
-"""
-                    test_file.write_text(test_content)
-                    generated_count += 1
+                # L1 Agent contracts: placeholder for answer_key (Agent generates)
+                placeholder = agent_dir / f"answer_key_{safe_id}.md"
+                generated_files.add(placeholder)
+                # Don't generate content - Agent will create answer_key
 
     # Process L3 Runtime
     for f in specs_dir.glob("L3*.md"):
@@ -182,32 +150,26 @@ if __name__ == '__main__':
             safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', f_id).lower()
             
             if f_type == 'decision':
-                 test_file = agent_dir / f"test_decision_{safe_id}.yaml"
-                 generated_files.add(test_file)
-                 if not test_file.exists():
-                     cases_yaml = ""
-                     if table_cases:
-                         for c in table_cases:
-                             name = c.get('Case', c.get('Scenario', 'Unnamed Case'))
-                             cases_yaml += f"  - name: \"{name}\"\n"
-                             for k, v in c.items():
-                                 if k not in ['Case', 'Scenario']:
-                                     cases_yaml += f"    {k.lower()}: \"{v}\"\n"
-                     else:
-                         cases_yaml = "  - name: \"Default Case\"\n    input: \"TODO\"\n    expected: \"TODO\"\n"
-                         
-                     test_content = f"""# Acceptance Test for {f_id} ({f_type})
-# Generated by Vibespec Compiler
-# ref: {f_id}
-
-cases:
-{cases_yaml}
-"""
-                     test_file.write_text(test_content)
-                     generated_count += 1
+                # L3 Decision (Role): placeholder for answer_key (Role generates)
+                placeholder = role_dir / f"answer_key_{safe_id}.md"
+                generated_files.add(placeholder)
+                # Don't generate content - Role will create answer_key
+            elif f_type == 'interface':
+                # L3 Interface: generate test in interface/ directory
+                test_file = interface_dir / f"test_{safe_id}.py"
+                test_dir = interface_dir
+            elif f_type == 'algorithm':
+                # L3 Algorithm: generate test in algorithm/ directory
+                test_file = algorithm_dir / f"test_{safe_id}.py"
+                test_dir = algorithm_dir
+            elif f_type == 'workflow':
+                # L3 Workflow: generate integration test in workflow/ directory
+                test_file = workflow_dir / f"test_{safe_id}.py"
+                test_dir = workflow_dir
             else:
-                 # Use type-based naming: test_{interface|algorithm|workflow}_{id}.py
-                 test_file = unit_tests_dir / f"test_{f_type}_{safe_id}.py"
+                continue
+            
+            if f_type != 'decision':
                  generated_files.add(test_file)
                  if not test_file.exists():
                      fixture_comments = ""
@@ -274,7 +236,7 @@ if __name__ == '__main__':
                      generated_count += 1
 
     # Report Orphans
-    all_existing = existing_tests | existing_agent
+    all_existing = existing_tests | existing_agent | existing_role
     orphans = all_existing - generated_files
     if orphans:
         print(f"⚠️  Orphaned tests found (spec deleted?):")
@@ -289,9 +251,11 @@ if __name__ == '__main__':
     specs_root = tests_dir / "specs"
     if specs_root.exists():
         naming_rules = {
-            "agent": re.compile(r"^test_[a-z0-9]+_[a-z0-9_]+\.yaml$"),
-            "unit": re.compile(r"^test_[a-z0-9]+_[a-z0-9_]+\.py$"),
-            "e2e": re.compile(r"^test_[a-z0-9]+_[a-z0-9_]+\.py$")
+            "agent": re.compile(r"^answer_key_[a-z0-9_]+\.md$"),
+            "role": re.compile(r"^answer_key_[a-z0-9_]+\.md$"),
+            "interface": re.compile(r"^test_[a-z0-9_]+\.py$"),
+            "algorithm": re.compile(r"^test_[a-z0-9_]+\.py$"),
+            "workflow": re.compile(r"^test_[a-z0-9_]+\.py$")
         }
         
         misplaced = []
@@ -301,12 +265,10 @@ if __name__ == '__main__':
             if f.is_file() and f.suffix in ['.py', '.md', '.yaml'] and "__pycache__" not in f.parts:
                 # Identify category
                 category = None
-                if str(f).startswith(str(specs_root / "agent")):
-                    category = "agent"
-                elif str(f).startswith(str(specs_root / "script" / "unit")):
-                    category = "unit"
-                elif str(f).startswith(str(specs_root / "script" / "e2e")):
-                    category = "e2e"
+                for cat in ["agent", "role", "interface", "algorithm", "workflow"]:
+                    if str(f).startswith(str(specs_root / cat)):
+                        category = cat
+                        break
                 
                 if category:
                     if not naming_rules[category].match(f.name):
