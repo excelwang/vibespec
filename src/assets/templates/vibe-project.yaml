@@ -3,7 +3,7 @@
 
 meta:
   version: "1.0"
-  agent_directive: "When interpreting specs, you MUST identify the specific ROLE, COMPONENT and L3 items responsible for the action. Do not rely solely on abstract top-level contracts. Find the concrete definition in L2 and L3 Specs."
+  agent_directive: "When interpreting specs, you MUST identify the specific ROLE, COMPONENT and L3 items responsible for the action. Do not rely solely on abstract top-level contracts. Find the concrete definition in L2 and L3 Specs. You MUST use the skills listed in 'REQUIRED SKILLS' to assist in your work."
 
 project:
   name: "Your Project"

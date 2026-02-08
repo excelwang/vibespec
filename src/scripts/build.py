@@ -136,8 +136,13 @@ def generate_manifest(items: list, config: dict) -> str:
     
     # Inject Agent Directive if present
     directive = config.get('meta', {}).get('agent_directive')
+    skills = config.get('project', {}).get('skills', [])
+    
     if directive:
         manifest += f"🧠 **AGENT DIRECTIVE**: {directive}\n\n"
+        
+    if skills:
+        manifest += f"🛠️  **REQUIRED SKILLS**: {', '.join(skills)}\n\n"
         
     manifest += "⚠️  **CRITICAL INSTRUCTION: THE FILE specs/.compiled-full-spec.md IS NOT A SUGGESTION—IT IS THE LAW.** ⚠️\n\n"
     manifest += "As the IMPLEMENTER Agent, you MUST perform GAP ANALYSIS on the codebase using this manifest.\n"
