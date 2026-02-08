@@ -2,7 +2,7 @@
 version: 3.0.0
 ---
 
-# L2: Vibe-Spec Architecture
+# L2: Vibespec Architecture
 
 > **Subject**: Role (Active) | Component (Passive)
 > - Role: Observes / Decides / Acts (Agent-driven)
@@ -11,7 +11,7 @@ version: 3.0.0
 
 ---
 
-## [system] ROLES
+## ROLES
 
 > Active entities: observe, decide, act
 
@@ -27,7 +27,7 @@ version: 3.0.0
 - **Decides**: Target layer, decomposition strategy, conflict resolution
 - **Acts**: Creates change proposals, requests approval
 
-(Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING), (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION), (Ref: CONTRACTS.LEAF_TYPE_PURITY.DECOMPOSE_MIXED)
+(Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING), (Ref: CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION), (Ref: CONTRACTS.IDEAS_PIPELINE.CONFLICT_DETECT)
 
 #### REVIEWER
 
@@ -37,7 +37,7 @@ version: 3.0.0
 - **Decides**: Internal consistency, traceability coverage, contradiction detection
 - **Acts**: Approves or rejects, presents to user
 
-(Ref: CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT), (Ref: CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION)
+(Ref: CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT), (Ref: CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.LAYER_SPECIFIC)
  
  #### QUALITY_AUDITOR
  
@@ -57,7 +57,7 @@ version: 3.0.0
  - Decides: Omissions, redundancies, downstream impact
  - Acts: Blocks invalid edits, evaluates cascade impact
 
- (Ref: CONTRACTS.REVIEW_PROTOCOL.OMISSION_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY), (Ref: CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW)
+ (Ref: CONTRACTS.REVIEW_PROTOCOL.OMISSION_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION), (Ref: CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW)
 
  #### PROCESS_ENFORCER
  
@@ -77,7 +77,7 @@ version: 3.0.0
 - **Decides**: Orphan detection, dangling refs, staleness detection
 - **Acts**: Flags violations, generates fix ideas
 
-(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.IDEAS_PIPELINE.CONFLICT_DETECT)
+(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY)
 
 ### ROLES.USER_INTERACTION
 
@@ -101,7 +101,7 @@ version: 3.0.0
 - **Decides**: Whether bootstrap needed, scope formulation
 - **Acts**: Prompts for scope, converts to SHALL/SHALL_NOT, creates L0
 
-(Ref: CONTRACTS.BOOTSTRAP.DETECTION), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_REFORM), (Ref: CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY)
+(Ref: CONTRACTS.BOOTSTRAP.DETECTION), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_REFORM), (Ref: CONTRACTS.BOOTSTRAP.APPROVAL_GATE)
  
  #### ONBOARDING_ASSISTANT
  
@@ -111,7 +111,7 @@ version: 3.0.0
  - Decides: Engagement strategy
  - Acts: Invites brainstorming
  
- (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY), (Ref: CONTRACTS.BOOTSTRAP.APPROVAL_GATE)
+ (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY), (Ref: CONTRACTS.STARTUP_MENU.FIRST_RUN_COMPREHENSION)
 
 ### ROLES.AUTOMATION
 
@@ -125,7 +125,7 @@ version: 3.0.0
 - **Decides**: Retry vs revert, whether to change approach
 - **Acts**: Attempts fix (max 3), reverts on failure
 
-(Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_RETRY), (Ref: CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE)
+(Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_RETRY), (Ref: CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION), (Ref: CONTRACTS.AUTOMATE_MODE.AUTO_FIX_WARNINGS)
 
 #### INSIGHT_MINER
 
@@ -165,7 +165,7 @@ version: 3.0.0
 - **Decides**: Processing order, warning fix strategy
 - **Acts**: Processes ideas, auto-accepts suggestions, auto-fixes warnings
 
-(Ref: CONTRACTS.AUTOMATE_MODE.AUTOMATE_TRIGGER), (Ref: CONTRACTS.AUTOMATE_MODE.AUTO_ACCEPT), (Ref: CONTRACTS.AUTOMATE_MODE.AUTO_FIX_WARNINGS)
+(Ref: CONTRACTS.AUTOMATE_MODE.AUTOMATE_TRIGGER), (Ref: CONTRACTS.AUTOMATE_MODE.AUTO_ACCEPT), (Ref: CONTRACTS.AUTOMATE_MODE.BUILD_BEFORE_TEST)
 
 #### TEST_VERIFIER
 
@@ -187,21 +187,21 @@ version: 3.0.0
 
 > Rationale: Script implementation would be prohibitively complex due to semantic understanding requirements.
 
-(Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST), (Ref: CONTRACTS.CERTIFICATION.CONTEXTUAL_SCENARIO)
+(Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST), (Ref: CONTRACTS.LEAF_TYPE_PURITY.DECOMPOSE_MIXED)
 
 #### IMPLEMENTER
 
 **Role**: Synchronizes project artifacts with specs
 
-- **Observes**: `vibe-spec-full.md`, `vibespec.yaml`, existing source code in `src/`
+- **Observes**: `vibespec-full.md`, `vibespec.yaml`, existing source code in `src/`
 - **Decides**: Gap analysis (MISSING/OUTDATED/ORPHAN), refactor vs rewrite strategy
 - **Acts**: Generates gap report, applies incremental changes, requests approval for large rewrites
 
-(Ref: CONTRACTS.BUILD_STRATEGY.GAP_ANALYSIS_FIRST), (Ref: CONTRACTS.BUILD_STRATEGY.INCREMENTAL_REFACTOR), (Ref: CONTRACTS.BUILD_STRATEGY.REWRITE_THRESHOLD)
+(Ref: CONTRACTS.BUILD_STRATEGY.GAP_ANALYSIS_FIRST), (Ref: CONTRACTS.BUILD_STRATEGY.INCREMENTAL_REFACTOR), (Ref: CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY)
 
 ---
 
-## [system] COMPONENTS
+## COMPONENTS
 
 > Passive entities: receive input, produce output
 
@@ -337,7 +337,7 @@ version: 3.0.0
 - Input: `specs_path`
 - Output: `ValidationResult`
 
-(Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE), (Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS)
+(Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE), (Ref: CONTRACTS.SCRIPT_USABILITY.AGENT_FRIENDLY_OUTPUT)
 
 #### COMPILE_SCRIPT
 
@@ -563,4 +563,4 @@ version: 3.0.0
 - Input: `scenario_path: Path`
 - Output: `Pass | Fail`
 
-(Ref: CONTRACTS.CERTIFICATION.CONTEXTUAL_SCENARIO)
+(Ref: CONTRACTS.CERTIFICATION.CONTEXTUAL_SCENARIO), (Ref: CONTRACTS.BUILD_STRATEGY.REWRITE_THRESHOLD)

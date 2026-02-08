@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vibe-Spec Validator
+Vibespec Validator
 Enforces the L1-CONTRACTS and VISION-defined specification standards.
 Uses only standard library to ensure portability across agent environments.
 """

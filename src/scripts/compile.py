@@ -93,8 +93,8 @@ def compile_specs(specs_dir: Path, output_file: Path):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
-        description='Compile Vibe-Spec files into a unified document.',
-        epilog='Example: python compile.py specs/ vibe-spec-full.md'
+        description='Compile Vibespec files into a unified document.',
+        epilog='Example: python compile.py specs/ vibespec-full.md'
     )
     parser.add_argument('specs_dir', nargs='?', help='Directory containing L*.md spec files')
     parser.add_argument('output_file', nargs='?', help='Output file path for compiled spec')
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     config = load_config(project_root)
     
     specs_dir = Path(args.specs_dir) if args.specs_dir else Path(config.get('build', {}).get('specs_dir', 'specs/'))
-    output_file = Path(args.output_file) if args.output_file else Path(config.get('build', {}).get('compiled_spec', 'vibe-spec-full.md'))
+    output_file = Path(args.output_file) if args.output_file else Path(config.get('build', {}).get('compiled_spec', 'vibespec-full.md'))
     
     compile_specs(specs_dir, output_file)
 

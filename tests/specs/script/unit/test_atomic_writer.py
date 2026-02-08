@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Tests for Infrastructure interfaces
-@verify_spec: ATOMIC_WRITER, STATS_COLLECTOR
+Tests for ATOMIC_WRITER interface
+@verify_spec: ATOMIC_WRITER
 """
 import unittest
 
@@ -19,16 +19,6 @@ class MockAtomicWriter:
         if path == "concurrent/":
             raise OSError("AtomicGuard: Concurrent write detected")
         # Mock: just pass for normal cases
-
-
-class MockStatsCollector:
-    def collect(self, specs: list) -> dict:
-        if specs is None:
-            raise ValueError("StatsError")
-        return {
-            'count': len(specs),
-            'layers': len(set(s.get('layer', 0) for s in specs))
-        }
 
 
 class TestAtomicWriter(unittest.TestCase):
@@ -49,27 +39,6 @@ class TestAtomicWriter(unittest.TestCase):
         with self.assertRaises(OSError) as ctx:
             self.writer.write("concurrent/", "content")
         self.assertIn("AtomicGuard", str(ctx.exception))
-
-
-class TestStatsCollector(unittest.TestCase):
-    def setUp(self):
-        self.collector = MockStatsCollector()
-    
-    @verify_spec("STATS_COLLECTOR")
-    def test_normal_collect(self):
-        specs = [{'id': 'A', 'layer': 0}, {'id': 'B', 'layer': 1}]
-        result = self.collector.collect(specs)
-        self.assertEqual(result['count'], 2)
-    
-    @verify_spec("STATS_COLLECTOR")
-    def test_edge_empty(self):
-        result = self.collector.collect([])
-        self.assertEqual(result['count'], 0)
-    
-    @verify_spec("STATS_COLLECTOR")
-    def test_error_null(self):
-        with self.assertRaises(ValueError):
-            self.collector.collect(None)
 
 
 if __name__ == "__main__":

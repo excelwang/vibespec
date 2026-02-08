@@ -2,7 +2,7 @@
 version: 3.0.0
 ---
 
-# L3: Vibe-Spec Runtime
+# L3: Vibespec Runtime
 
 > **Purpose**: Capture complex/error-prone implementation details for testability
 > 
@@ -275,6 +275,26 @@ interface Sorter {
 
 ---
 
+## [decision] LAYER_REVIEW_CRITERIA
+
+> Implements: [Role: ROLES.SPEC_MANAGEMENT.REVIEWER]
+
+**Checklists by Layer**:
+| Layer | Focus | Key Questions |
+|-------|-------|---------------|
+| L0 | Vision | Does it align with project philosophy? |
+| L1 | Contracts | Is it testable? RFC2119 keywords? |
+| L2 | Architecture | Agent vs Script? Max 3 refs? |
+| L3 | Implementation | Fixtures complete? Type signature? |
+
+**Fixtures**:
+| Layer | Input | Expected | Case |
+|---|---|---|---|
+| L0 | Vision statement | Philosophy check | Normal |
+| L1 | Contract item | RFC2119 validation | Normal |
+| L2 | Role definition | Agent/Script purity | Normal |
+| L3 | Interface | Fixture coverage | Normal |
+
 ## [algorithm] COVERAGE_VALIDATION
 
 > Implements: [Component: COMPONENTS.VALIDATOR_CORE.RESPONSIVENESS_CHECKER]
@@ -426,7 +446,7 @@ interface SectionParser {
 **Fixtures**:
 | Input | Expected | Case |
 |-------|----------|------|
-| "## [system] ID" | [{tag: "system", id: "ID"}] | Normal |
+| "## ID" | [{tag: "system", id: "ID"}] | Normal |
 | "## ID" | [{tag: null, id: "ID"}] | Edge |
 | "" | [] | Edge |
 
@@ -1002,7 +1022,10 @@ interface StatsCollector {
    b. **[Script: VALIDATOR]** Validation: Run `python validate.py`
    c. **[Agent: PROCESS_ENFORCER]** Oversight: Check for cascade warnings
    d. **[Agent: IMPLEMENTER]** Fix: Resolve warnings
-4. Final: **[Script: CLI]** Report success
+4. **[Script: COMPILER]** Compile: Run `python compile.py`
+5. **[Script: BUILDER]** Build: Sync artifacts via `vibespec build`
+6. **[Script: TEST_RUNNER]** Test: Run `python test.py`
+7. Final: **[Script: CLI]** Report success
 
 **Fixtures**:
 | Initial State | Sequence of Events | Expected Final State |

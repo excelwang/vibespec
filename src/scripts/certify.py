@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vibe-Spec Certification Suite
+Vibespec Certification Suite
 
 This script supports the Agent certification workflow:
 1. Agent generates individual answer_key_{item_id}.md files (per H2 spec section)
@@ -32,7 +32,7 @@ def combine_and_strip(agent_dir: Path):
     
     # Combine all answer keys
     combined_content = []
-    combined_content.append(f"# Vibe-Spec Certification Exam\n")
+    combined_content.append(f"# Vibespec Certification Exam\n")
     combined_content.append(f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
     combined_content.append("> Fill in the 'Student Answer' sections below.\n\n")
     combined_content.append("---\n\n")
@@ -78,7 +78,7 @@ def list_answer_keys(agent_dir: Path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Vibe-Spec Certification Suite",
+        description="Vibespec Certification Suite",
         epilog="""
 Workflow:
   1. Agent generates: answer_key_{item_id}.md (one per H2 spec section)

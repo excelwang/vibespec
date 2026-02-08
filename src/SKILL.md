@@ -1,19 +1,24 @@
 ---
-name: vibe-spec
-description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates. Use when user says "vibe-spec", "vibe spec", "vibespec", "refine specs", wants to capture a new idea, or wants to validate existing specifications. Supports (1) idea capture with `vibe-spec <content>`, (2) idea refinement with `vibe-spec`, (3) project bootstrapping when specs/ is missing, and (4) validation mode for self-hosting projects.
+name: vibespec
+version: 2.0.0
+description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates. Use when user says "vibespec", "vibe spec", "vibespec", "refine specs", wants to capture a new idea, or wants to validate existing specifications. Supports (1) idea capture with `vibespec <content>`, (2) idea refinement with `vibespec`, (3) project bootstrapping when specs/ is missing, and (4) validation mode for self-hosting projects.
 ---
 
-# Vibe-Spec Skill
+# Vibespec Skill
 
 Manage the refinement of raw thoughts into traceable specifications.
 
 ## Triggers
 
-### `vibe-spec` (no arguments)
-1. If `specs/` does not exist → Enter **Bootstrap Phase**.
-2. Else → Scan `specs/ideas/` and begin refinement.
+### `vibespec` (no arguments)
+1. **Comprehension Check**:
+   - If you have not recently read the full specs:
+     - Read `specs/L0-VISION.md`, `specs/L1-CONTRACTS.md`, `specs/L2-ARCHITECTURE.md`, `specs/L3-RUNTIME.md`.
+     - **Summarize** your understanding of the project to the user.
+2. If `specs/` does not exist → Enter **Bootstrap Phase**.
+3. Else → Scan `specs/ideas/` and begin refinement.
 
-### `vibe-spec <content>` (with arguments)
+### `vibespec <content>` (with arguments)
 1. Save `<content>` as timestamped file in `specs/ideas/`.
 2. ⛔ MANDATORY STOP ⛔
    - Call `notify_user` with the Idea artifact.
@@ -21,7 +26,7 @@ Manage the refinement of raw thoughts into traceable specifications.
    - **Re-read** the idea file before proceeding.
 3. Begin refinement workflow.
 
-### `vibe-spec reflect`
+### `vibespec reflect`
 1. Analyze current conversation context for key insights.
 2. If no new insights: Report "Up to date" and exit.
 3. Otherwise:
@@ -29,17 +34,17 @@ Manage the refinement of raw thoughts into traceable specifications.
    - Present summary for human approval.
    - Upon approval, save as timestamped idea files in `specs/ideas/`.
 
-### `vibe-spec build`
+### `vibespec build`
 1. Read `vibespec.yaml` to identify configured implementation skills.
-2. Synchronize project artifacts (e.g., source code, skill files) with `vibe-spec-full.md`.
+2. Synchronize project artifacts (e.g., source code, skill files) with `vibespec-full.md`.
 3. Report update status and any manual verification needed.
 
-### `vibe-spec reload`
+### `vibespec reload`
 1. Re-read this SKILL.md file.
 2. Confirm to user: "SKILL.md reloaded."
 3. Apply any updated instructions immediately.
 
-### `vibe-spec automate`
+### `vibespec automate`
 1. Enter **AUTOMATE MODE**: Skip all human approval gates.
 2. Process ALL pending ideas in `specs/ideas/`.
 3. Auto-accept all agent suggestions.
@@ -47,7 +52,7 @@ Manage the refinement of raw thoughts into traceable specifications.
 5. Run until: 0 pending ideas AND 0 warnings.
 6. Report final status to user.
 
-### `vibe-spec test [SPEC_ID]`
+### `vibespec test [SPEC_ID]`
 
 **Test Directory Structure**:
 ```
@@ -79,7 +84,7 @@ tests/specs/
 
 **Phase 5: Report**
 ```
-=== Vibe-Spec Test Coverage ===
+=== Vibespec Test Coverage ===
 L1 Contracts: X/Y (Z%)
 L3 Runtime:   A/B (C%)
 ---
@@ -112,7 +117,7 @@ PROMPT tests: PASS/FAIL
 
 ### Example Dialogue
 ```
-User: vibe-spec
+User: vibespec
 Agent: No specs/ directory found. Let's define your project scope.
        What is this project about? (Describe in a few sentences)
 
@@ -189,7 +194,7 @@ Process the specific layer L(N) identified in Phase 2:
 3. **Compile Prompt**: 
    - IF (No pending ideas): Explicitly ask user: "Run compilation now?"
    - ELSE: Loop back to Phase 2.
-4. If yes: Run `python3 scripts/compile.py specs/ vibe-spec-full.md`.
+4. If yes: Run `python3 scripts/compile.py specs/ vibespec-full.md`.
 
 ---
 
@@ -220,8 +225,8 @@ Process the specific layer L(N) identified in Phase 2:
 
 Use standalone scripts (zero dependencies) for mechanical operations:
 - `python3 scripts/validate.py specs/` - Structural validation.
-- `python3 scripts/compile.py specs/ vibe-spec-full.md` - Compile to single doc.
-- `python3 scripts/verify_compiled.py vibe-spec-full.md specs/` - Verify compiled doc matches sources.
+- `python3 scripts/compile.py specs/ vibespec-full.md` - Compile to single doc.
+- `python3 scripts/verify_compiled.py vibespec-full.md specs/` - Verify compiled doc matches sources.
 - `bash scripts/archive_ideas.sh` - Archive processed ideas.
 
 **IMPORTANT**: Run `python3 scripts/validate.py specs/` IMMEDIATELY after each layer modification, BEFORE presenting to human for review.
@@ -236,9 +241,6 @@ Use standalone scripts (zero dependencies) for mechanical operations:
 - **Strict Sequencing**: L(N) must be approved before L(N+1) begins. Simultaneous multi-layer edits are FORBIDDEN.
 - **Traceability**: All lists in specs MUST be numbered (`1. `) for addressability. Bullet points (`- `) are forbidden in spec bodies.
 - **Automation-First**: Use CLI tools for file operations, not raw LLM output.
-- **Marker Semantics**: H2 headers MUST use `[system]` or `[standard]` markers.
-  - `[system]` = Implementation details (Executor). Mutable, refactorable.
-  - `[standard]` = Rules/Constraints (Legislator). Immutable, must be followed.
 - **Layer Focus**:
   - L0: "Why/What". No implementation details, tool names, file paths.
   - L1: "Rules/Invariants". No architecture components, script logic.

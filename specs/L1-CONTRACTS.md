@@ -7,7 +7,7 @@ invariants:
     statement: "L(N) must be human-approved before L(N+1) refinement begins."
 ---
 
-# L1: Vibe-Spec Behavior Contracts
+# L1: Vibespec Behavior Contracts
 
 > **Subject**: Agent | Script. Pattern: `[Agent|Script] MUST [action]`
 > - Responsibility: WHO is accountable
@@ -15,7 +15,7 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.L3_TYPE_ANNOTATION
+## CONTRACTS.L3_TYPE_ANNOTATION
 
 - **TYPE_REQUIRED**: Script MUST enforce `[Type: X]` annotation on all L3 items.
   > Responsibility: Validation — ensure routing to correct execution mechanism.
@@ -43,7 +43,7 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.LEAF_TYPE_PURITY
+## CONTRACTS.LEAF_TYPE_PURITY
 
 - **PURE_LEAF**: Script MUST enforce L2 leaf items are pure Agent OR pure Script type.
   > Responsibility: Separation — no mixed responsibilities in leaf nodes.
@@ -60,7 +60,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.IDEAS_PIPELINE
+## CONTRACTS.IDEAS_PIPELINE
 
 - **BATCH_READ**: Script MUST read all idea files before analysis.
   > Responsibility: Data integrity — complete picture for prioritization.
@@ -109,7 +109,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.REVIEW_PROTOCOL
+## CONTRACTS.REVIEW_PROTOCOL
 
 - **SELF_AUDIT**: Agent MUST read full layer content after revision.
   > Responsibility: Quality — catch errors before human review.
@@ -166,6 +166,11 @@ invariants:
   > Verification: REVIEWER role assessment logged before validate.py execution.
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
 
+- **LAYER_SPECIFIC**: Agent MUST apply layer-specific review criteria during quality review.
+  > Responsibility: Precision — each layer has distinct validation focus.
+  > Verification: Review checklist matches layer type (L0=Vision, L1=Contracts, L2=Arch, L3=Impl).
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+
 - **CASCADE_REVIEW**: Agent MUST evaluate downstream spec impact when reviewing current level.
   > Responsibility: Coherence — identify required updates to child-level specs.
   > Verification: Review output includes proposed reorganization for L(N+1).
@@ -173,7 +178,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.REJECTION_HANDLING
+## CONTRACTS.REJECTION_HANDLING
 
 - **AUTOMATED_RETRY**: Agent MAY self-correct up to 3 times for fixable errors.
   > Responsibility: Recovery — minimize human intervention for minor issues.
@@ -197,7 +202,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.REFLECT
+## CONTRACTS.REFLECT
 
 - **CONTEXT_BASED**: Agent SHOULD extract ideas from current conversation.
   > Responsibility: Efficiency — use existing context.
@@ -211,7 +216,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.SCRIPT_FIRST
+## CONTRACTS.SCRIPT_FIRST
 
 - **TARGET**: Script MUST handle file I/O, validation, archival, formatting.
   > Responsibility: Reliability — 100% deterministic for mechanical ops.
@@ -240,16 +245,21 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.SCRIPT_USABILITY
+## CONTRACTS.SCRIPT_USABILITY
 
 - **HELP_MESSAGE**: Script MUST implement `--help` with usage and arguments.
   > Responsibility: Discoverability — reduce cognitive load.
   > Verification: Help output on `--help` flag.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
 
+- **AGENT_FRIENDLY_OUTPUT**: Script MUST produce output that is actionable, locatable, and structured.
+  > Responsibility: Clarity — enable agents to parse and act on results.
+  > Verification: Output includes file paths, line numbers, IDs, and action recommendations.
+  (Ref: VISION.CODE_QUALITY_GOALS.OBSERVABILITY)
+
 ---
 
-## [system] CONTRACTS.BOOTSTRAP
+## CONTRACTS.BOOTSTRAP
 
 - **DETECTION**: Script MUST detect missing `specs/` and trigger bootstrap.
   > Responsibility: Safety — prevent operation on uninitialized project.
@@ -278,9 +288,9 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.TRIGGERS
+## CONTRACTS.TRIGGERS
 
-- **TRIGGER_SCAN**: Script MUST scan ideas/ on bare `vibe-spec` invocation.
+- **TRIGGER_SCAN**: Script MUST scan ideas/ on bare `vibespec` invocation.
   > Responsibility: Default action — process pending ideas.
   > Verification: Ideas scanned when no arguments.
   (Ref: VISION.SCOPE.IDEAS)
@@ -290,7 +300,7 @@ invariants:
   > Verification: File created with timestamp name.
   (Ref: VISION.VIBE_CODING.PARADIGM)
 
-- **TRIGGER_ALIASES**: Script MUST recognize: `vibe-spec`, `vibespec`, `vibe spec`.
+- **TRIGGER_ALIASES**: Script MUST recognize: `vibespec`, `vibespec`, `vibe spec`.
   > Responsibility: Usability — reduce friction.
   > Verification: All aliases work identically.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
@@ -307,7 +317,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.VALIDATION_MODE
+## CONTRACTS.VALIDATION_MODE
 
 
 
@@ -333,7 +343,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.CUSTOM_RULES
+## CONTRACTS.CUSTOM_RULES
 
 - **RULE_FILE**: Script MUST load rules from `specs/.vibe-rules.yaml`.
   > Responsibility: Separation — project rules separate from framework.
@@ -368,7 +378,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.SKILL_DISTRIBUTION
+## CONTRACTS.SKILL_DISTRIBUTION
 
 - **SKILL_MD**: Script MUST treat SKILL.md as single source of truth for capabilities.
   > Responsibility: Auditability — version-controlled capabilities.
@@ -384,14 +394,14 @@ invariants:
   > Responsibility: Location — consistent skill path.
   > Verification: Loader finds skill at path.
 
-- **TRIGGER_WORDS**: Script MUST recognize: vibe-spec, vibespec, vibe spec, refine specs.
+- **TRIGGER_WORDS**: Script MUST recognize: vibespec, vibespec, vibe spec, refine specs.
   > Responsibility: Activation — multiple aliases.
   > Verification: All triggers activate skill.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
 
 ---
 
-## [standard] CONTRACTS.METADATA
+## CONTRACTS.METADATA
 
 - **FRONTMATTER**: Script MUST validate YAML frontmatter with `version` field.
   > Responsibility: Automation — machine-parseable metadata.
@@ -403,7 +413,7 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.TRACEABILITY
+## CONTRACTS.TRACEABILITY
 
 - **SEMANTIC_IDS**: Script MUST enforce `- **KEY**: ...` format (no sequential numbering).
   > Responsibility: Addressability — unique semantic keys.
@@ -433,22 +443,9 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.SECTION_MARKERS
-
-- **H2_ANNOTATION**: Script MUST warn on H2 headers without `[system]` or `[standard]`.
-  > Responsibility: Classification — distinguish impl from rules.
-  > Verification: Warning on unmarked H2.
-
-- **SYSTEM_SEMANTICS**: `[system]` = implementation details (How). Do not change unless you are the System Architect.
-- **STANDARD_SEMANTICS**: `[standard]` = design patterns (Rules). Follow these strictures.
-
-
-
-(Ref: VISION.AGENT_AS_DEVELOPER)
-
 ---
 
-## [standard] CONTRACTS.QUANTIFIED_VALIDATION
+## CONTRACTS.QUANTIFIED_VALIDATION
 
 - **ATOMICITY**: Script MUST enforce <50 words per L0 statement.
 - **DEPTH**: Script MUST enforce <=2 nesting levels.
@@ -459,7 +456,7 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.ALGEBRAIC_VALIDATION
+## CONTRACTS.ALGEBRAIC_VALIDATION
 
 - **MILLERS_LAW**: Script MUST enforce Fan-Out <= 7.
 - **CONSERVATION**: Script MUST enforce coverage sum >= 100%.
@@ -470,7 +467,7 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.L3_QUALITY
+## CONTRACTS.L3_QUALITY
 
 - **FIXTURE_REQUIRED**: L3 interface/algorithm MUST include Fixtures table.
   > Responsibility: Testability — every interface needs concrete test cases.
@@ -492,7 +489,7 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.STRICT_TESTABILITY
+## CONTRACTS.STRICT_TESTABILITY
 
 - **DEFAULT_TESTABLE**: Items with MUST/SHOULD/MAY are testable requirements.
 - **RATIONALE_SEPARATION**: Use `> Rationale:` block for explanations.
@@ -521,7 +518,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.COMPILATION
+## CONTRACTS.COMPILATION
 
 - **LLM_OPTIMIZED**: Script MUST produce single continuous markdown.
 
@@ -532,7 +529,7 @@ invariants:
 
 ---
 
-## [system] CONTRACTS.BUILD_STRATEGY
+## CONTRACTS.BUILD_STRATEGY
 
 - **GAP_ANALYSIS_FIRST**: IMPLEMENTER MUST perform gap analysis before implementation.
   > Responsibility: Risk reduction — understand current state before changes.
@@ -554,7 +551,7 @@ invariants:
 
 ---
 
-## [standard] CONTRACTS.TERMINOLOGY_ENFORCEMENT
+## CONTRACTS.TERMINOLOGY_ENFORCEMENT
 
 ```yaml
 standard_terms:
@@ -571,7 +568,7 @@ standard_terms:
 
 
 
-## [system] CONTRACTS.TESTING_WORKFLOW
+## CONTRACTS.TESTING_WORKFLOW
 
 - **COVERAGE_REPORT**: Script MUST report L1 and L3 coverage percentages.
   > Responsibility: Visibility — show testability gaps.
@@ -611,7 +608,7 @@ standard_terms:
 
 ---
 
-## [system] CONTRACTS.CERTIFICATION
+## CONTRACTS.CERTIFICATION
 
 - **ANSWER_KEY_GRANULAR**: Agent MUST generate individual `answer_key_{item_id}.md` files per H2 spec section.
   > Responsibility: Maintainability — one answer file per spec item for easy updates.
@@ -628,14 +625,14 @@ standard_terms:
   > Verification: answer_key files contain concrete, project-specific examples.
   (Ref: VISION.CERTIFICATION.COMPLIANCE)
 
-- **CONTEXTUAL_SCENARIO**: Vibe-spec MUST analyze project context to generate and execute a relevant End-to-End Scenario.
+- **CONTEXTUAL_SCENARIO**: Vibespec MUST analyze project context to generate and execute a relevant End-to-End Scenario.
   > Responsibility: Relevance — prove toolchain works on *this* project.
   > Verification: Generated scenario matches project domain (e.g., User vs. Order).
   (Ref: VISION.TRACEABILITY.CHAIN)
 
 ---
 
-## [system] CONTRACTS.RELOAD
+## CONTRACTS.RELOAD
 
 - **RELOAD_TRIGGER**: When user inputs `vibespec reload`, Agent MUST re-read SKILL.md.
   > Responsibility: Hot-reload — apply skill changes without restarting session.
@@ -644,7 +641,7 @@ standard_terms:
 
 ---
 
-## [system] CONTRACTS.TEMPLATE_GENERATION
+## CONTRACTS.TEMPLATE_GENERATION
 
 - **USE_TEMPLATES**: Agent MUST use templates from `src/assets/specs/` when generating files.
   > Responsibility: Consistency — ensure uniform formatting across all generated specs.
@@ -658,17 +655,22 @@ standard_terms:
 
 ---
 
-## [system] CONTRACTS.STARTUP_MENU
+## CONTRACTS.STARTUP_MENU
 
-- **INTERACTIVE_START**: When user runs `vibe-spec` (no args), Agent MUST display capabilities menu and wait for input.
+- **INTERACTIVE_START**: When user runs `vibespec` (no args), Agent MUST display capabilities menu and wait for input.
   > Responsibility: Control — prevent accidental execution of pending workloads.
   > Verification: Agent outputs usage help and stops execution.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
 
+- **FIRST_RUN_COMPREHENSION**: On first `vibespec` invocation, Agent MUST read all L0-L3 specs before executing.
+  > Responsibility: Context — ensure deep project understanding before action.
+  > Verification: Agent summarizes project understanding before proceeding.
+  (Ref: VISION.AGENT_AS_DEVELOPER.FULL_CONTEXT)
+
 ---
 
 
-## [system] CONTRACTS.AUTOMATE_MODE
+## CONTRACTS.AUTOMATE_MODE
 
 - **AUTOMATE_TRIGGER**: When user inputs `vibespec automate`, Agent MUST enter automate mode.
   > Responsibility: Efficiency — enable hands-off batch processing.
@@ -684,3 +686,8 @@ standard_terms:
   > Responsibility: Completeness — resolve all cascade warnings automatically.
   > Verification: Validation passes with 0 warnings after automate completes.
   (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+
+- **BUILD_BEFORE_TEST**: In automate mode, Agent MUST execute Build phase before Test phase.
+  > Responsibility: Validity — tests must run against latest artifacts.
+  > Verification: Workflow sequence is Refine → Validate → Compile → Build → Test.
+  (Ref: VISION.VIBE_CODING.TRUTH)

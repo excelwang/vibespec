@@ -110,8 +110,8 @@ def verify_compiled(file_path: Path):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
-        description='Verify structural integrity of compiled Vibe-Spec document.',
-        epilog='Example: python verify_compiled.py vibe-spec-full.md'
+        description='Verify structural integrity of compiled Vibespec document.',
+        epilog='Example: python verify_compiled.py vibespec-full.md'
     )
     parser.add_argument('file', help='Compiled spec file to verify')
     args = parser.parse_args()

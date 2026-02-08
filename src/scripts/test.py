@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vibe-Spec Test Runner
+Vibespec Test Runner
 Implements the test workflow defined in src/SKILL.md
 
 Phases:
@@ -78,8 +78,8 @@ def scan_existing_tests(tests_dir: Path) -> set:
     if not tests_dir.exists():
         return covered_ids
     
-    # 1. Scan Python tests in acceptance/scripts and runtime/components
-    for py_dir in [tests_dir / "acceptance/scripts", tests_dir / "runtime/components"]:
+    # 1. Scan Python tests in script/unit and script/e2e
+    for py_dir in [tests_dir / "script/unit", tests_dir / "script/e2e"]:
         if py_dir.exists():
             for py_file in py_dir.rglob("*.py"):
                 content = py_file.read_text()
@@ -87,8 +87,8 @@ def scan_existing_tests(tests_dir: Path) -> set:
                 for match in re.finditer(r'@verify_spec\(["\']([^"\']+)["\']\)', content):
                     covered_ids.add(match.group(1))
     
-    # 2. Scan YAML tests in acceptance/agent and runtime/roles
-    for yaml_dir in [tests_dir / "acceptance/agent", tests_dir / "runtime/roles"]:
+    # 2. Scan YAML tests in agent/ directory
+    for yaml_dir in [tests_dir / "agent"]:
         if yaml_dir.exists():
             for yaml_file in yaml_dir.rglob("*.yaml"):
                 content = yaml_file.read_text()
@@ -111,9 +111,11 @@ def scan_existing_tests(tests_dir: Path) -> set:
     
 def run_pytest(tests_dir: Path) -> tuple:
     """Run pytest on Python script tests."""
+    # Use absolute paths to avoid cwd confusion
+    abs_tests_dir = tests_dir.resolve()
     target_dirs = [
-        str(tests_dir / "script/e2e"),
-        str(tests_dir / "script/unit")
+        str(abs_tests_dir / "script/e2e"),
+        str(abs_tests_dir / "script/unit")
     ]
     
     valid_dirs = [d for d in target_dirs if Path(d).exists() and list(Path(d).glob("*.py"))]
@@ -122,12 +124,12 @@ def run_pytest(tests_dir: Path) -> tuple:
         return 0, 0, 0, "No script tests found"
     
     try:
-        cmd = ["python3", "-m", "pytest"] + valid_dirs + ["-v", "--tb=short"]
+        cmd = [sys.executable, "-m", "pytest"] + valid_dirs + ["-v", "--tb=short"]
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            cwd=tests_dir.parent
+            cwd=str(abs_tests_dir.parent.parent)  # Project root
         )
         
         # Parse pytest output
@@ -147,7 +149,7 @@ def main():
         print("❌ specs/ directory not found")
         return 1
     
-    print("=== Vibe-Spec Test Runner ===\n")
+    print("=== Vibespec Test Runner ===\n")
     
     # Phase 1: Collect testable specs
     print("📋 Phase 1: Collecting Testable Specs...")
@@ -222,7 +224,7 @@ def main():
     runtime_total = len(l3_decision) + len(l3_component)
 
     print("\n" + "=" * 55)
-    print("=== Vibe-Spec Test Coverage Dashboard ===")
+    print("=== Vibespec Test Coverage Dashboard ===")
     
     print(f"\n📂 [acceptance] (L1 Contracts)")
     print(f"   path: tests/specs/acceptance/")
