@@ -272,6 +272,13 @@ invariants:
   > Verification: Approval before any file creation.
   (Ref: VISION.VIBE_CODING.HUMAN_GATE)
 
+- **CERTIFICATION_OUTPUTS**: Script MUST generate:
+  - `tests/specs/agent/test_paper.md` (L1 Agent exams)
+  - `tests/specs/decision/test_paper.md` (L3 Decision exams)
+  > Responsibility: Artifact sync — maintain current exam papers.
+  > Verification: Required files exist after `vibespec compile`.
+  (Ref: VISION.SCOPE)
+
 - **INITIALIZATION**: Script MUST create L0-VISION.md and ideas/ on approval.
   > Responsibility: Structure — minimum viable spec foundation.
   > Verification: Required files exist after init.
@@ -659,12 +666,18 @@ standard_terms:
 
 ## CONTRACTS.CERTIFICATION
 
-- **ANSWER_KEY_LAYER**: Agent MUST generate `answer_key_l1.md` and `answer_key_l3.md` files.
-  > Responsibility: Organization — separate tests by layer for maintainability.
-  > Verification: `tests/specs/agent/answer_key_l{1,3}.md` files exist and match spec layers.
+- **ANSWER_KEY_LOCATION**: Script MUST place answer keys in `tests/specs/agent/` and `tests/specs/decision/`.
+  > Responsibility: Organization — keep tests near their spec counterparts.
+  > Verification: `answer_key_l3_*.md` found in `tests/specs/decision/`.
   (Ref: VISION.CERTIFICATION.COMPLIANCE, CONTRACTS.TESTING_WORKFLOW.TEST_GRANULARITY)
 
+- **ANSWER_KEY_FORMAT**: Agent MUST generate answer keys as Markdown files with `<!-- ANSWER_START -->` and `<!-- ANSWER_END -->` markers.
+  > Responsibility: Parsing — ensure automated scripts can extract test answers.
+  > Verification: `validate.py` AND `test_coverage.py` check for these markers.
+  (Ref: VISION.CERTIFICATION.PROOF)
+
 - **VERIFY_SPEC_ANNOTATION**: Agent MUST include `@verify_spec_id("SPEC_ID")` annotation per test item.
+
   > Responsibility: Traceability — enable coverage calculation for both agent and script tests.
   > Verification: All test items contain `@verify_spec_id` with valid spec ID.
   (Ref: VISION.SCOPE, CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT)

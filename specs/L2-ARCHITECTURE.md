@@ -7,6 +7,7 @@ version: 3.0.0
 > **Subject**: Role (Active) | Component (Passive)
 > - Role: Observes / Decides / Acts (Agent-driven)
 > - Component: Input / Output (Script-driven)
+> - Decision: Abstract L3 logic for Roles
 > - Heading levels indicate hierarchy: H2 = Top, H3 = Subsystem, H4 = Leaf
 
 ---
@@ -406,14 +407,16 @@ version: 3.0.0
 
 (Ref: CONTRACTS.VALIDATION_MODE.REPORT)
 
-#### SUMMARY_GENERATOR
+#### DECISION_ANSWER_KEY_GENERATOR
 
-**Component**: Generates summary
+**Component**: Generates answer keys for L3 Decisions.
 
-- Input: `result: ValidationResult`
-- Output: `Summary`
+**Type**: Script
 
-(Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION)
+**Implements**:
+- (Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_FORMAT)
+
+**Testing**: `tests/specs/decision/`
 
 #### DIFF_VIEWER
 

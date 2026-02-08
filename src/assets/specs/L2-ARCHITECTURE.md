@@ -7,6 +7,12 @@ version: 1.0.0
 > This document defines the high-level component structure.
 > Each component traces to L1 contracts and decomposes into L3 items.
 
+> **Subject**: Role (Active) | Component (Passive)
+> - Role: Observes / Decides / Acts (Agent-driven)
+> - Component: Input / Output (Script-driven)
+> - Decision: Abstract L3 logic for Roles
+> - Heading levels indicate hierarchy: H2 = Top, H3 = Subsystem, H4 = Leaf
+
 ---
 
 ## COMPONENTS.CORE

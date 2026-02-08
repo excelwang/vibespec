@@ -13,7 +13,7 @@ version: 3.0.0
 | Type | Tag | Associated Entity | Purpose | Content Requirement |
 |------|-----|-------------------|---------|---------------------|
 | **Interface** | `[interface]` | **Component** | Define system boundaries and function signatures. | Typed code block (TypeScript/Python), Fixtures table. |
-| **Decision** | `[decision]` | **Role** | Capture complex logic, human judgment, or policy rules. | Logic Table, Checklist, or Decision Tree. |
+| **Decision** | `[decision]` | **Role** | Capture complex logic, human judgment, or policy rules. | Logic Table, Checklist, or Decision Tree. Fixtures: Situation/Decision/Rationale. |
 | **Algorithm** | `[algorithm]` | **Component** | Describe deterministic computational steps. | Pseudocode or Flowchart. |
 | **Workflow** | `[workflow]` | **Component** | Orchestrate Components and Roles into end-to-end processes. | Ordered Steps list with Actor assignment. |
 
@@ -244,17 +244,17 @@ interface Sorter {
 **Rules**:
 | Condition | Action |
 |-----------|--------|
-| Retry ≤ 3 + has alt | Try alt |
-| Retry ≤ 3 + no alt | Revert + human |
-| Retry > 3 | Revert + human |
+| Validation Error | Run auto-fix, then re-validate |
+| Compile Error | Stop and report to user |
+| Human Reject | Revert change, ask for guidance |
 
 **Fixtures**:
-| Retry | HasAlt | Expected |
-|-------|--------|----------|
-| 1 | Yes | Retry(alt) |
-| 3 | Yes | Retry(alt) |
-| 4 | Yes | GiveUp |
-| 1 | No | GiveUp |
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| Compile fails | Stop | Cannot proceed without valid artifacts |
+| Single warning | Continue | Non-blocking |
+| Human rejects | Revert | Human-in-the-loop gate |
+ No | GiveUp |
 
 (Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_RETRY)
 
@@ -853,22 +853,23 @@ interface DiffViewer {
 
 ---
 
-## [interface] SUMMARY_GENERATOR
+## [interface] DECISION_ANSWER_KEY_GENERATOR
 
-> Implements: [Component: COMPONENTS.REPORTING.SUMMARY_GENERATOR]
+> Implements: [Component: COMPONENTS.REPORTING.DECISION_ANSWER_KEY_GENERATOR]
 
 ```code
-interface SummaryGenerator {
-  generate(result: ValidationResult): string
+interface DecisionAnswerKeyGenerator {
+  generate(decision: Decision): AnswerKeyFile
 }
 ```
 
 **Fixtures**:
 | Input | Expected | Case |
 |-------|----------|------|
-| 0 errors | "✅ Valid" | Normal |
-| N errors | "❌ N errors" | Error |
-| null | SummaryError | Error |
+| Decision item | answer_key_l3_{id}.md | Normal |
+| Agent item | throw Error | Error |
+| null | GeneratorError | Error |
+
 
 ---
 
@@ -1168,7 +1169,7 @@ interface CertificationEngine {
 | L1 spec item | answer_key_{id}.md | Normal |
 | Empty specs | [] | Edge |
 
-(Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_LAYER), (Ref: CONTRACTS.CERTIFICATION.VERIFY_SPEC_ANNOTATION), (Ref: CONTRACTS.CERTIFICATION.ERROR_PRONE_FOCUS)
+(Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_LOCATION), (Ref: CONTRACTS.CERTIFICATION.VERIFY_SPEC_ANNOTATION), (Ref: CONTRACTS.CERTIFICATION.ERROR_PRONE_FOCUS)
 
 ---
 

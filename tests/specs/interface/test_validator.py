@@ -15,7 +15,12 @@ def verify_spec(spec_id):
     return decorator
 
 FIXTURES = [
-    {"Input": "Invalid ref", "Expected": "Error: Dangling", "Case": "Error"},
+    {"Input": "Valid specs", "Expected": "{errors: [], warnings: []}", "Case": "Normal"},
+    {"Input": "Decision missing table", "Expected": "{warnings: [DecisionFormat]}", "Case": "Edge"},
+    {"Input": "Workflow missing steps", "Expected": "{warnings: [WorkflowFormat]}", "Case": "Edge"},
+    {"Input": "Interface missing fixtures", "Expected": "{warnings: [FixtureRequired]}", "Case": "Edge"},
+    {"Input": "Any item missing Implements", "Expected": "{warnings: [Traceability]}", "Case": "Edge"},
+    {"Input": "Dangling ref", "Expected": "{errors: [DanglingRef]}", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
