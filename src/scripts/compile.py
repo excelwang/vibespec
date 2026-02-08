@@ -145,22 +145,53 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
     # Process L1 Contracts
     for f in specs_dir.glob("L1*.md"):
         content = f.read_text()
+        lines = content.split('\n')
+        current_section = None
         
-        # L1 tests are covered by L3 workflows (L1_WORKFLOW_COVERAGE contract)
-        # Agent-type L1 items: Agent generates answer_key in agent/ directory
-        # Script-type L1 items: Covered by L3 workflow tests
-        rules = re.finditer(r'^- \*\*(?P<id>[A-Z0-9_]+)\*\*: (?P<subject>Agent|Script|Agent/Script|Script/Agent)', content, re.MULTILINE)
+        force_update = f.name in modified_specs
         
-        for match in rules:
-            f_id = match.group('id')
-            subject = match.group('subject')
-            safe_id = f_id.lower()
+        for i, line in enumerate(lines):
+            # Track current section (## CONTRACTS.X)
+            if line.startswith('## CONTRACTS.'):
+                current_section = line[3:].strip()
+                continue
             
-            if 'Agent' in subject and 'Script' not in subject:
-                # L1 Agent contracts: placeholder for answer_key (Agent generates)
-                placeholder = agent_dir / f"answer_key_{safe_id}.md"
-                generated_files.add(placeholder)
-                # Don't generate content - Agent will create answer_key
+            # Match Agent MUST rules
+            match = re.match(r'^- \*\*([A-Z0-9_]+)\*\*: Agent MUST (.+)', line)
+            if match and current_section:
+                rule_id = match.group(1)
+                rule_text = match.group(2)
+                full_id = f"L1.{current_section}.{rule_id}"  # L1 prefix to avoid ID conflicts
+                safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', full_id).lower()
+                
+                answer_key_file = agent_dir / f"answer_key_{safe_id}.md"
+                generated_files.add(answer_key_file)
+                
+                if not answer_key_file.exists() or force_update:
+                    if force_update and answer_key_file.exists():
+                        print(f"   🔄 Updating answer_key_{safe_id}.md (spec modified)")
+                    
+                    answer_key_content = f"""# Answer Key: {full_id}
+<!-- @verify_spec("{full_id}") -->
+
+## Question
+
+**Contract Rule**: Agent MUST {rule_text}
+
+Describe how the Agent should behave in the following scenarios:
+
+<!-- ANSWER_START -->
+## Expected Answer
+
+| Scenario | Agent Action | Expected Outcome |
+|----------|--------------|------------------|
+| [Scenario 1] | [Action per spec] | [Expected result] |
+| [Scenario 2] | [Action per spec] | [Expected result] |
+
+<!-- ANSWER_END -->
+"""
+                    answer_key_file.write_text(answer_key_content)
+                    generated_count += 1
 
     # Process L3 Runtime
     for f in specs_dir.glob("L3*.md"):
@@ -182,10 +213,39 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
             safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', f_id).lower()
             
             if f_type == 'decision':
-                # L3 Decision (Role): placeholder for answer_key (Role generates)
-                placeholder = role_dir / f"answer_key_{safe_id}.md"
-                generated_files.add(placeholder)
-                # Don't generate content - Role will create answer_key
+                # L3 Decision (Role): generate answer_key skeleton
+                answer_key_file = role_dir / f"answer_key_{safe_id}.md"
+                generated_files.add(answer_key_file)
+                
+                force_update = f.name in modified_specs
+                if not answer_key_file.exists() or force_update:
+                    if force_update and answer_key_file.exists():
+                        print(f"   🔄 Updating answer_key_{safe_id}.md (spec modified)")
+                    
+                    # Build fixtures table
+                    fixture_table = "| Situation | Decision | Rationale |\n|-----------|----------|-----------|\n"
+                    for case in table_cases:
+                        situation = case.get('Situation', case.get('Input', 'N/A'))
+                        decision = case.get('Decision', case.get('Expected', 'N/A'))
+                        rationale = case.get('Rationale', case.get('Case', 'N/A'))
+                        fixture_table += f"| {situation} | {decision} | {rationale} |\n"
+                    
+                    l3_id = f"L3.{f_id}"  # L3 prefix to avoid ID conflicts
+                    answer_key_content = f"""# Answer Key: {l3_id}
+<!-- @verify_spec("{l3_id}") -->
+
+## Question
+
+Given the following situations, what decision should the {f_id} role make?
+
+<!-- ANSWER_START -->
+## Expected Answer
+
+{fixture_table}
+<!-- ANSWER_END -->
+"""
+                    answer_key_file.write_text(answer_key_content)
+                    generated_count += 1
             elif f_type == 'interface':
                 # L3 Interface: generate test in interface/ directory
                 test_file = interface_dir / f"test_{safe_id}.py"
