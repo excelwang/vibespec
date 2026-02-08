@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: HIERARCHY_CHECK
-# ref: HIERARCHY_CHECK
-# Responsibility: Traceability — prevent drift from parent requirements.
-# Verification: Parent layer loaded on edit start.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Parent layer loaded on edit start."

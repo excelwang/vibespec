@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: APPROVAL_GATE
-# ref: APPROVAL_GATE
-# Responsibility: Human gate — prevent misdirected init.
-# Verification: Approval before any file creation.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Approval before any file creation."

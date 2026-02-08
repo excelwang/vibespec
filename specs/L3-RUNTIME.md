@@ -406,6 +406,50 @@ interface TestReporter {
 
 ---
 
+## [interface] ADAPTER_FACTORY
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.ADAPTER_FACTORY]
+
+```typescript
+interface AdapterFactory {
+  get(interface_id: string, env: 'MOCK' | 'REAL'): Adapter
+}
+
+type Adapter = MockAdapter | RealAdapter | SkipAdapter
+
+interface MockAdapter {
+  type: 'mock'
+  execute(input: any): FixtureResult
+}
+
+interface RealAdapter {
+  type: 'real'
+  execute(input: any): any
+}
+
+interface SkipAdapter {
+  type: 'skip'
+  reason: string
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| ("VALIDATOR", MOCK) | MockAdapter | Normal |
+| ("VALIDATOR", REAL) | RealAdapter | Normal |
+| ("VALIDATOR", REAL, no impl) | SkipAdapter("not implemented") | Edge |
+| ("UNKNOWN", MOCK) | AdapterError | Error |
+
+**Standards**:
+- MockAdapter MUST use L3 Fixtures to return predefined results
+- RealAdapter MUST attempt dynamic import from user project
+- SkipAdapter MUST be returned when REAL impl not found (not throw)
+
+(Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE), (Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION), (Ref: CONTRACTS.STRICT_TESTABILITY.SKIP_UNIMPLEMENTED)
+
+---
+
 ## [interface] BUILDER
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.BUILDER]
@@ -1165,3 +1209,65 @@ interface ScenarioDriver {
 |---|---|---|
 | Valid Workflow | PASS | Normal |
 | Broken Workflow | FAIL | Error |
+
+---
+
+## [workflow] FULL_WORKFLOW
+
+> Implements: [Contract: CONTRACTS.STRICT_TESTABILITY.FULL_WORKFLOW_REQUIRED]
+
+**Purpose**: End-to-end test covering all Roles and Components in a realistic project scenario.
+
+**Steps**:
+1. `SCANNER.scan("specs/")` → File[]
+2. `PARSER.parse(files)` → Spec[]
+3. `VALIDATOR.validate(specs)` → ValidationResult
+4. `ASSEMBLER.assemble(specs)` → CompiledSpec
+5. [Role] `ARCHITECT.review(compiled)` → ReviewResult (mocked)
+6. [Role] `IMPLEMENTER.implement(approved)` → Implementation (mocked)
+7. `TEST_EXECUTOR.run(tests, MOCK)` → TestResult
+8. `TEST_REPORTER.format(result)` → Report
+
+**Coverage**:
+- Roles: ARCHITECT, IMPLEMENTER, REVIEWER (all mocked)
+- Components: SCANNER, PARSER, VALIDATOR, ASSEMBLER, TEST_EXECUTOR, TEST_REPORTER
+
+**Fixtures**:
+| Scenario | Expected | Case |
+|----------|----------|------|
+| Full compile + test flow | All steps pass | Normal |
+| Validation fails at step 3 | Workflow halts, reports error | Error |
+| Role returns reject | Workflow handles rejection | Edge |
+
+(Ref: CONTRACTS.STRICT_TESTABILITY.FULL_WORKFLOW_REQUIRED), (Ref: CONTRACTS.STRICT_TESTABILITY.WORKFLOW_INTEROP_COVERAGE), (Ref: CONTRACTS.STRICT_TESTABILITY.ROLE_ALWAYS_MOCK)
+
+---
+
+## [interface] WORKFLOW_TEST_EXECUTOR
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.WORKFLOW_TEST_EXECUTOR]
+
+```typescript
+interface WorkflowTestExecutor {
+  run(workflow_id: string, env: 'MOCK' | 'REAL'): WorkflowResult
+}
+
+interface WorkflowResult {
+  passed: boolean
+  failed_step?: string
+  steps_executed: string[]
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| ("FULL_WORKFLOW", MOCK) | {passed: true, steps: [...]} | Normal |
+| ("FULL_WORKFLOW", REAL) | {passed: true, steps: [...]} | Normal (roles still mock) |
+| ("UNKNOWN_WORKFLOW", MOCK) | WorkflowNotFoundError | Error |
+
+**Standards**:
+- Role steps MUST use mocked output regardless of env
+- Component steps follow env-based adapter selection
+
+(Ref: CONTRACTS.STRICT_TESTABILITY.ROLE_ALWAYS_MOCK), (Ref: CONTRACTS.STRICT_TESTABILITY.WORKFLOW_INTEROP_COVERAGE)

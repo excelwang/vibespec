@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: ROLE_FIRST_REVIEW
-# ref: ROLE_FIRST_REVIEW
-# Responsibility: Quality-first — assess content quality before mechanical fixes.
-# Verification: REVIEWER role assessment logged before validate.py execution.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: REVIEWER role assessment logged before validate.py execution."

@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: DELETION_JUSTIFICATION
-# ref: DELETION_JUSTIFICATION
-# Responsibility: Safety — prevent accidental regression or scope creep (deletion is scope change).
-# Verification: User approval prompt contains "Motivation: [reason]" for deleted items.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: User approval prompt contains "Motivation: [reason]" for deleted items."

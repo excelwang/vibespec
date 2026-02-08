@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: SCOPE_INQUIRY
-# ref: SCOPE_INQUIRY
-# Responsibility: Capture — get raw user intent.
-# Verification: Open-ended question asked.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Open-ended question asked."

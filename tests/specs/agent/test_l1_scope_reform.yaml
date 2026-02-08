@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: SCOPE_REFORM
-# ref: SCOPE_REFORM
-# Responsibility: Formalization — transform vague to verifiable.
-# Verification: Output contains In-Scope and Out-of-Scope.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Output contains In-Scope and Out-of-Scope."

@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: APPROVAL_REQUIRED
-# ref: APPROVAL_REQUIRED
-# Responsibility: Human gate — prevent drift from user intent.
-# Verification: `notify_user` called after each idea creation.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: `notify_user` called after each idea creation."

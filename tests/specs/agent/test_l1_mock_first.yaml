@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: MOCK_FIRST
-# ref: MOCK_FIRST
-# Responsibility: Early validation — verify spec logic before implementation.
-# Verification: MOCK tests pass before REAL tests are attempted.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: MOCK tests pass before REAL tests are attempted."

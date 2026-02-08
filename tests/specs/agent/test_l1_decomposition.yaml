@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: DECOMPOSITION
-# ref: DECOMPOSITION
-# Responsibility: Architectural integrity — serialize changes.
-# Verification: Higher layers approved before lower layers processed.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Higher layers approved before lower layers processed."

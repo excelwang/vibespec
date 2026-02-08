@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: CONFLICT_RES
-# ref: CONFLICT_RES
-# Responsibility: Truth source — most recent intent wins.
-# Verification: Later idea values supersede earlier ones.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Later idea values supersede earlier ones."

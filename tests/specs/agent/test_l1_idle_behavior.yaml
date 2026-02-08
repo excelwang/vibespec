@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: IDLE_BEHAVIOR
-# ref: IDLE_BEHAVIOR
-# Responsibility: Self-hosting — continuous health monitoring.
-# Verification: Validation Mode triggered on conditions.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Validation Mode triggered on conditions."

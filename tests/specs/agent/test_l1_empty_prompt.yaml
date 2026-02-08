@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: EMPTY_PROMPT
-# ref: EMPTY_PROMPT
-# Responsibility: Onboarding — friendly new project experience.
-# Verification: Invitation shown on empty state.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Invitation shown on empty state."

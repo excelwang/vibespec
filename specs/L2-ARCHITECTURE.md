@@ -538,6 +538,34 @@ version: 3.0.0
 
 (Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.RESULT_EVALUATION)
 
+#### ADAPTER_FACTORY
+
+**Component**: Creates MOCK or REAL adapters for test execution
+
+- Input: `interface_id: string, env: MOCK|REAL`
+- Output: `Adapter`
+- Logic:
+  1. If env == MOCK → Return MockAdapter (uses L3 Fixtures)
+  2. If env == REAL → Return RealAdapter (imports user implementation)
+  3. If REAL adapter not found → Return SkipAdapter
+
+(Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE), (Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION), (Ref: CONTRACTS.STRICT_TESTABILITY.SKIP_UNIMPLEMENTED)
+
+#### WORKFLOW_TEST_EXECUTOR
+
+**Component**: Executes workflow (integration) tests
+
+- Input: `workflow_id: string, env: MOCK|REAL`
+- Output: `WorkflowResult{passed, failed, steps_executed[]}`
+- Logic:
+  1. Load workflow definition from L3
+  2. Execute each step sequentially
+  3. Role steps use mocked output (ROLE_ALWAYS_MOCK)
+  4. Component steps use env-based adapter
+
+(Ref: CONTRACTS.STRICT_TESTABILITY.WORKFLOW_INTEROP_COVERAGE), (Ref: CONTRACTS.STRICT_TESTABILITY.FULL_WORKFLOW_REQUIRED), (Ref: CONTRACTS.STRICT_TESTABILITY.ROLE_ALWAYS_MOCK)
+
+
 #### BUILDER
 
 **Component**: Orchestrates spec-to-implementation transformation
@@ -552,7 +580,10 @@ version: 3.0.0
 **Component**: Produces certification artifacts
 
 - Input: `specs: Spec[]`
-- Output: `answer_key_{id}.md, question_paper.md`
+- Output: `answer_key_l1.md, answer_key_l3.md, question_paper.md`
+- Standards:
+  - Each item in answer_key files MUST include `@verify_spec_id("SPEC_ID")`
+  - Tests MUST focus on error-prone usage patterns
 
 (Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_GRANULAR), (Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER), (Ref: CONTRACTS.CERTIFICATION.REALISTIC_CONTEXT)
 

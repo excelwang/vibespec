@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: SEQUENTIAL_ONLY
-# ref: SEQUENTIAL_ONLY
-# Responsibility: Safety — prevent cascading failures.
-# Verification: Single layer per turn.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Single layer per turn."

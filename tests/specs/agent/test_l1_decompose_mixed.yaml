@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: DECOMPOSE_MIXED
-# ref: DECOMPOSE_MIXED
-# Responsibility: Granularity — continue splitting until purity achieved.
-# Verification: All leaf items pass purity check.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: All leaf items pass purity check."

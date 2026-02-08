@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: HUMAN_REJECTION
-# ref: HUMAN_REJECTION
-# Responsibility: Clean slate — enable fresh approach.
-# Verification: Full revert on "try different approach".
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Full revert on "try different approach"."

@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: AUTOMATED_GIVEUP
-# ref: AUTOMATED_GIVEUP
-# Responsibility: Safety — prevent infinite loops.
-# Verification: Revert triggered on 4th failure.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Revert triggered on 4th failure."

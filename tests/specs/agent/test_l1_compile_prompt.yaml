@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: COMPILE_PROMPT
-# ref: COMPILE_PROMPT
-# Responsibility: Artifact sync — keep compiled output current.
-# Verification: Prompt shown when preconditions met.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Prompt shown when preconditions met."

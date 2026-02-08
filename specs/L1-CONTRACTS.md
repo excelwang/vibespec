@@ -520,6 +520,18 @@ invariants:
   > Responsibility: Granularity — enable precise test outcome reporting.
   > Verification: Test report includes all four states.
 
+- **ROLE_ALWAYS_MOCK**: Role output MUST remain mocked regardless of TEST_ENV.
+  > Responsibility: Determinism — scripts can execute full tests without LLM.
+  > Verification: Role adapter returns fixture values in both MOCK and REAL modes.
+
+- **WORKFLOW_INTEROP_COVERAGE**: L3 workflow specs MUST cover interface interoperability.
+  > Responsibility: Integration — verify communication between components.
+  > Verification: Workflow tests exercise cross-interface data flow.
+
+- **FULL_WORKFLOW_REQUIRED**: L3 MUST define `full_workflow` covering all Roles and Components.
+  > Responsibility: Completeness — end-to-end test for entire system.
+  > Verification: `test_workflow_full_workflow.py` invokes all roles and components.
+
 (Ref: VISION.SCOPE.COV)
 
 ---
@@ -631,10 +643,20 @@ standard_terms:
 
 ## CONTRACTS.CERTIFICATION
 
-- **ANSWER_KEY_GRANULAR**: Agent MUST generate individual `answer_key_{item_id}.md` files per H2 spec section.
-  > Responsibility: Maintainability — one answer file per spec item for easy updates.
-  > Verification: `tests/specs/agent/answer_key_*.md` files match H2 sections.
+- **ANSWER_KEY_LAYER**: Agent MUST generate `answer_key_l1.md` and `answer_key_l3.md` files.
+  > Responsibility: Organization — separate tests by layer for maintainability.
+  > Verification: `tests/specs/agent/answer_key_l{1,3}.md` files exist and match spec layers.
   (Ref: VISION.CERTIFICATION.COMPLIANCE, CONTRACTS.TESTING_WORKFLOW.TEST_GRANULARITY)
+
+- **VERIFY_SPEC_ANNOTATION**: Agent MUST include `@verify_spec_id("SPEC_ID")` annotation per test item.
+  > Responsibility: Traceability — enable coverage calculation for both agent and script tests.
+  > Verification: All test items contain `@verify_spec_id` with valid spec ID.
+  (Ref: VISION.SCOPE.COV, CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT)
+
+- **ERROR_PRONE_FOCUS**: Agent MUST design tests targeting error-prone usage patterns.
+  > Responsibility: Quality — cover realistic failure scenarios users encounter.
+  > Verification: Tests include edge cases and common misuse patterns.
+  (Ref: VISION.CERTIFICATION.COMPLIANCE)
 
 - **COMBINE_QUESTION_PAPER**: Script MUST combine all answer_key files and strip answers to generate `question_paper.md`.
   > Responsibility: Assessment — produce unified exam from individual answer keys.

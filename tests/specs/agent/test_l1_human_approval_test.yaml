@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: HUMAN_APPROVAL_TEST
-# ref: HUMAN_APPROVAL_TEST
-# Responsibility: Quality gate — human reviews test design.
-# Verification: notify_user called before file write.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: notify_user called before file write."

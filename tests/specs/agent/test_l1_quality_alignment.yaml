@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: QUALITY_ALIGNMENT
-# ref: QUALITY_ALIGNMENT
-# Responsibility: Maintainability, observability, determinism, modularity.
-# Verification: Warning raised for non-alignment.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: Warning raised for non-alignment."

@@ -1,8 +1,0 @@
-# Acceptance Test for L1 Contract: SKILL_TRACEABILITY
-# ref: SKILL_TRACEABILITY
-# Responsibility: Traceability — SKILL.md is derived artifact.
-# Verification: L3 updated before SKILL.md.
-
-cases:
-  - name: "Compliance Check"
-    expected: "Passes verification: L3 updated before SKILL.md."
