@@ -25,6 +25,9 @@ test:
   # Script Unit tests (L3)
   unit_dir: tests/specs/script/unit/
   
+  # Real adapters for TEST_ENV=REAL mode
+  real_adaptor_dir: tests/specs/real_adaptor/
+  
   # Detected framework
   framework: auto
 

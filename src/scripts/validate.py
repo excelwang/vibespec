@@ -550,10 +550,90 @@ def validate_specs(specs_dir: Path) -> tuple:
         
     return errors, warnings
 
+
+def verify_compiled(file_path: Path):
+    """Verify structural integrity and semantic traceability of compiled spec."""
+    if not file_path.exists():
+        print(f"❌ File not found: {file_path}")
+        return 1
+        
+    content = file_path.read_text()
+    errors = []
+    
+    # --- 1. Structural Checks ---
+    if "vibespecS SYSTEM CONTEXT" not in content[:200]:
+        errors.append("Structure: Missing System Context Preamble")
+        
+    for layer in ['L0', 'L1', 'L2', 'L3']:
+        if f"# Source: {layer}" not in content:
+            errors.append(f"Structure: Missing Layer Header for {layer}")
+            
+    # --- 2. Navigation Checks ---
+    toc_links = re.findall(r'\[.*?\]\(#(source-[\w-]+)\)', content)
+    anchors = set(re.findall(r"<a id='(source-[\w-]+)'>", content))
+    
+    if not toc_links:
+        errors.append("Navigation: No TOC links found")
+        
+    for link in toc_links:
+        if link not in anchors:
+            errors.append(f"Navigation: Broken TOC Link #{link}")
+
+    # --- 3. Semantic Traceability Checks ---
+    clean_content = re.sub(r'(`(?:[^`]+)`|```(?:[^`]+)```)', '', content)
+    
+    defined_ids = set()
+    current_h2 = None
+    lines = content.split('\n')
+    for line in lines:
+        stripped = line.strip()
+        h2_match = re.match(r'^##\s+(?:[\[\w]+\]\s+)?([A-Z_0-9]+(?:\.[A-Z_0-9]+)*)', stripped)
+        if h2_match:
+            current_h2 = h2_match.group(1)
+            defined_ids.add(current_h2)
+            continue
+        if current_h2 and stripped.startswith('- **'):
+            key_match = re.match(r'-\s*\*\*([A-Z0-9_]+)\*\*:', stripped)
+            if key_match:
+                full_id = f"{current_h2}.{key_match.group(1)}"
+                defined_ids.add(full_id)
+    
+    raw_refs = re.findall(r'\(Ref:\s*([^)]+)\)', clean_content)
+    referenced_ids = set()
+    for ref_group in raw_refs:
+        tokens = re.findall(r'([A-Z0-9_]+(?:\.[A-Z0-9_]+)+)', ref_group)
+        for t in tokens:
+            referenced_ids.add(t)
+
+    dangling = [ref for ref in referenced_ids if ref not in defined_ids]
+    if dangling:
+        errors.append(f"Traceability: {len(dangling)} Dangling References")
+        for d in sorted(dangling)[:3]:
+            errors.append(f"  - {d}")
+
+    # --- Report ---
+    if errors:
+        print(f"❌ Compiled spec verification failed:")
+        for e in errors:
+            print(f"  - {e}")
+        return 1
+    else:
+        print(f"✅ Compiled spec verified:")
+        print(f"  - Structure: OK (L0-L3 present)")
+        print(f"  - Navigation: OK ({len(toc_links)} links)")
+        print(f"  - Semantics: OK ({len(defined_ids)} IDs, {len(referenced_ids)} refs)")
+        return 0
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('specs_dir', nargs='?', default='./specs')
+    parser.add_argument('--compiled', help='Verify compiled spec file instead of source specs')
     args = parser.parse_args()
+    
+    # If --compiled is specified, run compiled verification
+    if args.compiled:
+        return verify_compiled(Path(args.compiled))
     
     specs_dir = Path(args.specs_dir)
     if not specs_dir.exists():

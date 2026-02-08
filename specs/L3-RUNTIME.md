@@ -8,7 +8,7 @@ version: 3.0.0
 > 
 > **Content Types**: `[interface]` | `[decision]` | `[algorithm]` | `[workflow]`
 
-## Item Type Definitions
+**Item Type Definitions**
 
 | Type | Tag | Associated Entity | Purpose | Content Requirement |
 |------|-----|-------------------|---------|---------------------|

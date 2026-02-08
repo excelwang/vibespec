@@ -7,8 +7,8 @@ Implements: Answer Key Format Plan (strippable answers)
 Usage: python generate_test_paper.py [tests_dir]
 
 Output:
-  - tests/test_paper_agent.md  (L1 Agent contracts)
-  - tests/test_paper_role.md   (L3 Decisions)
+  - tests/specs/agent/test_paper.md     (L1 Agent contracts)
+  - tests/specs/decision/test_paper.md  (L3 Decisions)
 """
 import re
 import sys
@@ -81,17 +81,17 @@ def main():
     if agent_dir.exists():
         total += generate_test_paper(
             agent_dir, 
-            tests_dir / 'test_paper_agent.md',
+            agent_dir / 'test_paper.md',
             'L1 Agent Contract'
         )
     
     # Generate L3 Decision test paper
-    role_dir = specs_dir / 'role'
-    if role_dir.exists():
+    decision_dir = specs_dir / 'decision'
+    if decision_dir.exists():
         total += generate_test_paper(
-            role_dir,
-            tests_dir / 'test_paper_role.md', 
-            'L3 Decision Role'
+            decision_dir,
+            decision_dir / 'test_paper.md', 
+            'L3 Decision'
         )
     
     print(f"\n📝 Total questions generated: {total}")

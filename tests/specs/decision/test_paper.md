@@ -1,4 +1,4 @@
-# Test Paper: L3 DECISION ROLE Compliance Test
+# Test Paper: L3 DECISION Compliance Test
 
 > ⚠️ **IMPORTANT**: Answer based ONLY on `.compiled-full-spec.md` content.
 > Do NOT use external knowledge or infer beyond what is explicitly stated in the spec.

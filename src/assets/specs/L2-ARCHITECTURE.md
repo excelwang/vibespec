@@ -2,40 +2,124 @@
 version: 1.0.0
 ---
 
-# L2: Architecture
+# L2: {{PROJECT_NAME}} Architecture
 
-> **Subject**: Role (Active) | Component (Passive)
-> - Role: Observes / Decides / Acts (Agent-driven)
-> - Component: Input / Output (Script-driven)
-> - Heading levels indicate hierarchy: H2 = Top, H3 = Subsystem, H4 = Leaf
-
----
-
-## ROLES.CORE
-
-> **Guidance**: Active entities that Observe, Decide, and Act.
-
-#### [Role Name]
-
-**Role**: [Single sentence responsibility]
-
-- **Observes**: [Inputs, events, state]
-- **Decides**: [Logic, branching, choices]
-- **Acts**: [Outputs, side effects, calls]
-
-(Ref: CONTRACTS.EXAMPLE)
+> This document defines the high-level component structure.
+> Each component traces to L1 contracts and decomposes into L3 items.
 
 ---
 
 ## COMPONENTS.CORE
 
-> **Guidance**: Passive entities that process Input -> Output.
+Core components that implement primary functionality.
 
-#### [Component Name]
+### COMPONENTS.CORE.{{DOMAIN_1}}
 
-**Component**: [Single sentence responsibility]
+#### {{COMPONENT_NAME}}
 
-- **Input**: [Data structures, arguments]
-- **Output**: [Return values, artifacts]
+**Component**: [Description of what this component does]
 
-(Ref: CONTRACTS.EXAMPLE)
+**Type**: Script | Agent
+
+**Implements**:
+- (Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
+
+**Dependencies**:
+- [List internal/external dependencies]
+
+---
+
+### COMPONENTS.CORE.{{DOMAIN_2}}
+
+#### {{COMPONENT_NAME}}
+
+**Component**: [Description]
+
+**Type**: Script | Agent
+
+**Implements**:
+- (Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
+
+---
+
+## COMPONENTS.AUTOMATION
+
+Components for automated workflows.
+
+### COMPONENTS.AUTOMATION.{{WORKFLOW_DOMAIN}}
+
+#### {{WORKFLOW_COMPONENT}}
+
+**Component**: [Description of automation workflow]
+
+**Type**: Workflow
+
+**Implements**:
+- (Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
+
+---
+
+## COMPONENTS.TESTING
+
+Components for the testing workflow.
+
+### COMPONENTS.TESTING.ADAPTER_PATTERN
+
+#### MOCK_ADAPTER
+
+**Component**: Returns fixture data for MOCK mode testing.
+
+**Type**: Script
+
+**Implements**:
+- (Ref: CONTRACTS.TESTING_WORKFLOW.MOCK_DEFAULT)
+- (Ref: CONTRACTS.TESTING_WORKFLOW.ADAPTER_PATTERN)
+
+#### REAL_ADAPTER
+
+**Component**: Calls real implementation for REAL mode testing.
+
+**Type**: Script
+
+**Implements**:
+- (Ref: CONTRACTS.TESTING_WORKFLOW.REAL_SWITCH)
+- (Ref: CONTRACTS.TESTING_WORKFLOW.ADAPTER_PATTERN)
+
+**Location**: `tests/specs/real_adaptor/`
+
+---
+
+## COMPONENTS.ROLES
+
+Agent role components for semantic decisions.
+
+### COMPONENTS.ROLES.{{ROLE_NAME}}
+
+#### {{DECISION_NAME}}
+
+**Component**: [Description of agent decision role]
+
+**Type**: Agent (Decision)
+
+**Implements**:
+- (Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
+
+---
+
+## COMPONENTS.{{PROJECT_SPECIFIC}}
+
+> Add your project-specific components here.
+
+### COMPONENTS.{{PROJECT_SPECIFIC}}.{{DOMAIN}}
+
+#### {{COMPONENT_NAME}}
+
+**Component**: [Description of what this component does]
+
+**Type**: Script | Agent | Hybrid
+
+**Implements**:
+- (Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
+
+**Dependencies**:
+- [List internal/external dependencies]

@@ -110,7 +110,7 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
     
     New structure:
     - tests/specs/agent/       # L1 Agent contracts (answer_key by Agent)
-    - tests/specs/role/        # L3 Decisions (answer_key by Role)  
+    - tests/specs/decision/    # L3 Decisions (answer_key)
     - tests/specs/interface/   # L3 Interface tests
     - tests/specs/algorithm/   # L3 Algorithm tests
     - tests/specs/workflow/    # L3 Workflow integration tests
@@ -119,12 +119,12 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
     
     # Create type-based directories
     agent_dir = base_dir / "agent"
-    role_dir = base_dir / "role"
+    decision_dir = base_dir / "decision"
     interface_dir = base_dir / "interface"
     algorithm_dir = base_dir / "algorithm"
     workflow_dir = base_dir / "workflow"
     
-    for d in [agent_dir, role_dir, interface_dir, algorithm_dir, workflow_dir]:
+    for d in [agent_dir, decision_dir, interface_dir, algorithm_dir, workflow_dir]:
         d.mkdir(parents=True, exist_ok=True)
     
     generated_count = 0
@@ -135,7 +135,7 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
     for d in [interface_dir, algorithm_dir, workflow_dir]:
         existing_tests.update(d.glob("test_*.py"))
     existing_agent = set(agent_dir.glob("answer_key_*.md"))
-    existing_role = set(role_dir.glob("answer_key_*.md"))
+    existing_decision = set(decision_dir.glob("answer_key_*.md"))
 
     # Detect modified specs for force-update
     modified_specs = get_modified_specs(specs_dir)
@@ -214,7 +214,10 @@ Describe how the Agent should behave in the following scenarios:
             
             if f_type == 'decision':
                 # L3 Decision (Role): generate answer_key skeleton
-                answer_key_file = role_dir / f"answer_key_{safe_id}.md"
+                l3_id = f"L3.{f_id}"
+                safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', l3_id).lower()
+                
+                answer_key_file = decision_dir / f"answer_key_{safe_id}.md"
                 generated_files.add(answer_key_file)
                 
                 force_update = f.name in modified_specs
@@ -350,7 +353,7 @@ if __name__ == '__main__':
                          generated_count += 1
 
     # Report Orphans
-    all_existing = existing_tests | existing_agent | existing_role
+    all_existing = existing_tests | existing_agent | existing_decision
     orphans = all_existing - generated_files
     if orphans:
         print(f"⚠️  Orphaned tests found (spec deleted?):")

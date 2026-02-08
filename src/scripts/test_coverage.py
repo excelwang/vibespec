@@ -42,7 +42,7 @@ def extract_testable_items(specs_dir: Path) -> list:
             if match and current_section:
                 rule_id = match.group(1)
                 rule_text = match.group(2)
-                full_id = f"{current_section}.{rule_id}" if current_section else rule_id
+                full_id = f"L1.{current_section}.{rule_id}"  # Use L1 prefix
                 safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', full_id).lower()
                 
                 items.append({
@@ -82,7 +82,12 @@ def extract_testable_items(specs_dir: Path) -> list:
                             fixtures.append(dict(zip(headers, cols)))
             
             # Determine test owner and expected path
-            safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', item_id).lower()
+            if item_type == 'decision':
+                l3_id = f"L3.{item_id}"  # Use L3 prefix
+            else:
+                l3_id = item_id
+
+            safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', l3_id).lower()
             
             if item_type in ['interface', 'algorithm']:
                 test_owner = 'Script'
@@ -92,12 +97,12 @@ def extract_testable_items(specs_dir: Path) -> list:
                 expected_test = f"tests/specs/workflow/test_{safe_id}.py"
             elif item_type == 'decision':
                 test_owner = 'Agent'
-                expected_test = f"tests/specs/role/answer_key_{safe_id}.md"
+                expected_test = f"tests/specs/decision/answer_key_{safe_id}.md"
             else:
                 continue
             
             items.append({
-                'id': item_id,
+                'id': l3_id,
                 'type': item_type,
                 'fixtures': fixtures,
                 'test_owner': test_owner,
@@ -117,18 +122,29 @@ def check_test_status(item: dict, project_root: Path) -> dict:
     
     content = test_path.read_text()
     
+    # Check for @verify_spec annotation
+    spec_id = item['id']
+    if f'@verify_spec("{spec_id}")' not in content and f"@verify_spec('{spec_id}')" not in content:
+         return {'status': 'INVALID', 'reason': f'Missing annotation @verify_spec("{spec_id}")'}
+
     # Check for agent (L1 Agent contract) stub indicators
     if item['type'] == 'agent':
-        if '## TODO:' in content or 'TODO' in content:
-            return {'status': 'STUB', 'reason': 'Agent validation not implemented'}
+        if '<!-- ANSWER_START -->' not in content:
+            return {'status': 'STUB', 'reason': 'Answer key not generated'}
+        # Check for placeholder content in answers
+        if '[Scenario' in content or '[Action per spec]' in content or '[Expected result]' in content:
+            return {'status': 'STUB', 'reason': 'Answer contains placeholders'}
         return {'status': 'COMPLETE', 'reason': 'Answer key implemented'}
     
     # Check for answer_key (L3 decision) stub indicators
     if item['type'] == 'decision':
-        if '## TODO: Agent Implementation' in content:
-            return {'status': 'STUB', 'reason': 'Agent validation not implemented'}
-        if 'validation_steps:' in content and '[DECISION_COMPONENT]' in content:
-            return {'status': 'STUB', 'reason': 'Placeholder validation steps'}
+        if '<!-- ANSWER_START -->' not in content:
+            return {'status': 'STUB', 'reason': 'Answer key not generated'}
+        # Check for placeholder content  
+        if 'TODO' in content or '[' in content and ']' in content:
+            # More specific check: look for table placeholders
+            if '| TODO' in content or '| [' in content:
+                return {'status': 'STUB', 'reason': 'Answer contains placeholders'}
         return {'status': 'COMPLETE', 'reason': 'Answer key implemented'}
     
     # Check for Python test stub indicators
