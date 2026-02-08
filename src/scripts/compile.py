@@ -368,11 +368,12 @@ if __name__ == '__main__':
     specs_root = tests_dir / "specs"
     if specs_root.exists():
         naming_rules = {
-            "agent": re.compile(r"^answer_key_[a-z0-9_]+\.md$"),
-            "role": re.compile(r"^answer_key_[a-z0-9_]+\.md$"),
+            "agent": re.compile(r"^(answer_key_[a-z0-9_]+|test_paper)\.md$"),
+            "decision": re.compile(r"^(answer_key_[a-z0-9_]+|test_paper)\.md$"),
             "interface": re.compile(r"^test_[a-z0-9_]+\.py$"),
             "algorithm": re.compile(r"^test_[a-z0-9_]+\.py$"),
-            "workflow": re.compile(r"^test_[a-z0-9_]+\.py$")
+            "workflow": re.compile(r"^test_[a-z0-9_]+\.py$"),
+            "real_adaptor": re.compile(r"^.*$") # Allow any file in real_adaptor
         }
         
         misplaced = []
@@ -382,9 +383,10 @@ if __name__ == '__main__':
             if f.is_file() and f.suffix in ['.py', '.md', '.yaml'] and "__pycache__" not in f.parts:
                 # Identify category
                 category = None
-                for cat in ["agent", "role", "interface", "algorithm", "workflow"]:
+                for cat in ["agent", "decision", "interface", "algorithm", "workflow", "real_adaptor"]:
                     if str(f).startswith(str(specs_root / cat)):
                         category = cat
+
                         break
                 
                 if category:
