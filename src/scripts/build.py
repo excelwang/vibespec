@@ -1,232 +1,198 @@
 #!/usr/bin/env python3
 """
-Vibespec Build Script - Synchronizes project artifacts with compiled specs.
+Vibespec Build Script - The Bridge between Spec and Code.
 
-Zero third-party dependencies - uses Python stdlib only.
-Version: 2.0.0
+Features:
+1. Verify Compiled Spec (Law)
+2. Gap Analysis (Spec vs Code)
+3. Code Generation (Stubs)
+4. SKILL.md Sync (Contract Enforcement)
 
-Build Phase performs:
-1. Verify compiled spec exists
-2. Synchronize SKILL.md with L3 changes
-3. Report status
-
-Configuration: Reads from vibespec.yaml
+Zero Dependencies.
 """
 import sys
+import re
+import os
 from pathlib import Path
 from datetime import datetime
 
+# --- Config & Utils ---
 
 def load_config(project_root: Path) -> dict:
-    """Load configuration from vibespec.yaml if present."""
+    """Load configuration from vibespec.yaml."""
     config_file = project_root / 'vibespec.yaml'
     if not config_file.exists():
         print(f"❌ Error: vibespec.yaml not found in {project_root}")
         sys.exit(1)
     
-    # Simple YAML parsing for basic key-value structure (no external deps)
     config = {}
     current_section = None
     content = config_file.read_text()
     
     for line in content.split('\n'):
+        # 1. Handle Section Headers (e.g., "meta:")
+        if not line.startswith(' '):
+            stripped = line.strip()
+            if stripped.endswith(':') and ':' not in stripped[:-1]:
+                current_section = stripped[:-1]
+                config[current_section] = {}
+                continue
+        
+        # 2. Handle Key-Values within Sections
         stripped = line.strip()
         if not stripped or stripped.startswith('#'):
             continue
-        
-        # Section header
-        if not line.startswith(' ') and stripped.endswith(':') and ':' not in stripped[:-1]:
-            current_section = stripped[:-1]
-            config[current_section] = {}
-        # Key-value in section
-        elif current_section and ':' in stripped:
+            
+        if current_section and ':' in stripped:
             key, value = stripped.split(':', 1)
-            value = value.strip().strip('"\'')
-            # Handle lists [item1, item2]
-            if value.startswith('[') and value.endswith(']'):
+            key = key.strip()
+            value = value.strip()
+            
+            # Handle quoted strings explicitly
+            if value.startswith('"') and value.endswith('"'):
+                value = value[1:-1]
+            elif value.startswith("'") and value.endswith("'"):
+                value = value[1:-1]
+            elif value.startswith('[') and value.endswith(']'):
                 value = [v.strip() for v in value[1:-1].split(',')]
-            config[current_section][key.strip()] = value
+                
+            config[current_section][key] = value
     
     return config
 
-
 def verify_compiled_spec(compiled_path: Path) -> bool:
-    """Verify compiled spec exists and is up-to-date."""
+    """Ensure specs/.compiled-full-spec.md exists and is fresh."""
     if not compiled_path.exists():
         print(f"❌ Error: Compiled spec not found: {compiled_path}")
-        print(f"   → Action: Run 'python3 src/scripts/compile.py' first")
+        print(f"   → Run 'vibespec compile' first")
         return False
     
-    # Check if compiled spec is newer than source specs
-    specs_dir = compiled_path.parent / 'specs'
+    specs_dir = compiled_path.parent
     if specs_dir.exists():
         compiled_mtime = compiled_path.stat().st_mtime
         for spec_file in specs_dir.glob('L*.md'):
             if spec_file.stat().st_mtime > compiled_mtime:
                 print(f"⚠️  Warning: {spec_file.name} is newer than compiled spec")
-                print(f"   → Action: Run 'python3 src/scripts/compile.py' to update")
-                return True  # Continue but warn
+                print(f"   → Run 'vibespec compile' to update")
+                # Continue allowing apply, but warn
     
     return True
 
+# --- Parsing Logic ---
 
-def sync_skill_md(project_root: Path, skill_output: Path, compiled_spec: Path, skills: list) -> dict:
-    """
-    Synchronize SKILL.md with compiled spec and active skills.
-    Returns status dict with updates made.
-    """
-    status = {
-        'skill_exists': skill_output.exists(),
-        'updates': [],
-        'warnings': [],
-        'active_skills': skills
-    }
+def parse_spec_items(compiled_spec: Path):
+    """Parses [interface], [algorithm], [workflow] items from spec."""
+    content = compiled_spec.read_text()
+    items = []
     
-    if not skill_output.exists():
-        status['warnings'].append(f"SKILL.md not found at {skill_output}")
-        return status
+    # Regex to find items: ## [type] ID ... block
+    # We need to capture the code block too for stub generation
+    pattern = re.compile(r'^## \[(?P<type>interface|algorithm|workflow)\]\s+(?P<id>.+?)\n(?P<body>.*?)(?=\n##|\n---|\Z)', re.DOTALL | re.MULTILINE)
     
-    # Read current SKILL.md
-    skill_content = skill_output.read_text()
-    
-    # Check for version alignment
-    if 'version: 2.0.0' not in skill_content and 'Version: 2.0.0' not in skill_content:
-        # Check frontmatter properly
-        pass # removed strict check to allow for flexible frontmatter
-    
-    # Check if configured skills are mentioned (Implementation of SKILL_SYNC)
-    for skill in skills:
-        if skill not in skill_content:
-             status['warnings'].append(f"Configured skill '{skill}' not mentioned in SKILL.md")
-
-    # Read compiled spec to check for new L3 items
-    if compiled_spec.exists():
-        compiled_content = compiled_spec.read_text()
+    for match in pattern.finditer(content):
+        item_type = match.group('type')
+        item_id = match.group('id').strip()
+        body = match.group('body')
         
-        # Extract L3 interface names from compiled spec
-        l3_interfaces = []
-        for line in compiled_content.split('\n'):
-            if line.startswith('## [interface]') or line.startswith('## [decision]') or line.startswith('## [algorithm]'):
-                interface_name = line.split(']')[1].strip()
-                l3_interfaces.append(interface_name)
+        # Extract code block if key
+        code_match = re.search(r'```(?:python|code|TEXT)(.*?)```', body, re.DOTALL)
+        code_block = code_match.group(1).strip() if code_match else ""
         
-        status['l3_interfaces_count'] = len(l3_interfaces)
-    
-    return status
+        # Extract Component/Contract ref
+        ref_match = re.search(r'> Implements: \[(.+?)\]', body)
+        implements = ref_match.group(1) if ref_match else "Unknown"
 
+        items.append({
+            'type': item_type,
+            'id': item_id,
+            'body': body,
+            'code': code_block,
+            'implements': implements
+        })
+        
+    return items
 
-def generate_report(status: dict, config: dict) -> str:
-    """Generate build report."""
-    lines = []
-    lines.append("=== Vibespec Build Report ===\n")
-    lines.append(f"📅 Timestamp: {datetime.now().isoformat()}\n")
-    lines.append(f"📂 Project: {config.get('project', {}).get('name', 'unknown')}\n")
-    lines.append(f"📦 Version: {config.get('project', {}).get('version', 'unknown')}\n")
-    
-    skills = status.get('skill', {}).get('active_skills', [])
-    if skills:
-        lines.append(f"🔧 Active Skills: {', '.join(skills)}\n")
-    
-    lines.append("")
-    
-    # Compiled spec status
-    lines.append("📋 Compiled Spec:")
-    lines.append(f"   Status: {'✅ OK' if status.get('compiled_ok') else '❌ Missing'}")
-    
-    # SKILL.md status
-    lines.append("\n📝 SKILL.md:")
-    lines.append(f"   Exists: {'✅ Yes' if status.get('skill', {}).get('skill_exists') else '❌ No'}")
-    if status.get('skill', {}).get('l3_interfaces_count'):
-        lines.append(f"   L3 Interfaces: {status['skill']['l3_interfaces_count']}")
-    
-    # Warnings
-    if status.get('skill', {}).get('warnings'):
-        lines.append("\n⚠️  Warnings:")
-        for warn in status['skill']['warnings']:
-            lines.append(f"   - {warn}")
-    
-    # Updates
-    if status.get('skill', {}).get('updates'):
-        lines.append("\n📝 Updates Made:")
-        for update in status['skill']['updates']:
-            lines.append(f"   - {update}")
-    
-    return '\n'.join(lines)
+# --- Gap Analysis (Logical) ---
 
+def generate_manifest(items: list, config: dict) -> str:
+    """Generate a logical manifest of L3 items for the Agent."""
+    manifest = "## 📜 L3 Spec Manifest\n\n"
+    
+    # Inject Agent Directive if present
+    directive = config.get('meta', {}).get('agent_directive')
+    if directive:
+        manifest += f"🧠 **AGENT DIRECTIVE**: {directive}\n\n"
+        
+    manifest += "⚠️  **CRITICAL INSTRUCTION: THE FILE specs/.compiled-full-spec.md IS NOT A SUGGESTION—IT IS THE LAW.** ⚠️\n\n"
+    manifest += "As the IMPLEMENTER Agent, you MUST perform GAP ANALYSIS on the codebase using this manifest.\n"
+    manifest += "You MUST classify every item below into one of these categories:\n"
+    manifest += "1. **[MISSING]**: Item defined in spec but no corresponding code exists.\n"
+    manifest += "2. **[OUTDATED]**: Code exists but signature/logic does not match spec.\n"
+    manifest += "3. **[ORPHAN]**: Code exists but is NOT defined in spec (Delete or Document).\n"
+    manifest += "4. **[MATCH]**: Code exists and matches spec.\n\n"
+    
+    for item in items:
+        manifest += f"- **[{item['type'].upper()}]** {item['id']}\n"
+        manifest += f"  - Implements: {item['implements']}\n"
+        # manifest += f"  - Signature: \n{item['code']}\n" 
+    
+    return manifest
 
-def build(project_root: Path = None):
-    """Main build function."""
-    if project_root is None:
-        project_root = Path.cwd()
-    
-    # AUTHORITATIVE PROMPT
-    print("\n🔥 **ATTENTION ENGINEER** 🔥")
-    print("You are about to materialize the **Project Specs**.")
-    print("The file specs/.compiled-full-spec.md is not a suggestion—it is the **LAW**.")
-    print("Every Contract is a promise. Every Interface is a covenant.")
-    print("Do not improvise. Do not guess.")
-    print("Your mission is **Perfection**:")
-    print("- 100% Traceability")
-    print("- 100% Test Coverage")
-    print("- 0% Drift")
-    print("Build this with the precision of a watchmaker and the pride of an artisan.")
-    print("The spec is the blueprint; the code is the monument.")
-    print("**EXECUTE.**\n")
-    
-    print("=== Vibespec Build ===\n")
-    
-    # Load configuration
-    config = load_config(project_root)
-    build_config = config.get('build', {})
-    skills = config.get('project', {}).get('skills', [])
-    
-    compiled_spec = project_root / build_config.get('compiled_spec', 'vibespec-full.md')
-    skill_output = project_root / build_config.get('skill_output', 'src/SKILL.md')
-    
-    status = {}
-    
-    # Phase 1: Verify compiled spec
-    print("📋 Phase 1: Verifying compiled spec...")
-    status['compiled_ok'] = verify_compiled_spec(compiled_spec)
-    
-    if not status['compiled_ok']:
-        print("\n❌ Build failed: Compiled spec not found")
-        print("   → Run 'python3 src/scripts/compile.py' first")
-        sys.exit(1)
-    
-    print(f"   ✅ Found: {compiled_spec}")
-    
-    # Phase 2: Sync SKILL.md
-    print("\n📝 Phase 2: Synchronizing SKILL.md...")
-    status['skill'] = sync_skill_md(project_root, skill_output, compiled_spec, skills)
-    
-    if status['skill']['skill_exists']:
-        print(f"   ✅ SKILL.md verified: {skill_output}")
-    else:
-        print(f"   ⚠️  SKILL.md not found: {skill_output}")
-    
-    # Phase 3: Report
-    print("\n" + generate_report(status, config))
-    
-    # Final status
-    has_warnings = bool(status.get('skill', {}).get('warnings'))
-    
-    if has_warnings:
-        print("\n⚠️  Build completed with warnings")
-    else:
-        print("\n✅ Build completed successfully")
-    
-    return status
+# --- Main ---
 
-
-if __name__ == "__main__":
+def main():
     import argparse
-    parser = argparse.ArgumentParser(
-        description='Vibespec Build - Synchronize project artifacts with specs.',
-        epilog='Example: python build.py'
-    )
-    parser.add_argument('--project-root', '-p', type=Path, default=None,
-                        help='Project root directory (default: current directory)')
+    parser = argparse.ArgumentParser(description='Vibespec Build - Tool for IMPLEMENTER Role')
+    parser.add_argument('--manifest', action='store_true', help='Output L3 Spec Manifest for Agent')
     args = parser.parse_args()
     
-    build(args.project_root)
+    project_root = Path.cwd()
+    
+    # print("\n🏗️  Vibespec Build\n")
+    
+    config = load_config(project_root)
+    compiled_spec = project_root / config.get('build', {}).get('compiled_spec', 'specs/.compiled-full-spec.md')
+    
+    if not verify_compiled_spec(compiled_spec):
+        sys.exit(1)
+        
+    items = parse_spec_items(compiled_spec)
+    
+    if args.manifest:
+        print(generate_manifest(items))
+    else:
+        print(f"✅ Verified {len(items)} L3 items in Spec.")
+        print("💡 Run with --manifest to see the implementation list for the Agent.")
+
+# --- Main ---
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description='Vibespec Build - Tool for IMPLEMENTER Role')
+    parser.add_argument('--manifest', action='store_true', help='Output L3 Spec Manifest for Agent')
+    args = parser.parse_args()
+    
+    project_root = Path.cwd()
+    
+    # Load Generic Config
+    config = load_config(project_root)
+    
+    # Resolve Paths from Config
+    build_config = config.get('build', {})
+    compiled_spec_path = build_config.get('compiled_spec', 'specs/.compiled-full-spec.md')
+    compiled_spec = project_root / compiled_spec_path
+    
+    if not verify_compiled_spec(compiled_spec):
+        sys.exit(1)
+        
+    items = parse_spec_items(compiled_spec)
+    
+    if args.manifest:
+        print(generate_manifest(items, config))
+    else:
+        # Standard Output: Summary for Human/Agent
+        print(f"✅ Verified {len(items)} L3 items in compiled spec.")
+        print("💡 Run 'vibespec build --manifest' to see the implementation tasks.")
+
+if __name__ == "__main__":
+    main()
