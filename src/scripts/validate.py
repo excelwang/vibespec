@@ -171,6 +171,12 @@ def parse_spec_file(spec_file: Path) -> dict:
 
         # 2. H3 Detection: ### ID
         if stripped.startswith('### '):
+            # L3 items are strictly defined by H2 [tag]. H3 should be content.
+            if layer == 3:
+                if current_export and current_export in items:
+                    items[current_export]['body'] += line + '\n'
+                continue
+
             hid = stripped[4:].strip()
             current_h3 = hid
             if re.match(r'^[A-Z0-9_.]+$', hid):
@@ -189,18 +195,18 @@ def parse_spec_file(spec_file: Path) -> dict:
 
         # 3. H4 Detection: #### ID
         if stripped.startswith('#### '):
+            # L3 items are strictly defined by H2. H4 is content.
+            if layer == 3:
+                if current_export and current_export in items:
+                    items[current_export]['body'] += line + '\n'
+                continue
+
             hid = stripped[5:].strip()
             parent_prefix = current_h3 if current_h3 else current_h2
             
             if re.match(r'^[A-Z0-9_.]+$', hid):
-                if layer == 3:
-                     full_id = hid
-                elif layer == 2 and parent_prefix:
+                if layer == 2 and parent_prefix:
                      # L2 leaf: H2/H3 parent + ID
-                     # If parent is ROLES.SPEC_MANAGEMENT, child is ARCHITECT
-                     # Output: ROLES.SPEC_MANAGEMENT.ARCHITECT
-                     # But spec_id is ARCHITECTURE, need to handle prefixes
-                     # Actually standard L2 usage: H3=ROLES.SPEC_MANAGEMENT
                      full_id = f"{parent_prefix}.{hid}"
                 else:
                      full_id = f"{spec_id}.{hid}"
@@ -214,6 +220,11 @@ def parse_spec_file(spec_file: Path) -> dict:
 
         # 4. List Item Detection: - **KEY**:
         if stripped.startswith('- **'):
+            if layer == 3:
+                if current_export and current_export in items:
+                    items[current_export]['body'] += line + '\n'
+                continue
+            
             key_match = re.match(r'- \*\*([A-Z0-9_]+)\*\*:', stripped)
             if key_match:
                 key = key_match.group(1)
@@ -229,14 +240,14 @@ def parse_spec_file(spec_file: Path) -> dict:
         if current_export and current_export in items:
             items[current_export]['body'] += line + '\n'
             
-            # Extract (Ref: X)
-            ref_matches = re.findall(r'\(Ref: ([\w.]+)(?:,\s*(\d+)%)?\)', line)
+            # Extract (Ref: X) - exclude placeholder '...'
+            ref_matches = re.findall(r'\(Ref: ([A-Z][\w.]+)(?:,\s*(\d+)%)?\)', line)
             for ref_id, weight_str in ref_matches:
                 weight = int(weight_str) if weight_str else 100
                 references.append({'id': ref_id, 'weight': weight, 'line': i+1, 'source_id': current_export})
             
-            # Extract Implements: [Type: ID]
-            impl_matches = re.findall(r'Implements:\s*\[(?:Role|Component):\s*([\w.]+)\]', line)
+            # Extract Implements: [Type: ID] - must start with uppercase
+            impl_matches = re.findall(r'Implements:\s*\[(?:Role|Component):\s*([A-Z][\w.]+)\]', line)
             for impl_id in impl_matches:
                 references.append({'id': impl_id, 'weight': 100, 'line': i+1, 'source_id': current_export})
                 
@@ -307,9 +318,8 @@ def validate_specs(specs_dir: Path) -> tuple:
                     parent = '.'.join(parts[:i])
                     if parent in coverage: coverage[parent] += 1
             else:
-                if data['layer'] < 3: # Strict check for L0-L2
-                     # L3 might ref code symbols, less strict or handled by Consumers
-                     pass
+                # Strict check for all layers
+                errors.append(f"Dangling Reference: `{ref['source_id']}` refers to `{target}` which does not exist.")
 
     # 4. Check Completeness (L1 items must have downstream refs)
     for exp, count in coverage.items():
@@ -385,7 +395,13 @@ def validate_specs(specs_dir: Path) -> tuple:
             header = item_data['header']
             body = item_data['body']
             
-            # Check if it's an interface or algorithm
+            # 7a. Common Checks
+            # TRACEABILITY_TAG: All L3 items MUST have Implements: tag
+            if 'Implements: [' not in body:
+                warnings.append(f"L3 Quality: `{item_id}` missing `Implements: [Role|Component: ID]` tag.")
+
+            # 7b. Type-Specific Checks
+            # [interface] or [algorithm]
             if '[interface]' in header or '[algorithm]' in header:
                 # Check Fixtures table
                 if 'Fixtures' not in body and '| Input |' not in body:
@@ -418,6 +434,18 @@ def validate_specs(specs_dir: Path) -> tuple:
                 if cons_match and item_id in l3_interfaces:
                     consumers = [c.strip() for c in cons_match.group(1).split(',')]
                     l3_interfaces[item_id]['consumers'] = consumers
+
+            # [decision]
+            elif '[decision]' in header:
+                 # DECISION_FORMAT: Must have Table (|) or List (-)
+                 if '|' not in body and '- ' not in body:
+                     warnings.append(f"L3 Quality: `{item_id}` (Decision) must be structured (Table or List).")
+
+            # [workflow]
+            elif '[workflow]' in header:
+                # WORKFLOW_FORMAT: Must have "**Steps**" section (can have suffix like "**Steps - Init**")
+                if '**Steps' not in body:
+                     warnings.append(f"L3 Quality: `{item_id}` (Workflow) missing `**Steps**...` section.")
 
     # 8. Interface Compatibility Check
     for iface_id, iface_info in l3_interfaces.items():

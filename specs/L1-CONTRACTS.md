@@ -65,12 +65,12 @@ invariants:
 - **BATCH_READ**: Script MUST read all idea files before analysis.
   > Responsibility: Data integrity — complete picture for prioritization.
   > Verification: `files_read == files_exist`.
-  (Ref: VISION.SCOPE.IDEAS)
+  (Ref: VISION.SCOPE)
 
 - **TIMESTAMP_ORDER**: Script MUST sort ideas by filename timestamp.
   > Responsibility: Preserve user intent sequence.
   > Verification: Processing order matches chronological order.
-  (Ref: VISION.SCOPE.IDEAS)
+  (Ref: VISION.SCOPE)
 
 - **LEVEL_SEEKING**: Agent MUST classify each idea to highest applicable layer.
   > Responsibility: Shift-left — prevent detail pollution.
@@ -95,14 +95,14 @@ invariants:
 - **CONFLICT_DETECT**: Agent MUST identify conflicting ideas before resolution.
   > Responsibility: Analysis — detect overlapping or contradictory statements.
   > Verification: Conflict pairs logged before resolution applied.
-  (Ref: VISION.SCOPE.IDEAS)
+  (Ref: VISION.SCOPE)
 
 
 
 - **CONFLICT_RES**: Agent MUST resolve detected conflicts by latest timestamp.
   > Responsibility: Truth source — most recent intent wins.
   > Verification: Later idea values supersede earlier ones.
-  (Ref: VISION.SCOPE.IDEAS)
+  (Ref: VISION.SCOPE)
 
 ---
 
@@ -116,7 +116,7 @@ invariants:
 - **QUALITY_ALIGNMENT**: Agent SHOULD verify TARGET_PROJECT pillar alignment.
   > Responsibility: Maintainability, observability, determinism, modularity.
   > Verification: Warning raised for non-alignment.
-  (Ref: VISION.TARGET_PROJECT)
+  (Ref: VISION.SCOPE)
 
 - **HIERARCHY_CHECK**: Agent MUST load parent layer before editing child.
   > Responsibility: Traceability — prevent drift from parent requirements.
@@ -198,7 +198,7 @@ invariants:
 - **CONTEXT_BASED**: Agent SHOULD extract ideas from current conversation.
   > Responsibility: Efficiency — use existing context.
   > Verification: Ideas extracted without external log access.
-  (Ref: VISION.SCOPE.REFL)
+  (Ref: VISION.SCOPE)
 
 - **HUMAN_REVIEW**: Agent MUST get approval before saving distilled ideas.
   > Responsibility: Human gate — verify AI insights.
@@ -232,7 +232,7 @@ invariants:
 - **ZERO_DEPS**: Script MUST use only standard library.
   > Responsibility: Portability — no supply chain risk.
   > Verification: No pip dependencies.
-  (Ref: VISION.SCOPE.DEPS)
+  (Ref: VISION.SCOPE)
 
 ---
 
@@ -246,7 +246,7 @@ invariants:
 - **AGENT_FRIENDLY_OUTPUT**: Script MUST produce output that is actionable, locatable, and structured.
   > Responsibility: Clarity — enable agents to parse and act on results.
   > Verification: Output includes file paths, line numbers, IDs, and action recommendations.
-  (Ref: VISION.CODE_QUALITY_GOALS.OBSERVABILITY)
+  (Ref: VISION.CODE_QUALITY_GOALS)
 
 ---
 
@@ -255,7 +255,7 @@ invariants:
 - **DETECTION**: Script MUST detect missing `specs/` and trigger bootstrap.
   > Responsibility: Safety — prevent operation on uninitialized project.
   > Verification: Bootstrap triggered when specs/ absent.
-  (Ref: VISION.SCOPE.IDEAS)
+  (Ref: VISION.SCOPE)
 
 - **SCOPE_INQUIRY**: Agent MUST ask user to describe project.
   > Responsibility: Capture — get raw user intent.
@@ -275,7 +275,7 @@ invariants:
 - **INITIALIZATION**: Script MUST create L0-VISION.md and ideas/ on approval.
   > Responsibility: Structure — minimum viable spec foundation.
   > Verification: Required files exist after init.
-  (Ref: VISION.SCOPE.VAL)
+  (Ref: VISION.SCOPE)
 
 - **CONFIG_TEMPLATE**: Script MUST auto-generate `vibespec.yaml` using the standard template `assets/templates/vibespec.yaml`.
   > Responsibility: Standardization — prevent configuration drift at project inception.
@@ -289,7 +289,7 @@ invariants:
 - **TRIGGER_SCAN**: Script MUST scan ideas/ on bare `vibespec` invocation.
   > Responsibility: Default action — process pending ideas.
   > Verification: Ideas scanned when no arguments.
-  (Ref: VISION.SCOPE.IDEAS)
+  (Ref: VISION.SCOPE)
 
 - **TRIGGER_CAPTURE**: Script MUST save inline content as timestamped idea.
   > Responsibility: Capture — save raw thoughts immediately.
@@ -330,7 +330,7 @@ invariants:
 - **FULL_SCAN**: Script MUST run validation across all layers.
   > Responsibility: Completeness — scan L0-L3.
   > Verification: All spec files validated.
-  (Ref: VISION.SCOPE.VAL)
+  (Ref: VISION.SCOPE)
 
 - **REPORT**: Agent MUST summarize orphans, ratio warnings, terminology issues.
   > Responsibility: Feedback — actionable maintenance report.
@@ -345,7 +345,7 @@ invariants:
 - **COMPILE_PROMPT**: Agent SHOULD prompt for compilation on pass.
   > Responsibility: Artifact sync — keep output current.
   > Verification: Prompt shown on clean validation.
-  (Ref: VISION.SCOPE.DOCS)
+  (Ref: VISION.SCOPE)
 
 ---
 
@@ -389,12 +389,12 @@ invariants:
 - **SKILL_MD**: Script MUST treat SKILL.md as single source of truth for capabilities.
   > Responsibility: Auditability — version-controlled capabilities.
   > Verification: Capabilities match SKILL.md.
-  (Ref: VISION.SCOPE.SKILL)
+  (Ref: VISION.SCOPE)
 
 - **COMPLIANCE**: Script MUST validate SKILL.md against skill-creator schema.
   > Responsibility: Ecosystem compatibility.
   > Verification: Schema validation passes.
-  (Ref: VISION.SCOPE.SKILL)
+  (Ref: VISION.SCOPE)
 
 - **ENTRY_POINT**: Script MUST use `src/SKILL.md` as skill entry.
   > Responsibility: Location — consistent skill path.
@@ -469,7 +469,7 @@ invariants:
 - **EXPANSION_RATIO**: Script SHOULD warn if L(N)/L(N-1) ratio outside 1.0-10.0.
 - **TEST_COVERAGE**: Script SHOULD warn if L3 leaf has no `@verify_spec` reference.
 
-(Ref: VISION.SCOPE.COV)
+(Ref: VISION.SCOPE)
 
 ---
 
@@ -490,6 +490,18 @@ invariants:
 - **INTERFACE_COMPATIBILITY**: Script MUST verify type compatibility between interoperating interfaces.
   > Responsibility: Integration — ensure producer output matches consumer input.
   > Verification: Error if output type of producer does not match input type of consumer.
+
+- **DECISION_FORMAT**: `[decision]` items MUST include a Logic Table (pipes `|`) or a Checklist (bullets `-`).
+  > Responsibility: Clarity — decisions must be structured, not free text.
+  > Verification: Warning if body lacks `|` or `-`.
+
+- **WORKFLOW_FORMAT**: `[workflow]` items MUST include a "**Steps**:" section.
+  > Responsibility: Execution — workflows are sequences of actions.
+  > Verification: Warning if `**Steps**:` regex not found.
+
+- **TRACEABILITY_TAG**: ALL L3 items MUST include an `Implements: [Role|Component: ID]` tag.
+  > Responsibility: Traceability — link every implementation detail to architecture.
+  > Verification: Warning if `Implements:` tag missing.
 
 (Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE)
 
@@ -536,7 +548,7 @@ invariants:
   > Responsibility: Traceability — L1 requirements verified through integration tests.
   > Verification: `validate.py` checks L1→L3 workflow traceability. Refs must be part of a valid `[workflow]` item's Steps or Coverage section.
 
-(Ref: VISION.SCOPE.COV)
+(Ref: VISION.SCOPE)
 
 ---
 
@@ -572,7 +584,7 @@ invariants:
 - **SKILL_SYNC**: Script MUST synchronize `src/SKILL.md` with `skills` list in `vibespec.yaml`.
   > Responsibility: Consistency — `vibespec.yaml` is single source of truth for active skills.
   > Verification: `src/SKILL.md` reflects configured skills.
-  (Ref: VISION.SCOPE.SKILL)
+  (Ref: VISION.SCOPE)
 
 - **AUTHORITATIVE_PROMPT**: Script MUST present `specs/.compiled-full-spec.md` as non-negotiable Law to Agent.
   > Responsibility: Compliance — prevent agent improvisation.
@@ -641,7 +653,7 @@ standard_terms:
   > Naming: `test_{item_id}.*` or `answer_key_{item_id}.md` (extension per project framework).
   > Verification: Each test artifact maps to exactly one `## [...]` spec section.
 
-(Ref: VISION.SCOPE.COV), (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+(Ref: VISION.SCOPE), (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
 
 ---
 
@@ -655,7 +667,7 @@ standard_terms:
 - **VERIFY_SPEC_ANNOTATION**: Agent MUST include `@verify_spec_id("SPEC_ID")` annotation per test item.
   > Responsibility: Traceability — enable coverage calculation for both agent and script tests.
   > Verification: All test items contain `@verify_spec_id` with valid spec ID.
-  (Ref: VISION.SCOPE.COV, CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT)
+  (Ref: VISION.SCOPE, CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT)
 
 - **ERROR_PRONE_FOCUS**: Agent MUST design tests targeting error-prone usage patterns.
   > Responsibility: Quality — cover realistic failure scenarios users encounter.
@@ -710,7 +722,7 @@ standard_terms:
 - **USE_TEMPLATES**: Agent MUST use templates from `src/assets/specs/` when generating files.
   > Responsibility: Consistency — ensure uniform formatting across all generated specs.
   > Verification: Generated files match template structure.
-  (Ref: VISION.PHILOSOPHY.MAINTAINABILITY)
+  (Ref: VISION.PHILOSOPHY)
 
 - **TEMPLATE_FILES**: Templates MUST include: IDEA_TEMPLATE.md, L0-VISION.md, L1-CONTRACTS.md, L2-ARCHITECTURE.md, L3-IMPLEMENTATION.md.
   > Responsibility: Completeness — provide templates for all spec types.

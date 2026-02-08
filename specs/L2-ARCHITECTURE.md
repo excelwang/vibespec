@@ -234,7 +234,7 @@ version: 3.0.0
  - Input: `lines: string[]`
  - Output: `Section[]`
  
- (Ref: CONTRACTS.SECTION_MARKERS.H2_ANNOTATION), (Ref: CONTRACTS.SECTION_MARKERS.SYSTEM_SEMANTICS), (Ref: CONTRACTS.SECTION_MARKERS.STANDARD_SEMANTICS)
+
 
 #### VALIDATOR
 
@@ -355,7 +355,7 @@ version: 3.0.0
  - Input: `scope`
  - Output: `L0-VISION.md`, `vibespec.yaml`
  
- (Ref: CONTRACTS.BOOTSTRAP.INITIALIZATION), (Ref: CONTRACTS.BOOTSTRAP.CONFIG_GENERATION)
+ (Ref: CONTRACTS.BOOTSTRAP.INITIALIZATION)
 
 #### BUILD_SCRIPT
 
@@ -585,7 +585,7 @@ version: 3.0.0
   - Each item in answer_key files MUST include `@verify_spec_id("SPEC_ID")`
   - Tests MUST focus on error-prone usage patterns
 
-(Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_GRANULAR), (Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER), (Ref: CONTRACTS.CERTIFICATION.REALISTIC_CONTEXT)
+
 
 #### TEMPLATE_LOADER
 

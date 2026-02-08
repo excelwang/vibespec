@@ -8,6 +8,15 @@ version: 3.0.0
 > 
 > **Content Types**: `[interface]` | `[decision]` | `[algorithm]` | `[workflow]`
 
+## Item Type Definitions
+
+| Type | Tag | Associated Entity | Purpose | Content Requirement |
+|------|-----|-------------------|---------|---------------------|
+| **Interface** | `[interface]` | **Component** | Define system boundaries and function signatures. | Typed code block (TypeScript/Python), Fixtures table. |
+| **Decision** | `[decision]` | **Role** | Capture complex logic, human judgment, or policy rules. | Logic Table, Checklist, or Decision Tree. |
+| **Algorithm** | `[algorithm]` | **Component** | Describe deterministic computational steps. | Pseudocode or Flowchart. |
+| **Workflow** | `[workflow]` | **Component** | Orchestrate Components and Roles into end-to-end processes. | Ordered Steps list with Actor assignment. |
+
 ---
 
 ## [interface] SCANNER
@@ -73,8 +82,11 @@ interface ValidationResult {
 | Input | Expected | Case |
 |-------|----------|------|
 | Valid specs | {errors: [], warnings: []} | Normal |
+| Decision missing table | {warnings: [DecisionFormat]} | Edge |
+| Workflow missing steps | {warnings: [WorkflowFormat]} | Edge |
+| Interface missing fixtures | {warnings: [FixtureRequired]} | Edge |
+| Any item missing Implements | {warnings: [Traceability]} | Edge |
 | Dangling ref | {errors: [DanglingRef]} | Error |
-| Orphan item | {warnings: [Orphan]} | Edge |
 
 **Consumers**: [REVIEWER, TRACEABILITY_GUARDIAN]
 
@@ -97,7 +109,7 @@ interface Assembler {
 | [] | EmptyDoc | Edge |
 | Circular deps | AssemblyError | Error |
 
-**Consumers**: [compile.py]
+**Consumers**: [COMPILE_SCRIPT]
 
 ---
 
@@ -598,6 +610,7 @@ interface ValidateScript {
 | no specs | EmptyError | Edge |
 
 (Ref: CONTRACTS.STRICT_TESTABILITY.L1_WORKFLOW_COVERAGE)
+(Ref: CONTRACTS.L3_QUALITY.DECISION_FORMAT), (Ref: CONTRACTS.L3_QUALITY.WORKFLOW_FORMAT), (Ref: CONTRACTS.L3_QUALITY.TRACEABILITY_TAG)
 
 ---
 
@@ -1178,7 +1191,7 @@ interface CertificationEngine {
 
 ## [algorithm] SCENARIO_GENERATION
 
-> Implements: [Role: ROLES.QUALITY.TEST_DESIGNER]
+> Implements: [Role: ROLES.AUTOMATION.TEST_DESIGNER]
 
 **Logic**:
 1. Scan project `src/` to identify domain (e.g., Models, APIs).
