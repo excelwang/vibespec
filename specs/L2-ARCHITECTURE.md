@@ -59,6 +59,16 @@ version: 3.0.0
 
  (Ref: CONTRACTS.REVIEW_PROTOCOL.OMISSION_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY), (Ref: CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW)
 
+ #### PROCESS_ENFORCER
+ 
+ **Role**: Enforces workflow constraints
+ 
+ - Observes: Action sequence, approval states
+ - Decides: Whether action violates process rules
+ - Acts: Blocks multi-layer edits, enforces human review gates
+
+ (Ref: CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY), (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW)
+
 #### TRACEABILITY_GUARDIAN
 
 **Role**: Ensures traceability chain integrity
@@ -81,7 +91,7 @@ version: 3.0.0
 - **Decides**: Information format, urgency level
 - **Acts**: Calls notify_user, waits for response
 
-(Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION), (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED), (Ref: CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY)
+(Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION), (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED), (Ref: CONTRACTS.STARTUP_MENU.INTERACTIVE_START)
 
 #### BOOTSTRAP_AGENT
 
@@ -125,7 +135,7 @@ version: 3.0.0
 - **Decides**: Key decisions, architectural shifts, new requirements
 - **Acts**: Creates idea files, requests approval
 
-(Ref: CONTRACTS.REFLECT.CONTEXT_BASED), (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW), (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL)
+(Ref: CONTRACTS.REFLECT.CONTEXT_BASED), (Ref: CONTRACTS.IDEAS_PIPELINE.TERM_ANALYSIS), (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL)
 
 #### PATTERN_SCOUT
 
@@ -135,7 +145,7 @@ version: 3.0.0
 - **Decides**: Script-worthiness (frequency, determinism)
 - **Acts**: Proposes new scripts via idea pipeline
 
-(Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE), (Ref: CONTRACTS.SCRIPT_FIRST.GOAL)
+(Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE), (Ref: CONTRACTS.SCRIPT_FIRST.GOAL), (Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_GIVEUP)
 
 #### RELOAD_HANDLER
 

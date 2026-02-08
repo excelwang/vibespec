@@ -1044,3 +1044,21 @@ interface CertificationEngine {
 |-------|----------|------|
 | L1 spec item | answer_key_{id}.md | Normal |
 | Empty specs | [] | Edge |
+
+---
+
+## [decision] PROCESS_ENFORCER_DECISION
+
+> Implements: [Role: ROLES.SPEC_MANAGEMENT.PROCESS_ENFORCER]
+
+**Decision Logic**:
+1. Check if edit spans multiple layers (L1 + L2)
+2. Check if persistent action (write) has prior human approval
+3. Block if violation detected
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| Edit L1 + L2 | Block | SEQUENTIAL_ONLY |
+| Write L1 w/o approval | Block | REFL.HUMAN_REVIEW |
+| Edit L1 only | Allow | Valid op |

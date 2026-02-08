@@ -97,6 +97,11 @@ invariants:
   > Verification: Conflict pairs logged before resolution applied.
   (Ref: VISION.SCOPE.IDEAS)
 
+- **TERM_ANALYSIS**: When processing ideas, Agent MUST analyze for new domain terms and update UBIQUITOUS_LANGUAGE (L0).
+  > Responsibility: Vocabulary — prevent terminology drift.
+  > Verification: New terms in idea trigger L0 update proposal.
+  (Ref: VISION.UBIQUITOUS_LANGUAGE)
+
 - **CONFLICT_RES**: Agent MUST resolve detected conflicts by latest timestamp.
   > Responsibility: Truth source — most recent intent wins.
   > Verification: Later idea values supersede earlier ones.
@@ -642,6 +647,16 @@ standard_terms:
   (Ref: VISION.TRACEABILITY.CHAIN)
 
 ---
+
+## [system] CONTRACTS.STARTUP_MENU
+
+- **INTERACTIVE_START**: When user runs `vibe-spec` (no args), Agent MUST display capabilities menu and wait for input.
+  > Responsibility: Control — prevent accidental execution of pending workloads.
+  > Verification: Agent outputs usage help and stops execution.
+  (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+
+---
+
 
 ## [system] CONTRACTS.AUTOMATE_MODE
 
