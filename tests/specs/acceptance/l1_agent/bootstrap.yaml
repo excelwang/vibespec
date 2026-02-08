@@ -1,0 +1,34 @@
+spec_id: CONTRACTS.BOOTSTRAP
+type: agent_contract
+description: "Agent contracts for project bootstrap"
+
+contracts:
+  - id: SCOPE_INQUIRY
+    requirement: "Agent MUST ask user to describe project"
+    cases:
+      - name: "Asks for description"
+        given:
+          project_state: "new"
+        then:
+          behavior: "Agent asks open-ended question about project goals"
+        evaluation: llm
+
+  - id: SCOPE_REFORM
+    requirement: "Agent MUST convert input to SHALL/SHALL NOT statements"
+    cases:
+      - name: "Reformulates scope"
+        given:
+          user_input: "I want to build a calculator"
+        then:
+          behavior: "Agent creates In-Scope and Out-of-Scope sections"
+        evaluation: llm
+
+  - id: APPROVAL_GATE
+    requirement: "Agent MUST get approval before creating files"
+    cases:
+      - name: "Requests approval"
+        given:
+          action: "create L0-VISION.md"
+        then:
+          behavior: "Agent asks user for approval before file creation"
+        evaluation: llm

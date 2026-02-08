@@ -139,9 +139,15 @@ def parse_spec_file(spec_file: Path) -> dict:
         # Code block toggle
         if stripped.startswith('```') or stripped.startswith('~~~'):
             in_code_block = not in_code_block
+            # Still include code block markers in body for L3 quality checks
+            if current_export and current_export in items:
+                items[current_export]['body'] += line + '\n'
             continue
             
         if in_code_block:
+            # Include code block content in body for L3 quality checks
+            if current_export and current_export in items:
+                items[current_export]['body'] += line + '\n'
             continue
             
         # 1. H2 Detection: ## [tag] ID
@@ -343,7 +349,92 @@ def validate_specs(specs_dir: Path) -> tuple:
                 if len(l1_refs) > MAX_L1_REFS_PER_LEAF:
                      errors.append(f"Complexity Violation: `{item_id}` has {len(l1_refs)} L1 refs (Max {MAX_L1_REFS_PER_LEAF}). Split responsibilities.")
 
-    # 6. Custom Rules
+    # 6. Check L2 Leaf -> L3 Implementation Coverage
+    l2_leaves = set()
+    l3_implements = set()
+    
+    for spec_id, data in specs.items():
+        if data['layer'] == 2:
+            for exp in data['exports']:
+                # Only track leaf items (#### level)
+                item = data['items'].get(exp)
+                if item and item['header'].startswith('#### '):
+                    l2_leaves.add(exp)
+        elif data['layer'] == 3:
+            for ref in data['references']:
+                # Track all L3 -> L2 references
+                l3_implements.add(ref['id'])
+    
+    # Check for unimplemented L2 leaves
+    for leaf in l2_leaves:
+        if leaf not in l3_implements:
+            # Try partial match (check if any L3 ref ends with leaf's last segment)
+            leaf_name = leaf.split('.')[-1]
+            matched = any(leaf_name in impl for impl in l3_implements)
+            if not matched:
+                warnings.append(f"L2→L3 Coverage Warning: `{leaf}` has no L3 implementation.")
+
+    # 7. L3 Quality Checks
+    l3_interfaces = {}  # id -> {input_types, output_type, consumers}
+    
+    for spec_id, data in specs.items():
+        if data['layer'] != 3:
+            continue
+            
+        for item_id, item_data in data['items'].items():
+            header = item_data['header']
+            body = item_data['body']
+            
+            # Check if it's an interface or algorithm
+            if '[interface]' in header or '[algorithm]' in header:
+                # Check Fixtures table
+                if 'Fixtures' not in body and '| Input |' not in body:
+                    warnings.append(f"L3 Quality: `{item_id}` missing Fixtures table.")
+                else:
+                    # Check case coverage
+                    if 'Normal' not in body:
+                        warnings.append(f"L3 Quality: `{item_id}` missing Normal case in Fixtures.")
+                    if 'Edge' not in body and 'Error' not in body:
+                        warnings.append(f"L3 Quality: `{item_id}` missing Edge/Error case in Fixtures.")
+                
+                # Check type signature (code block)
+                if '```' not in body:
+                    warnings.append(f"L3 Quality: `{item_id}` missing type signature (code block).")
+                
+                # Extract interface info for compatibility check
+                # Parse input/output from code block
+                import_match = re.search(r'(\w+)\((.*?)\):\s*(\w+)', body)
+                if import_match:
+                    func_name = import_match.group(1)
+                    params = import_match.group(2)
+                    return_type = import_match.group(3)
+                    l3_interfaces[item_id] = {
+                        'output': return_type,
+                        'inputs': [p.split(':')[-1].strip() for p in params.split(',') if ':' in p]
+                    }
+                    
+                # Extract Consumers
+                cons_match = re.search(r'\*\*Consumers\*\*:\s*\[(.*?)\]', body)
+                if cons_match and item_id in l3_interfaces:
+                    consumers = [c.strip() for c in cons_match.group(1).split(',')]
+                    l3_interfaces[item_id]['consumers'] = consumers
+
+    # 8. Interface Compatibility Check
+    for iface_id, iface_info in l3_interfaces.items():
+        consumers = iface_info.get('consumers', [])
+        output_type = iface_info.get('output', '')
+        
+        for consumer_id in consumers:
+            # Find consumer interface
+            consumer = l3_interfaces.get(consumer_id)
+            if consumer:
+                consumer_inputs = consumer.get('inputs', [])
+                # Check if output is compatible with any consumer input
+                if output_type and consumer_inputs:
+                    if output_type not in consumer_inputs:
+                        warnings.append(f"L3 Compatibility: `{iface_id}` output `{output_type}` may not match `{consumer_id}` inputs.")
+
+    # 9. Custom Rules
     custom_rules = extract_rules_from_l1(specs)
     if custom_rules:
         ce, cw = apply_custom_rules(custom_rules, specs)

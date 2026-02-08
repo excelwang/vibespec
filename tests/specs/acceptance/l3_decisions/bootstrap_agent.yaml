@@ -1,0 +1,22 @@
+spec_id: BOOTSTRAP_AGENT
+type: decision
+description: "Decides bootstrap actions for new projects"
+
+cases:
+  - name: "Normal: No vibespec.yaml runs init"
+    given:
+      has_vibespec_yaml: false
+      has_specs_dir: false
+    when: "Agent checks project state"
+    then:
+      action: run_init
+    evaluation: llm
+
+  - name: "Edge: Has config but no specs"
+    given:
+      has_vibespec_yaml: true
+      has_specs_dir: false
+    when: "Agent checks project state"
+    then:
+      action: create_specs
+    evaluation: llm

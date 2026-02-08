@@ -1,0 +1,22 @@
+spec_id: ONBOARDING_ASSISTANT
+type: decision
+description: "Guides new users through vibe-spec setup"
+
+cases:
+  - name: "Normal: New user gets tutorial"
+    given:
+      user_familiarity: low
+      project_state: empty
+    when: "Agent greets user"
+    then:
+      action: show_tutorial
+    evaluation: llm
+
+  - name: "Edge: Experienced user skips"
+    given:
+      user_familiarity: high
+      project_state: initialized
+    when: "Agent greets user"
+    then:
+      action: show_status
+    evaluation: llm

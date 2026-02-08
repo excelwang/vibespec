@@ -1,0 +1,38 @@
+spec_id: TEST_DESIGNER
+type: decision
+description: "Decides how to generate tests for L3 items"
+
+cases:
+  - name: "Normal: L3 with fixtures generates unit tests"
+    given:
+      l3_item:
+        id: SCANNER
+        has_fixtures: true
+        complexity: low
+    when: "Agent analyzes the L3 item"
+    then:
+      action: generate_tests
+      test_type: unit
+    evaluation: llm
+
+  - name: "Edge: Complex algorithm generates integration tests"
+    given:
+      l3_item:
+        id: ASSEMBLER
+        has_fixtures: true
+        complexity: high
+    when: "Agent analyzes the L3 item"
+    then:
+      action: generate_tests
+      test_type: integration
+    evaluation: llm
+
+  - name: "Error: Missing fixtures requests clarification"
+    given:
+      l3_item:
+        id: NEW_INTERFACE
+        has_fixtures: false
+    when: "Agent analyzes the L3 item"
+    then:
+      action: request_fixtures
+    evaluation: llm

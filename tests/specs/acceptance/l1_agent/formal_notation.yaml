@@ -1,0 +1,15 @@
+spec_id: CONTRACTS.FORMAL_NOTATION
+type: agent_contract
+description: "Agent contracts for formal notation"
+
+contracts:
+  - id: PREFER_FORMALISMS
+    requirement: "Agent SHOULD use diagrams in L2, pseudocode in L3"
+    cases:
+      - name: "Uses formal notation"
+        given:
+          layer: 2
+          content_type: "component description"
+        then:
+          behavior: "Agent includes mermaid diagram"
+        evaluation: llm

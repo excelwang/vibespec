@@ -1,0 +1,24 @@
+spec_id: CONTRACTS.STRICT_TESTABILITY
+type: agent_contract
+description: "Agent contracts for strict testability"
+
+contracts:
+  - id: MOCK_GENERATION
+    requirement: "Agent MUST generate mock objects for external interfaces"
+    cases:
+      - name: "Creates mocks"
+        given:
+          interface: "EXTERNAL_API"
+        then:
+          behavior: "Agent creates mock implementation for testing"
+        evaluation: llm
+
+  - id: MOCK_FIRST
+    requirement: "Agent SHOULD run tests in MOCK mode during development"
+    cases:
+      - name: "Uses mock first"
+        given:
+          test_mode: "development"
+        then:
+          behavior: "Agent runs mock tests before real tests"
+        evaluation: llm

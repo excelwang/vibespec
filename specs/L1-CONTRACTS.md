@@ -405,6 +405,10 @@ invariants:
   > Responsibility: Grounding — all items anchored.
   > Verification: Error on unanchored items.
 
+- **L2_L3_IMPLEMENTATION**: Script MUST warn if L2 Component has no L3 interface implementing it.
+  > Responsibility: Implementation coverage — every Component should have technical specification.
+  > Verification: Warning on L2 Component without `Implements: [Component: ...]` in L3.
+
 (Ref: VISION.TRACEABILITY.CHAIN), (Ref: VISION.TRACEABILITY.GOAL)
 
 ---
@@ -446,6 +450,28 @@ invariants:
 
 ---
 
+## [standard] CONTRACTS.L3_QUALITY
+
+- **FIXTURE_REQUIRED**: L3 interface/algorithm MUST include Fixtures table.
+  > Responsibility: Testability — every interface needs concrete test cases.
+  > Verification: Warning if `Fixtures` table missing.
+
+- **CASE_COVERAGE**: Fixtures SHOULD include Normal, Edge, and Error cases.
+  > Responsibility: Robustness — test boundaries and failures.
+  > Verification: Warning if any case type missing.
+
+- **TYPE_SIGNATURE**: L3 interface MUST include typed function signature (code block).
+  > Responsibility: Precision — unambiguous contract for implementation.
+  > Verification: Warning if no code block present.
+
+- **INTERFACE_COMPATIBILITY**: Script MUST verify type compatibility between interoperating interfaces.
+  > Responsibility: Integration — ensure producer output matches consumer input.
+  > Verification: Error if output type of producer does not match input type of consumer.
+
+(Ref: VISION.FORMAL_SYNTAX.PRECISION_OVER_PROSE)
+
+---
+
 ## [standard] CONTRACTS.STRICT_TESTABILITY
 
 - **DEFAULT_TESTABLE**: Items with MUST/SHOULD/MAY are testable requirements.
@@ -456,8 +482,20 @@ invariants:
   > Verification: Mocks used in generated tests.
 
 - **ENVIRONMENT_TOGGLE**: Script MUST support `TEST_ENV=MOCK|REAL` switch.
-  > Responsibility: Flexibilty — validation (Mock) vs verification (Real).
+  > Responsibility: Flexibility — validation (Mock) vs verification (Real).
   > Verification: Tests run against Real implementation when set.
+
+- **MOCK_FIRST**: Agent SHOULD run tests in MOCK mode during development.
+  > Responsibility: Early validation — verify spec logic before implementation.
+  > Verification: MOCK tests pass before REAL tests are attempted.
+
+- **SKIP_UNIMPLEMENTED**: Script MUST report SKIP (not FAIL) for missing implementations in REAL mode.
+  > Responsibility: Clarity — distinguish "not implemented" from "implemented incorrectly".
+  > Verification: REAL mode returns SKIP when adapter not found.
+
+- **RESULT_STATES**: Script MUST support result states: PASS, FAIL, SKIP, ERROR.
+  > Responsibility: Granularity — enable precise test outcome reporting.
+  > Verification: Test report includes all four states.
 
 (Ref: VISION.SCOPE.COV)
 
@@ -471,6 +509,28 @@ invariants:
 - **NOISE_REDUCTION**: Script MUST strip frontmatter.
 
 (Ref: VISION.COMPILATION_STRUCTURE)
+
+---
+
+## [system] CONTRACTS.BUILD_STRATEGY
+
+- **GAP_ANALYSIS_FIRST**: IMPLEMENTER MUST perform gap analysis before implementation.
+  > Responsibility: Risk reduction — understand current state before changes.
+  > Verification: Gap report generated before any code modifications.
+
+- **INCREMENTAL_REFACTOR**: IMPLEMENTER SHOULD prefer incremental changes over full rewrites.
+  > Responsibility: Stability — minimize disruption to working code.
+  > Verification: Changes preserve git history continuity.
+
+- **REWRITE_THRESHOLD**: Agent MUST request human approval if gap exceeds 70%.
+  > Responsibility: Human oversight — large changes require confirmation.
+  > Verification: notify_user called when gap > 70%.
+
+- **GAP_CATEGORIES**: Script MUST classify gaps as MISSING, OUTDATED, or ORPHAN.
+  > Responsibility: Clarity — different gap types require different actions.
+  > Verification: Report includes categorized gap list.
+
+(Ref: VISION.VIBE_CODING.HUMAN_GATE), (Ref: VISION.VIBE_CODING.TRUTH)
 
 ---
 

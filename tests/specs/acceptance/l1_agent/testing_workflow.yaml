@@ -1,0 +1,35 @@
+spec_id: CONTRACTS.TESTING_WORKFLOW
+type: agent_contract
+description: "Agent contracts for testing workflow"
+
+contracts:
+  - id: TEST_GENERATION
+    requirement: "Agent MUST generate tests for uncovered L3 fixtures"
+    cases:
+      - name: "Generates tests"
+        given:
+          uncovered_l3: ["SCANNER", "PARSER"]
+        then:
+          behavior: "Agent creates test files for uncovered items"
+        evaluation: llm
+
+  - id: HUMAN_APPROVAL_TEST
+    requirement: "Agent MUST request approval before saving generated tests"
+    cases:
+      - name: "Asks before save"
+        given:
+          generated_test: "test_scanner.py"
+        then:
+          behavior: "Agent asks user approval before writing file"
+        evaluation: llm
+
+  - id: RESULT_EVALUATION
+    requirement: "Agent SHOULD analyze failures and propose fixes"
+    cases:
+      - name: "Proposes fix"
+        given:
+          test_result: "FAIL"
+          error: "assertion error"
+        then:
+          behavior: "Agent suggests fix for the failure"
+        evaluation: llm

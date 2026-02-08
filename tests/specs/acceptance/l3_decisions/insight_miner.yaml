@@ -1,0 +1,13 @@
+spec_id: INSIGHT_MINER
+type: decision
+description: "Extracts insights from conversation for ideas"
+
+cases:
+  - name: "Normal: Extracts actionable insight"
+    given:
+      conversation: "We should add logging to track errors better"
+    when: "Agent mines for insights"
+    then:
+      action: create_idea
+      idea: "Add error logging"
+    evaluation: llm

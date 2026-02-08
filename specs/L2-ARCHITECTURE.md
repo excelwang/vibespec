@@ -157,17 +157,17 @@ version: 3.0.0
 
 > Rationale: Script implementation would be prohibitively complex due to semantic understanding requirements.
 
-(Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST)
+(Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST), (Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_FIRST)
 
 #### IMPLEMENTER
 
 **Role**: Synchronizes project artifacts with specs
 
-- **Observes**: `vibe-spec-full.md` (compiled spec), `vibespec.yaml` (compile configuration)
-- **Decides**: Required updates for project files using specific automation skills
-- **Acts**: To coding the project acooring to `vibe-spec-full.md` 
+- **Observes**: `vibe-spec-full.md`, `vibespec.yaml`, existing source code in `src/`
+- **Decides**: Gap analysis (MISSING/OUTDATED/ORPHAN), refactor vs rewrite strategy
+- **Acts**: Generates gap report, applies incremental changes, requests approval for large rewrites
 
-(Ref: VISION.VIBE_CODING.AI_ASSIST), (Ref: VISION.VIBE_CODING.TRUTH)
+(Ref: CONTRACTS.BUILD_STRATEGY.GAP_ANALYSIS_FIRST), (Ref: CONTRACTS.BUILD_STRATEGY.INCREMENTAL_REFACTOR), (Ref: CONTRACTS.BUILD_STRATEGY.REWRITE_THRESHOLD)
 
 ---
 
@@ -506,4 +506,4 @@ version: 3.0.0
 - Input: `compiled_spec: Path, skills: string[]`
 - Output: `UpdateStatus`
 
-(Ref: VISION.VIBE_CODING.TRUTH), (Ref: VISION.AGENT_AS_DEVELOPER.PRIMARY_CONSUMER)
+(Ref: VISION.VIBE_CODING.TRUTH), (Ref: VISION.AGENT_AS_DEVELOPER.PRIMARY_CONSUMER), (Ref: CONTRACTS.BUILD_STRATEGY.GAP_CATEGORIES)

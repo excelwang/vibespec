@@ -1,0 +1,13 @@
+spec_id: PATTERN_SCOUT
+type: decision
+description: "Identifies patterns in codebase for reuse"
+
+cases:
+  - name: "Normal: Detects repeated workflow"
+    given:
+      repetitions: 3
+      pattern: "validate -> transform -> save"
+    when: "Agent scouts for patterns"
+    then:
+      action: propose_abstraction
+    evaluation: llm

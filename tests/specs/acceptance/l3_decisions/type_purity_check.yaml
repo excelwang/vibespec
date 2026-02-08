@@ -1,0 +1,34 @@
+spec_id: TYPE_PURITY_CHECK
+type: decision
+description: "Checks if L2 leaf items are pure Agent or pure Script type"
+
+cases:
+  - name: "Normal: Pure Agent type passes"
+    given:
+      item:
+        keywords: ["semantic", "context", "decide"]
+    when: "Agent checks purity"
+    then:
+      type: Agent
+      pure: true
+    evaluation: llm
+
+  - name: "Normal: Pure Script type passes"
+    given:
+      item:
+        keywords: ["scan", "parse", "sort"]
+    when: "Agent checks purity"
+    then:
+      type: Script
+      pure: true
+    evaluation: llm
+
+  - name: "Error: Mixed type requires decomposition"
+    given:
+      item:
+        keywords: ["parse", "decide", "context"]
+    when: "Agent checks purity"
+    then:
+      pure: false
+      action: decompose
+    evaluation: llm

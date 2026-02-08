@@ -29,6 +29,8 @@ interface Scanner {
 
 **Consumers**: [ARCHITECT]
 
+(Ref: CONTRACTS.L3_QUALITY.FIXTURE_REQUIRED), (Ref: CONTRACTS.L3_QUALITY.CASE_COVERAGE), (Ref: CONTRACTS.L3_QUALITY.TYPE_SIGNATURE), (Ref: CONTRACTS.L3_QUALITY.INTERFACE_COMPATIBILITY)
+
 ---
 
 ## [interface] PARSER
@@ -301,7 +303,7 @@ function validate_coverage(specs: Spec[]) -> Violation[]:
 | L0.A (orphan) | [OrphanViolation] | Edge |
 | L0.A → 8 items | [FanoutViolation] | Error |
 
-(Ref: CONTRACTS.ALGEBRAIC_VALIDATION.MILLERS_LAW)
+(Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION), (Ref: CONTRACTS.TRACEABILITY.L2_L3_IMPLEMENTATION)
 
 ---
 
@@ -345,17 +347,21 @@ interface ExecutionResult {
   passed: number
   failed: number
   skipped: number
+  errors: number
 }
+
+type TestResultState = 'PASS' | 'FAIL' | 'SKIP' | 'ERROR'
 ```
 
 **Fixtures**:
 | Input | Expected | Case |
 |-------|----------|------|
-| tests/ + MOCK | {passed: 5, failed: 0} | Normal |
-| tests/ + REAL | {passed: 4, failed: 1} | Normal |
-| empty tests/ | {passed: 0, failed: 0} | Edge |
+| tests/ + MOCK | {passed: 5, failed: 0, skipped: 0} | Normal |
+| tests/ + REAL (all impl) | {passed: 4, failed: 1, skipped: 0} | Normal |
+| tests/ + REAL (no impl) | {passed: 0, failed: 0, skipped: 5} | Edge (SKIP) |
+| empty tests/ | {passed: 0, failed: 0, skipped: 0} | Edge |
 
-(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT)
+(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.STRICT_TESTABILITY.SKIP_UNIMPLEMENTED), (Ref: CONTRACTS.STRICT_TESTABILITY.RESULT_STATES)
 
 ---
 
@@ -404,3 +410,563 @@ interface BuildResult {
 | invalid spec | ERROR, "Traceability broken" | Error |
 
 (Ref: VISION.VIBE_CODING.TRUTH)
+
+---
+
+## [interface] SECTION_PARSER
+
+> Implements: [Component: COMPONENTS.COMPILER_PIPELINE.SECTION_PARSER]
+
+```typescript
+interface SectionParser {
+  parse(content: string): Section[]
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| "## [system] ID" | [{tag: "system", id: "ID"}] | Normal |
+| "## ID" | [{tag: null, id: "ID"}] | Edge |
+| "" | [] | Edge |
+
+---
+
+## [interface] CUSTOM_RULES_LOADER
+
+> Implements: [Component: COMPONENTS.VALIDATOR_CORE.CUSTOM_RULES_LOADER]
+
+```typescript
+interface CustomRulesLoader {
+  load(specsDir: Path): Rule[]
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| specs/ with rules | Rule[] | Normal |
+| empty specs/ | [] | Edge |
+| invalid YAML | LoadError | Error |
+
+---
+
+## [interface] ARCHIVER
+
+> Implements: [Component: COMPONENTS.IDEAS_PROCESSOR.ARCHIVER]
+
+```typescript
+interface Archiver {
+  archive(ideas: Idea[]): void
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| [idea1, idea2] | void (files moved) | Normal |
+| [] | void (no-op) | Edge |
+| read-only dir | ArchiveError | Error |
+
+---
+
+## [interface] SKILL_LOADER
+
+> Implements: [Component: COMPONENTS.SCRIPTS.SKILL_LOADER]
+
+```typescript
+interface SkillLoader {
+  load(path: Path): SkillDef
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| valid SKILL.md | SkillDef | Normal |
+| no SKILL.md | null | Edge |
+| malformed | ParseError | Error |
+
+---
+
+## [interface] INIT_SCRIPT
+
+> Implements: [Component: COMPONENTS.SCRIPTS.INIT_SCRIPT]
+
+```typescript
+interface InitScript {
+  init(projectDir: Path): InitResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| empty dir | SUCCESS | Normal |
+| existing project | SKIP | Edge |
+| no permissions | InitError | Error |
+
+---
+
+## [interface] VALIDATE_SCRIPT
+
+> Implements: [Component: COMPONENTS.SCRIPTS.VALIDATE_SCRIPT]
+
+```typescript
+interface ValidateScript {
+  validate(specsDir: Path): ValidationResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| valid specs | {errors: 0} | Normal |
+| invalid specs | {errors: N} | Normal |
+| no specs | EmptyError | Edge |
+
+---
+
+## [interface] COMPILE_SCRIPT
+
+> Implements: [Component: COMPONENTS.SCRIPTS.COMPILE_SCRIPT]
+
+```typescript
+interface CompileScript {
+  compile(specsDir: Path, output: Path): void
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| specs/ -> out.md | void | Normal |
+| no specs | CompileError | Error |
+| invalid output | WriteError | Error |
+
+---
+
+## [interface] COMMAND_ROUTER
+
+> Implements: [Component: COMPONENTS.TRIGGER_ROUTER.COMMAND_ROUTER]
+
+```typescript
+interface CommandRouter {
+  route(command: string): Handler
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| "validate" | ValidateHandler | Normal |
+| "unknown" | HelpHandler | Edge |
+| "" | HelpHandler | Edge |
+
+---
+
+## [interface] WORKFLOW_DISPATCHER
+
+> Implements: [Component: COMPONENTS.TRIGGER_ROUTER.WORKFLOW_DISPATCHER]
+
+```typescript
+interface WorkflowDispatcher {
+  dispatch(trigger: Trigger): void
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| FileSave trigger | RunValidation | Normal |
+| Unknown trigger | NoOp | Edge |
+| null | DispatchError | Error |
+
+---
+
+## [interface] LINT_CHECKER
+
+> Implements: [Component: COMPONENTS.QUALITY.LINT_CHECKER]
+
+```typescript
+interface LintChecker {
+  check(spec: Spec): LintResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| valid spec | {issues: []} | Normal |
+| missing tag | {issues: [TagWarning]} | Edge |
+| malformed | LintError | Error |
+
+---
+
+## [interface] ASSERTION_CHECKER
+
+> Implements: [Component: COMPONENTS.QUALITY.ASSERTION_CHECKER]
+
+```typescript
+interface AssertionChecker {
+  check(spec: Spec): AssertionResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| RFC2119 compliant | {pass: true} | Normal |
+| low keyword density | {pass: false} | Edge |
+| empty spec | AssertionError | Error |
+
+---
+
+## [interface] NOTATION_CHECKER
+
+> Implements: [Component: COMPONENTS.QUALITY.NOTATION_CHECKER]
+
+```typescript
+interface NotationChecker {
+  check(spec: Spec): NotationResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| valid notation | {issues: []} | Normal |
+| informal language | {issues: [Warn]} | Edge |
+| mixed case IDs | {issues: [Error]} | Error |
+
+---
+
+## [interface] TERM_CHECKER
+
+> Implements: [Component: COMPONENTS.QUALITY.TERM_CHECKER]
+
+```typescript
+interface TermChecker {
+  check(spec: Spec, vocab: Vocabulary): TermResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| controlled terms | {violations: []} | Normal |
+| banned term | {violations: [TermViolation]} | Error |
+| unknown term | {warnings: [UnknownTerm]} | Edge |
+
+---
+
+## [interface] PURITY_CHECKER
+
+> Implements: [Component: COMPONENTS.QUALITY.PURITY_CHECKER]
+
+```typescript
+interface PurityChecker {
+  check(spec: Spec): PurityResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| pure spec | {pure: true} | Normal |
+| impl details in L0 | {pure: false} | Error |
+| mixed concerns | {warnings: [Impure]} | Edge |
+
+---
+
+## [interface] SCRIPT_SCANNER
+
+> Implements: [Component: COMPONENTS.QUALITY.SCRIPT_SCANNER]
+
+```typescript
+interface ScriptScanner {
+  scan(spec: Spec): ScriptRef[]
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| L3 with scripts | [ScriptRef] | Normal |
+| no scripts | [] | Edge |
+| broken ref | ScanError | Error |
+
+---
+
+## [interface] ERROR_PRINTER
+
+> Implements: [Component: COMPONENTS.REPORTING.ERROR_PRINTER]
+
+```typescript
+interface ErrorPrinter {
+  print(errors: Violation[]): string
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| [error1] | "❌ error1" | Normal |
+| [] | "" | Edge |
+| null | PrintError | Error |
+
+---
+
+## [interface] DIFF_VIEWER
+
+> Implements: [Component: COMPONENTS.REPORTING.DIFF_VIEWER]
+
+```typescript
+interface DiffViewer {
+  diff(before: Spec, after: Spec): DiffResult
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| changed spec | {added: N, removed: M} | Normal |
+| identical | {added: 0, removed: 0} | Edge |
+| null input | DiffError | Error |
+
+---
+
+## [interface] SUMMARY_GENERATOR
+
+> Implements: [Component: COMPONENTS.REPORTING.SUMMARY_GENERATOR]
+
+```typescript
+interface SummaryGenerator {
+  generate(result: ValidationResult): string
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| 0 errors | "✅ Valid" | Normal |
+| N errors | "❌ N errors" | Error |
+| null | SummaryError | Error |
+
+---
+
+## [interface] ATOMIC_WRITER
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.ATOMIC_WRITER]
+
+```typescript
+interface AtomicWriter {
+  write(path: Path, content: string): void
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| valid path | void (file written) | Normal |
+| readonly path | WriteError | Error |
+| concurrent write | AtomicGuard | Edge |
+
+---
+
+## [interface] STATS_COLLECTOR
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.STATS_COLLECTOR]
+
+```typescript
+interface StatsCollector {
+  collect(specs: Spec[]): Stats
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| [spec1, spec2] | {count: 2, ...} | Normal |
+| [] | {count: 0} | Edge |
+| null | StatsError | Error |
+
+---
+
+## [decision] TEST_DESIGNER
+
+> Implements: [Role: ROLES.AUTOMATION.TEST_DESIGNER]
+
+**Decision Logic**:
+1. Analyze L3 fixtures for testable scenarios
+2. Determine test strategy (unit/integration)
+3. Generate test code with `@verify_spec` decorators
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| L3 with fixtures | Generate tests | Has concrete cases |
+| L3 no fixtures | Request fixtures | Missing test data |
+| Complex algorithm | Integration test | Needs end-to-end |
+
+---
+
+## [decision] TEST_VERIFIER
+
+> Implements: [Role: ROLES.AUTOMATION.TEST_VERIFIER]
+
+**Decision Logic**:
+1. Run generated tests
+2. Compare results to expected outcomes
+3. Report pass/fail with evidence
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| All pass | Report success | Tests green |
+| Failures | Report with diff | Show evidence |
+| Flaky test | Rerun and flag | Detect instability |
+
+---
+
+## [decision] IMPLEMENTER
+
+> Implements: [Role: ROLES.AUTOMATION.IMPLEMENTER]
+
+**Decision Logic**:
+1. Perform gap analysis
+2. Decide refactor vs rewrite
+3. Apply incremental changes
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| Gap < 30% | Incremental | Low risk |
+| Gap > 70% | Request approval | High risk |
+| Orphan code | Flag for removal | Spec drift |
+
+---
+
+## [decision] PATTERN_SCOUT
+
+> Implements: [Role: ROLES.AUTOMATION.PATTERN_SCOUT]
+
+**Decision Logic**:
+1. Analyze code for repeated patterns
+2. Identify abstraction opportunities
+3. Suggest refactoring
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| 3+ similar blocks | Suggest abstract | DRY principle |
+| Unique code | No action | No pattern |
+| Anti-pattern | Flag warning | Code smell |
+
+---
+
+## [decision] INSIGHT_MINER
+
+> Implements: [Role: ROLES.AUTOMATION.INSIGHT_MINER]
+
+**Decision Logic**:
+1. Analyze spec evolution
+2. Identify trends and issues
+3. Generate insights
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| Growing complexity | Warn | Maintenance risk |
+| Stable specs | Report health | Good sign |
+| Frequent changes | Flag volatility | Instability |
+
+---
+
+## [decision] QUALITY_AUDITOR
+
+> Implements: [Role: ROLES.SPEC_MANAGEMENT.QUALITY_AUDITOR]
+
+**Decision Logic**:
+1. Check spec quality metrics
+2. Compare to thresholds
+3. Report violations
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| RFC2119 > 50% | Pass | Good density |
+| RFC2119 < 50% | Warn | Weak assertions |
+| Missing fixtures | Error | Untestable |
+
+---
+
+## [decision] CONSISTENCY_CHECKER
+
+> Implements: [Role: ROLES.SPEC_MANAGEMENT.CONSISTENCY_CHECKER]
+
+**Decision Logic**:
+1. Compare related specs
+2. Detect contradictions
+3. Flag inconsistencies
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| Aligned specs | Pass | Consistent |
+| Contradiction | Error | Conflict |
+| Ambiguity | Warn | Clarification needed |
+
+---
+
+## [decision] USER_LIAISON
+
+> Implements: [Role: ROLES.USER_INTERACTION.USER_LIAISON]
+
+**Decision Logic**:
+1. Receive user requests
+2. Route to appropriate workflow
+3. Report results
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| "validate" | Run validation | Direct command |
+| "help" | Show help | Guidance needed |
+| Ambiguous | Ask clarification | Unclear intent |
+
+---
+
+## [decision] BOOTSTRAP_AGENT
+
+> Implements: [Role: ROLES.USER_INTERACTION.BOOTSTRAP_AGENT]
+
+**Decision Logic**:
+1. Check project state
+2. Initialize if needed
+3. Report status
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| No vibespec.yaml | Run init | New project |
+| Existing project | Skip init | Already setup |
+| Partial setup | Resume init | Incomplete |
+
+---
+
+## [decision] ONBOARDING_ASSISTANT
+
+> Implements: [Role: ROLES.USER_INTERACTION.ONBOARDING_ASSISTANT]
+
+**Decision Logic**:
+1. Assess user familiarity
+2. Provide appropriate guidance
+3. Offer examples
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| New user | Full tutorial | Learning curve |
+| Experienced | Quick tips | Efficiency |
+| Stuck user | Contextual help | Unblock |

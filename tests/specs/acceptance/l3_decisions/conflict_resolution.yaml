@@ -1,0 +1,45 @@
+spec_id: CONFLICT_RESOLUTION
+type: decision
+description: "Resolves conflicts between specs by timestamp"
+
+cases:
+  - name: "Normal: Latest timestamp wins"
+    given:
+      ideas:
+        - id: idea_001
+          timestamp: 1707300000
+          value: "old value"
+        - id: idea_002
+          timestamp: 1707400000
+          value: "new value"
+    when: "Agent resolves the conflict"
+    then:
+      winner: idea_002
+      value: "new value"
+    evaluation: llm
+
+  - name: "Edge: Single idea no conflict"
+    given:
+      ideas:
+        - id: idea_001
+          timestamp: 1707300000
+          value: "only value"
+    when: "Agent resolves the conflict"
+    then:
+      winner: idea_001
+      action: none
+    evaluation: llm
+
+  - name: "Edge: Same timestamp escalates"
+    given:
+      ideas:
+        - id: idea_001
+          timestamp: 1707300000
+          value: "value A"
+        - id: idea_002
+          timestamp: 1707300000
+          value: "value B"
+    when: "Agent resolves the conflict"
+    then:
+      action: escalate_to_human
+    evaluation: llm

@@ -1,0 +1,24 @@
+spec_id: CONTRACTS.REFLECT
+type: agent_contract
+description: "Agent contracts for reflection and idea extraction"
+
+contracts:
+  - id: CONTEXT_BASED
+    requirement: "Agent SHOULD extract ideas from current conversation"
+    cases:
+      - name: "Extracts insight"
+        given:
+          conversation: "We discussed adding a new caching layer"
+        then:
+          behavior: "Agent extracts idea about caching"
+        evaluation: llm
+
+  - id: HUMAN_REVIEW
+    requirement: "Agent MUST get approval before saving distilled ideas"
+    cases:
+      - name: "Gets approval"
+        given:
+          extracted_ideas: ["Add caching"]
+        then:
+          behavior: "Agent presents ideas for user approval before saving"
+        evaluation: llm

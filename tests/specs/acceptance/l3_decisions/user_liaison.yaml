@@ -1,0 +1,22 @@
+spec_id: USER_LIAISON
+type: decision
+description: "Decides when to engage user for clarification"
+
+cases:
+  - name: "Normal: Ambiguous requirement asks user"
+    given:
+      clarity: low
+      impact: high
+    when: "Agent evaluates the requirement"
+    then:
+      action: ask_user
+    evaluation: llm
+
+  - name: "Edge: Clear requirement proceeds"
+    given:
+      clarity: high
+      impact: low
+    when: "Agent evaluates the requirement"
+    then:
+      action: proceed
+    evaluation: llm

@@ -1,0 +1,27 @@
+spec_id: TEST_VERIFIER
+type: decision
+description: "Verifies that tests correctly validate spec requirements"
+
+cases:
+  - name: "Normal: Test covers all fixtures"
+    given:
+      spec:
+        fixtures: ["normal", "edge", "error"]
+      test:
+        cases: ["normal", "edge", "error"]
+    when: "Agent verifies the test"
+    then:
+      action: pass
+    evaluation: llm
+
+  - name: "Edge: Missing error case warns"
+    given:
+      spec:
+        fixtures: ["normal", "edge", "error"]
+      test:
+        cases: ["normal", "edge"]
+    when: "Agent verifies the test"
+    then:
+      action: warn
+      missing: ["error"]
+    evaluation: llm

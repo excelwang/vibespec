@@ -1,0 +1,15 @@
+spec_id: CONTRACTS.LEAF_TYPE_PURITY
+type: agent_contract
+description: "Agent contracts for ensuring L2 leaf type purity"
+
+contracts:
+  - id: DECOMPOSE_MIXED
+    requirement: "Agent MUST decompose mixed items until each leaf is pure"
+    cases:
+      - name: "Decomposes hybrid"
+        given:
+          item:
+            keywords: ["parse", "semantic", "decide"]
+        then:
+          behavior: "Agent splits into Script part (parse) and Agent part (semantic, decide)"
+        evaluation: llm

@@ -1,0 +1,36 @@
+spec_id: LAYER_CLASSIFICATION
+type: decision
+description: "Classifies content to appropriate layer (L0-L3)"
+
+cases:
+  - name: "Normal: Vision content -> L0"
+    given:
+      content: "The purpose of this system is to..."
+    when: "Agent classifies the content"
+    then:
+      layer: 0
+    evaluation: llm
+
+  - name: "Normal: Contract content -> L1"
+    given:
+      content: "Agent MUST validate all inputs before processing"
+    when: "Agent classifies the content"
+    then:
+      layer: 1
+    evaluation: llm
+
+  - name: "Normal: Component content -> L2"
+    given:
+      content: "VALIDATOR Component: Executes validation rules"
+    when: "Agent classifies the content"
+    then:
+      layer: 2
+    evaluation: llm
+
+  - name: "Normal: Interface content -> L3"
+    given:
+      content: "interface Scanner { scan(path: string): SpecTree }"
+    when: "Agent classifies the content"
+    then:
+      layer: 3
+    evaluation: llm
