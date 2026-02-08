@@ -229,7 +229,8 @@ Describe how the Agent should behave in the following scenarios:
                 l3_decisions.append({
                     'id': l3_id,
                     'role': f_id,
-                    'answer_key': f"answer_key_{safe_id}.md"
+                    'answer_key': f"answer_key_{safe_id}.md",
+                    'fixtures': table_cases  # Include fixtures for test paper
                 })
                 
                 answer_key_file = decision_dir / f"answer_key_{safe_id}.md"
@@ -392,22 +393,53 @@ if __name__ == '__main__':
     # 1. L1 Agent Test Paper
     agent_paper = agent_dir / "test_paper.md"
     generated_files.add(agent_paper)
-    paper_content = "# L1 Agent Exam Paper\n\n"
-    paper_content += "The following contracts require manual or automated verification by the Agent.\n\n"
-    for item in l1_contracts:
-        paper_content += f"- [ ] **{item['id']}**: {item['text'][:100]}...\n"
-        paper_content += f"  - [Answer Key](./{item['answer_key']})\n\n"
+    paper_content = """# L1 Agent Certification Exam
+
+**Instructions**: For each contract below, provide your decision and rationale.
+Reference `specs/.compiled-full-spec.md` for all policy decisions.
+
+---
+
+"""
+    for i, item in enumerate(l1_contracts, 1):
+        paper_content += f"## {i}. {item['id']}\n\n"
+        paper_content += f"**Contract**: Agent MUST {item['text']}\n\n"
+        paper_content += "| Scenario | Your Decision | Rationale |\n"
+        paper_content += "|----------|---------------|----------|\n"
+        paper_content += "| Standard Case | | |\n"
+        paper_content += "| Edge Case | | |\n\n"
+        paper_content += f"> [Answer Key](./{item['answer_key']})\n\n---\n\n"
     agent_paper.write_text(paper_content)
     
     # 2. L3 Decision Test Paper
     decision_paper = decision_dir / "test_paper.md"
     generated_files.add(decision_paper)
-    paper_content = "# L3 Decision Exam Paper\n\n"
-    paper_content += "The following complex decisions require verification of logic and judgment.\n\n"
-    for item in l3_decisions:
-        paper_content += f"- [ ] **{item['id']}** ({item['role']})\n"
-        paper_content += f"  - [Answer Key](./{item['answer_key']})\n\n"
+    paper_content = """# L3 Decision Certification Exam
+
+**Instructions**: For each scenario, provide your decision and rationale.
+Reference `specs/.compiled-full-spec.md` entirely for all policy decisions.
+
+---
+
+"""
+    for i, item in enumerate(l3_decisions, 1):
+        paper_content += f"## {i}. {item['id']}\n\n"
+        paper_content += f"**Role**: {item['role']}\n\n"
+        # Embed fixture table from answer key if available
+        if 'fixtures' in item and item['fixtures']:
+            paper_content += "| Scenario | Your Decision | Rationale |\n"
+            paper_content += "|----------|---------------|----------|\n"
+            for fix in item['fixtures']:
+                # Use first column value from fixture (could be Input, Situation, Condition, etc.)
+                first_val = list(fix.values())[0] if fix else 'N/A'
+                paper_content += f"| {first_val} | | |\n"
+        else:
+            paper_content += "| Scenario | Your Decision | Rationale |\n"
+            paper_content += "|----------|---------------|----------|\n"
+            paper_content += "| [See spec for scenarios] | | |\n"
+        paper_content += f"\n> [Answer Key](./{item['answer_key']})\n\n---\n\n"
     decision_paper.write_text(paper_content)
+
                 
     # Report Orphans
     all_existing = existing_tests | existing_agent | existing_decision
