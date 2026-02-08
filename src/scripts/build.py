@@ -147,6 +147,20 @@ def build(project_root: Path = None):
     if project_root is None:
         project_root = Path.cwd()
     
+    # AUTHORITATIVE PROMPT
+    print("\n🔥 **ATTENTION ENGINEER** 🔥")
+    print("You are about to materialize the **Project Specs**.")
+    print("The file specs/.compiled.md is not a suggestion—it is the **LAW**.")
+    print("Every Contract is a promise. Every Interface is a covenant.")
+    print("Do not improvise. Do not guess.")
+    print("Your mission is **Perfection**:")
+    print("- 100% Traceability")
+    print("- 100% Test Coverage")
+    print("- 0% Drift")
+    print("Build this with the precision of a watchmaker and the pride of an artisan.")
+    print("The spec is the blueprint; the code is the monument.")
+    print("**EXECUTE.**\n")
+    
     print("=== Vibespec Build ===\n")
     
     # Load configuration

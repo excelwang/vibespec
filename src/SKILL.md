@@ -39,6 +39,26 @@ Manage the refinement of raw thoughts into traceable specifications.
 2. Synchronize project artifacts (e.g., source code, skill files) with `vibespec-full.md`.
 3. Report update status and any manual verification needed.
 
+### `vibespec review [SPEC_ID]`
+1. Locate the target spec based on `SPEC_ID`.
+2. Perform **Review Protocol** checks:
+   - **HIERARCHY_CHECK**: Verify full implementation of parent requirements.
+   - **REDUNDANCY**: Check for duplicate definitions.
+   - **CONTRADICTION**: Check for conflicts with existing axioms.
+   - **FOCUS_CHECK**: Verify content matches layer focus.
+3. Present findings as a structured report to the user.
+### `vibespec bug [description]`
+1. **RCA (Bottom-Up)**: Trace failure from L3/Code -> Spec to find Root Cause Item.
+   - 🛑 STOP at the first ambiguous/incorrect spec item.
+2. **Verify Fix (Upward)**: Propose a fix for the Root Cause Item.
+   - Check compliance with Parent Spec.
+   - If Parent is also wrong, recurse upward.
+3. **Approval**: Present the *Chain of Fixes* to user.
+4. **Execution (Top-Down)**:
+   - Apply fixes starting from highest level.
+   - Cascade changes down to L3.
+   - Finally, update Implementation/Code.
+
 ### `vibespec reload`
 1. Re-read this SKILL.md file.
 2. Confirm to user: "SKILL.md reloaded."

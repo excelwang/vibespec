@@ -97,10 +97,7 @@ invariants:
   > Verification: Conflict pairs logged before resolution applied.
   (Ref: VISION.SCOPE.IDEAS)
 
-- **TERM_ANALYSIS**: When processing ideas, Agent MUST analyze for new domain terms and update UBIQUITOUS_LANGUAGE (L0).
-  > Responsibility: Vocabulary — prevent terminology drift.
-  > Verification: New terms in idea trigger L0 update proposal.
-  (Ref: VISION.UBIQUITOUS_LANGUAGE)
+
 
 - **CONFLICT_RES**: Agent MUST resolve detected conflicts by latest timestamp.
   > Responsibility: Truth source — most recent intent wins.
@@ -148,10 +145,7 @@ invariants:
   > Verification: Single layer per turn.
   (Ref: VISION.TRACEABILITY.CHAIN)
 
-- **FOCUS_CHECK**: Script MUST verify layer content matches layer definition.
-  > Responsibility: Focus — prevent wrong-layer content.
-  > Verification: Focus violations are blocking.
-  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+
 
 - **SKILL_TRACEABILITY**: Agent MUST NOT edit SKILL.md without updating L3.
   > Responsibility: Traceability — SKILL.md is derived artifact.
@@ -283,6 +277,11 @@ invariants:
   > Verification: Required files exist after init.
   (Ref: VISION.SCOPE.VAL)
 
+- **CONFIG_GENERATION**: Script MUST auto-generate `vibespec.yaml` if missing.
+  > Responsibility: Zero Friction — eliminate manual setup.
+  > Verification: `vibespec.yaml` exists after init/repair.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
+
 ---
 
 ## CONTRACTS.TRIGGERS
@@ -296,6 +295,16 @@ invariants:
   > Responsibility: Capture — save raw thoughts immediately.
   > Verification: File created with timestamp name.
   (Ref: VISION.VIBE_CODING.PARADIGM)
+
+- **TRIGGER_REVIEW**: Script MUST accept `vibespec review [ID]` to audit specific specs.
+  > Responsibility: Audit — on-demand quality check.
+  > Verification: Runs review protocol on target spec.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+
+- **TRIGGER_BUG**: Script MUST accept `vibespec bug [desc]` to initiate spec-based RCA.
+  > Responsibility: Maintenance — formalize bug fixing.
+  > Verification: RCA steps logged before idea creation.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
 
 - **TRIGGER_ALIASES**: Script MUST recognize: `vibespec`, `vibespec`, `vibe spec`.
   > Responsibility: Usability — reduce friction.
@@ -544,6 +553,11 @@ invariants:
   > Responsibility: Clarity — different gap types require different actions.
   > Verification: Report includes categorized gap list.
 
+- **AUTHORITATIVE_PROMPT**: Script MUST present `specs/.compiled.md` as non-negotiable Law to Agent.
+  > Responsibility: Compliance — prevent agent improvisation.
+  > Verification: Build script outputs "The file specs/.compiled.md is not a suggestion—it is the LAW."
+
+
 (Ref: VISION.VIBE_CODING.HUMAN_GATE), (Ref: VISION.VIBE_CODING.TRUTH)
 
 ---
@@ -574,6 +588,11 @@ standard_terms:
 - **UNCOVERED_LIST**: Script MUST list uncovered spec IDs.
   > Responsibility: Actionability — identify missing tests.
   > Verification: Uncovered IDs listed in report.
+
+- **META_TEST_GENERATION**: Compiler Script MUST extract testable fixtures to `tests/specs/` mirroring the L1-L3 hierarchy.
+  > Responsibility: Synchronization — tests are derived directly from specs.
+  > Verification: `tests/specs/{layer}/{item}.py` matches spec structure.
+  (Ref: VISION.CERTIFICATION.COMPLIANCE)
 
 - **WORKFLOW_VERIFICATION**: Script MUST verify L3 `[workflow]` items using state transition fixtures.
   > Responsibility: Integration Logic — prove sequences work end-to-end.
@@ -626,7 +645,24 @@ standard_terms:
   > Responsibility: Relevance — prove toolchain works on *this* project.
   > Verification: Generated scenario matches project domain (e.g., User vs. Order).
   (Ref: VISION.TRACEABILITY.CHAIN)
+---
 
+## CONTRACTS.MAINTENANCE
+
+- **BUG_RCA**: On `vibespec bug`, Agent MUST trace failures recursively from L3 to L0 to find the root cause spec item.
+  > Responsibility: Depth — find the true origin.
+  > Verification: RCA trace log shows upward traversal.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+
+- **RECURSIVE_FIX**: Agent MUST verify proposed spec fixes against parent layers (Upward) before cascading changes (Downward).
+  > Responsibility: Integrity — prevent local fixes from breaking global contracts.
+  > Verification: Fix proposal includes parent compliance check.
+  (Ref: VISION.TRACEABILITY.CHAIN)
+
+- **DELETION_JUSTIFICATION**: Agent MUST document the reason for any L1-L3 item deletion and request review.
+  > Responsibility: Safety — prevent accidental regression or scope creep (deletion is scope change).
+  > Verification: User approval prompt contains "Motivation: [reason]" for deleted items.
+  (Ref: VISION.TRACEABILITY.CHAIN)
 ---
 
 ## CONTRACTS.RELOAD

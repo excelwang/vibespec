@@ -71,15 +71,12 @@ def extract_l3_interfaces(specs_dir: Path) -> list:
     
     return l3_items
 
-def scan_existing_tests(tests_dir: Path) -> set:
+def scan_existing_tests(config: dict) -> set:
     """Scan tests for @verify_spec decorators or YAML spec_id/id fields."""
     covered_ids = set()
     
-    if not tests_dir.exists():
-        return covered_ids
-    
-    # 1. Scan Python tests in script/unit and script/e2e
-    for py_dir in [tests_dir / "script/unit", tests_dir / "script/e2e"]:
+    # 1. Scan Python tests in unit and e2e dirs
+    for py_dir in [Path(config['unit_dir']), Path(config['e2e_dir'])]:
         if py_dir.exists():
             for py_file in py_dir.rglob("*.py"):
                 content = py_file.read_text()
@@ -88,34 +85,32 @@ def scan_existing_tests(tests_dir: Path) -> set:
                     covered_ids.add(match.group(1))
     
     # 2. Scan YAML tests in agent/ directory
-    for yaml_dir in [tests_dir / "agent"]:
-        if yaml_dir.exists():
-            for yaml_file in yaml_dir.rglob("*.yaml"):
-                content = yaml_file.read_text()
+    agent_dir = Path(config['agent_dir'])
+    if agent_dir.exists():
+        for yaml_file in agent_dir.rglob("*.yaml"):
+            content = yaml_file.read_text()
+            
+            # spec_id: SPEC_ID (top-level)
+            spec_id_match = re.search(r'^spec_id:\s*(\S+)', content, re.MULTILINE)
+            if spec_id_match:
+                base_id = spec_id_match.group(1)
+                covered_ids.add(base_id)
                 
-                # spec_id: SPEC_ID (top-level)
-                spec_id_match = re.search(r'^spec_id:\s*(\S+)', content, re.MULTILINE)
-                if spec_id_match:
-                    base_id = spec_id_match.group(1)
-                    covered_ids.add(base_id)
-                    
-                    # For agent contracts, also extract sub-contract IDs
-                    # - id: SUB_ID
-                    for sub_match in re.finditer(r'^\s*-\s*id:\s*(\w+)', content, re.MULTILINE):
-                        sub_id = sub_match.group(1)
-                        covered_ids.add(f"{base_id}.{sub_id}")
+                # For agent contracts, also extract sub-contract IDs
+                # - id: SUB_ID
+                for sub_match in re.finditer(r'^\s*-\s*id:\s*(\w+)', content, re.MULTILINE):
+                    sub_id = sub_match.group(1)
+                    covered_ids.add(f"{base_id}.{sub_id}")
     
     return covered_ids
 
 
     
-def run_pytest(tests_dir: Path) -> tuple:
+def run_pytest(config: dict) -> tuple:
     """Run pytest on Python script tests."""
-    # Use absolute paths to avoid cwd confusion
-    abs_tests_dir = tests_dir.resolve()
     target_dirs = [
-        str(abs_tests_dir / "script/e2e"),
-        str(abs_tests_dir / "script/unit")
+        str(Path(config['e2e_dir']).resolve()),
+        str(Path(config['unit_dir']).resolve())
     ]
     
     valid_dirs = [d for d in target_dirs if Path(d).exists() and list(Path(d).glob("*.py"))]
@@ -129,7 +124,7 @@ def run_pytest(tests_dir: Path) -> tuple:
             cmd,
             capture_output=True,
             text=True,
-            cwd=str(abs_tests_dir.parent.parent)  # Project root
+            cwd=str(Path.cwd())  # Project root
         )
         
         # Parse pytest output
@@ -141,9 +136,20 @@ def run_pytest(tests_dir: Path) -> tuple:
     except Exception as e:
         return 0, 0, 0, str(e)
 
+def load_config():
+    config = {'agent_dir': 'tests/specs/agent', 'e2e_dir': 'tests/specs/script/e2e', 'unit_dir': 'tests/specs/script/unit'}
+    if Path("vibespec.yaml").exists():
+        for line in Path("vibespec.yaml").read_text().splitlines():
+             if ":" in line:
+                 k, v = line.split(":", 1)
+                 k = k.strip()
+                 if k in config: config[k] = v.strip()
+    return config
+
 def main():
+    config = load_config()
     specs_dir = Path("specs")
-    tests_dir = Path("tests/specs")
+    # tests_dir removed as we use specific dirs from config
     
     if not specs_dir.exists():
         print("❌ specs/ directory not found")
@@ -161,7 +167,7 @@ def main():
     
     # Phase 2: Analyze coverage
     print("\n📊 Phase 2: Analyzing Coverage...")
-    covered_ids = scan_existing_tests(tests_dir)
+    covered_ids = scan_existing_tests(config)
     
     l1_covered = sum(1 for c in l1_contracts if c['id'] in covered_ids)
     l3_covered = sum(1 for i in l3_items if i['id'] in covered_ids)
@@ -190,7 +196,7 @@ def main():
     
     # Phase 4: Execute tests
     print("\n🧪 Phase 4: Executing Tests...")
-    passed, failed, skipped, output = run_pytest(tests_dir)
+    passed, failed, skipped, output = run_pytest(config)
     
     if "No script tests found" in output:
         print("   ⏭️  No script tests to run (TEST_ENV=MOCK)")
@@ -227,14 +233,15 @@ def main():
     print("=== Vibespec Test Coverage Dashboard ===")
     
     print(f"\n📂 [acceptance] (L1 Contracts)")
-    print(f"   path: tests/specs/acceptance/")
-    print(f"   Coverage: {acceptance_covered}/{acceptance_total} ({ (acceptance_covered/acceptance_total*100 if acceptance_total else 0):.1f}%)")
+    print(f"   Agent Dir: {config['agent_dir']}")
+    print(f"   E2E Dir:   {config['e2e_dir']}")
+    print(f"   Coverage: {acceptance_covered}/{acceptance_total} ({(acceptance_covered/acceptance_total*100 if acceptance_total else 0):.1f}%)")
     print(f"     - 🤖 Agent Contracts (YAML):   {l1_agent_cov}/{len(l1_agent)}")
     print(f"     - 📜 Script Contracts (Python): {l1_script_cov}/{len(l1_script)}")
     
     print(f"\n📂 [runtime] (L3 System)")
-    print(f"   path: tests/specs/runtime/")
-    print(f"   Coverage: {runtime_covered}/{runtime_total} ({ (runtime_covered/runtime_total*100 if runtime_total else 0):.1f}%)")
+    print(f"   Unit Dir:  {config['unit_dir']}")
+    print(f"   Coverage: {runtime_covered}/{runtime_total} ({(runtime_covered/runtime_total*100 if runtime_total else 0):.1f}%)")
     print(f"     - 🧠 Role Decisions (YAML):    {l3_decision_cov}/{len(l3_decision)}")
     print(f"     - ⚙️  Components (Python):       {l3_component_cov}/{len(l3_component)}")
     

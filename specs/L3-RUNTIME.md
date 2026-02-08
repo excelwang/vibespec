@@ -516,14 +516,16 @@ interface SkillLoader {
 ```typescript
 interface InitScript {
   init(projectDir: Path): InitResult
+  generateConfig(): Path
 }
 ```
 
 **Fixtures**:
 | Input | Expected | Case |
 |-------|----------|------|
-| empty dir | SUCCESS | Normal |
+| empty dir | L0 + Config | Normal |
 | existing project | SKIP | Edge |
+| minimal init | Config Only | Config Gen |
 | no permissions | InitError | Error |
 
 ---
@@ -563,6 +565,31 @@ interface CompileScript {
 | specs/ -> out.md | void | Normal |
 | no specs | CompileError | Error |
 | invalid output | WriteError | Error |
+
+**Standards**:
+- **META_TEST_STRUCTURE**:
+  - `tests/specs/agent/` : `answer_key_{snake_case_id}.md`
+  - `tests/specs/script/unit/` : `test_{snake_case_id}.py`
+  - `tests/specs/script/e2e/` : `test_{snake_case_id}.py`
+
+---
+
+## [interface] BUILD_SCRIPT
+
+> Implements: [Component: COMPONENTS.SCRIPTS.BUILD_SCRIPT]
+
+```typescript
+interface BuildScript {
+  build(config: Path): BuildReport
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| valid config | Report | Normal |
+| no config | Error | Missing Config |
+| drift detected | Warning | Drift |
 
 ---
 
