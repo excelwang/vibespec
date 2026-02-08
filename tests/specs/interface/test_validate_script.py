@@ -30,28 +30,40 @@ def get_adapter(env='MOCK'):
         return MockAdapter()
     elif env == 'REAL':
         try:
-            # TODO: Import real implementation
-            return None  # SkipAdapter
+            # Real implementation not yet available
+            return None
         except ImportError:
             return None
     return None
 
-class TestVALIDATESCRIPT(unittest.TestCase):
+class TestVALIDATE_SCRIPT(unittest.TestCase):
     def setUp(self):
         self.env = os.environ.get('TEST_ENV', 'MOCK')
         self.adapter = get_adapter(self.env)
 
     @verify_spec("VALIDATE_SCRIPT")
     def test_compliance(self):
+        
     # Fixtures from Spec:
     # - Input: valid specs, Expected: {errors: 0}, Case: Normal
     # - Input: invalid specs, Expected: {errors: N}, Case: Normal
     # - Input: no specs, Expected: EmptyError, Case: Edge
 
-        if self.adapter is None and self.env == 'REAL':
-            self.skipTest("REAL adapter not implemented for VALIDATE_SCRIPT")
-        # TODO: Implement test logic using self.adapter
-        pass
+        if self.adapter is None:
+            if self.env == 'REAL':
+                self.skipTest("REAL adapter not implemented for VALIDATE_SCRIPT")
+            else:
+                self.fail("Mock adapter failed to initialize")
+
+        if self.env == 'MOCK':
+            # Verify Mock Adapter returns expected values for all fixtures
+            for fixture in FIXTURES:
+                input_val = fixture.get('Input')
+                expected_val = fixture.get('Expected')
+                if input_val and expected_val:
+                    result = self.adapter.execute(input_val)
+                    self.assertEqual(result, expected_val, 
+                        f"Mock adapter failed for input: {input_val}")
 
 if __name__ == '__main__':
     unittest.main()

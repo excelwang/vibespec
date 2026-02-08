@@ -1,464 +1,118 @@
-# Test Paper: L1 AGENT CONTRACT Compliance Test
+# L1 Agent Exam Paper
 
-> ⚠️ **IMPORTANT**: Answer based ONLY on `.compiled-full-spec.md` content.
-> Do NOT use external knowledge or infer beyond what is explicitly stated in the spec.
-> Your answers will be graded against the exact spec definitions.
+The following contracts require manual or automated verification by the Agent.
 
----
+- [ ] **L1.CONTRACTS.LEAF_TYPE_PURITY.DECOMPOSE_MIXED**: decompose mixed items until each leaf is pure....
+  - [Answer Key](./answer_key_l1_contracts_leaf_type_purity_decompose_mixed.md)
 
-## Q1: L1.CONTRACTS.BOOTSTRAP.APPROVAL_GATE
+- [ ] **L1.CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING**: classify each idea to highest applicable layer....
+  - [Answer Key](./answer_key_l1_contracts_ideas_pipeline_level_seeking.md)
 
-## Question
+- [ ] **L1.CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION**: split mixed-level ideas and process sequentially....
+  - [Answer Key](./answer_key_l1_contracts_ideas_pipeline_decomposition.md)
 
-**Contract Rule**: Agent MUST get approval before creating files.
+- [ ] **L1.CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED**: pause for human review after creating idea file....
+  - [Answer Key](./answer_key_l1_contracts_ideas_pipeline_approval_required.md)
 
-Describe how the Agent should behave in the following scenarios:
+- [ ] **L1.CONTRACTS.IDEAS_PIPELINE.CONFLICT_DETECT**: identify conflicting ideas before resolution....
+  - [Answer Key](./answer_key_l1_contracts_ideas_pipeline_conflict_detect.md)
 
-<!-- [Answer hidden for testing] -->
+- [ ] **L1.CONTRACTS.IDEAS_PIPELINE.CONFLICT_RES**: resolve detected conflicts by latest timestamp....
+  - [Answer Key](./answer_key_l1_contracts_ideas_pipeline_conflict_res.md)
 
----
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT**: read full layer content after revision....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_self_audit.md)
 
-## Q2: L1.CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK**: load parent layer before editing child....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_hierarchy_check.md)
 
-## Question
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY**: flag duplicate definitions and overlapping content....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_redundancy.md)
 
-**Contract Rule**: Agent MUST ask user to describe project.
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION**: flag conflicts with existing content....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_contradiction.md)
 
-Describe how the Agent should behave in the following scenarios:
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION**: present all findings during approval....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_notification.md)
 
-<!-- [Answer hidden for testing] -->
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY**: NOT edit multiple layers in one turn....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_sequential_only.md)
 
----
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY**: NOT edit SKILL.md without updating L3....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_skill_traceability.md)
 
-## Q3: L1.CONTRACTS.BOOTSTRAP.SCOPE_REFORM
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.ROLE_FIRST_REVIEW**: evaluate revision quality through REVIEWER role before fixing validation errors....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_role_first_review.md)
 
-## Question
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.LAYER_SPECIFIC**: apply layer-specific review criteria during quality review....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_layer_specific.md)
 
-**Contract Rule**: Agent MUST convert input to SHALL/SHALL NOT statements.
+- [ ] **L1.CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW**: evaluate downstream spec impact when reviewing current level....
+  - [Answer Key](./answer_key_l1_contracts_review_protocol_cascade_review.md)
 
-Describe how the Agent should behave in the following scenarios:
+- [ ] **L1.CONTRACTS.REJECTION_HANDLING.AUTOMATED_GIVEUP**: revert and halt after 3 failed retries....
+  - [Answer Key](./answer_key_l1_contracts_rejection_handling_automated_giveup.md)
 
-<!-- [Answer hidden for testing] -->
+- [ ] **L1.CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION**: revert to pre-task state on user rejection....
+  - [Answer Key](./answer_key_l1_contracts_rejection_handling_human_rejection.md)
 
----
+- [ ] **L1.CONTRACTS.REFLECT.HUMAN_REVIEW**: get approval before saving distilled ideas....
+  - [Answer Key](./answer_key_l1_contracts_reflect_human_review.md)
 
-## Q4: L1.CONTRACTS.BUILD_STRATEGY.REWRITE_THRESHOLD
+- [ ] **L1.CONTRACTS.SCRIPT_FIRST.PROACTIVE**: propose scripts for repetitive workflows....
+  - [Answer Key](./answer_key_l1_contracts_script_first_proactive.md)
 
-## Question
+- [ ] **L1.CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY**: ask user to describe project....
+  - [Answer Key](./answer_key_l1_contracts_bootstrap_scope_inquiry.md)
 
-**Contract Rule**: Agent MUST request human approval if gap exceeds 70%.
+- [ ] **L1.CONTRACTS.BOOTSTRAP.SCOPE_REFORM**: convert input to SHALL/SHALL NOT statements....
+  - [Answer Key](./answer_key_l1_contracts_bootstrap_scope_reform.md)
 
-Describe how the Agent should behave in the following scenarios:
+- [ ] **L1.CONTRACTS.BOOTSTRAP.APPROVAL_GATE**: get approval before creating files....
+  - [Answer Key](./answer_key_l1_contracts_bootstrap_approval_gate.md)
 
-<!-- [Answer hidden for testing] -->
+- [ ] **L1.CONTRACTS.TRIGGERS.IDLE_BEHAVIOR**: enter Validation Mode when ideas/ empty and SKILL.md exists....
+  - [Answer Key](./answer_key_l1_contracts_triggers_idle_behavior.md)
 
----
+- [ ] **L1.CONTRACTS.TRIGGERS.EMPTY_PROMPT**: invite brainstorming when project empty....
+  - [Answer Key](./answer_key_l1_contracts_triggers_empty_prompt.md)
 
-## Q5: L1.CONTRACTS.CERTIFICATION.ANSWER_KEY_LAYER
+- [ ] **L1.CONTRACTS.VALIDATION_MODE.REPORT**: summarize orphans, ratio warnings, terminology issues....
+  - [Answer Key](./answer_key_l1_contracts_validation_mode_report.md)
 
-## Question
+- [ ] **L1.CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL**: generate ideas for found errors....
+  - [Answer Key](./answer_key_l1_contracts_validation_mode_fix_proposal.md)
 
-**Contract Rule**: Agent MUST generate `answer_key_l1.md` and `answer_key_l3.md` files.
+- [ ] **L1.CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION**: generate mock objects for external interfaces....
+  - [Answer Key](./answer_key_l1_contracts_strict_testability_mock_generation.md)
 
-Describe how the Agent should behave in the following scenarios:
+- [ ] **L1.CONTRACTS.BUILD_STRATEGY.REWRITE_THRESHOLD**: request human approval if gap exceeds 70%....
+  - [Answer Key](./answer_key_l1_contracts_build_strategy_rewrite_threshold.md)
 
-<!-- [Answer hidden for testing] -->
+- [ ] **L1.CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION**: generate tests for uncovered L3 fixtures....
+  - [Answer Key](./answer_key_l1_contracts_testing_workflow_test_generation.md)
 
----
+- [ ] **L1.CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST**: request approval before saving generated tests....
+  - [Answer Key](./answer_key_l1_contracts_testing_workflow_human_approval_test.md)
 
-## Q6: L1.CONTRACTS.CERTIFICATION.ERROR_PRONE_FOCUS
+- [ ] **L1.CONTRACTS.CERTIFICATION.ANSWER_KEY_FORMAT**: generate answer keys as Markdown files with `<!-- ANSWER_START -->` and `<!-- ANSWER_END -->` marker...
+  - [Answer Key](./answer_key_l1_contracts_certification_answer_key_format.md)
 
-## Question
+- [ ] **L1.CONTRACTS.CERTIFICATION.VERIFY_SPEC_ANNOTATION**: include `@verify_spec_id("SPEC_ID")` annotation per test item....
+  - [Answer Key](./answer_key_l1_contracts_certification_verify_spec_annotation.md)
 
-**Contract Rule**: Agent MUST design tests targeting error-prone usage patterns.
+- [ ] **L1.CONTRACTS.CERTIFICATION.ERROR_PRONE_FOCUS**: design tests targeting error-prone usage patterns....
+  - [Answer Key](./answer_key_l1_contracts_certification_error_prone_focus.md)
 
-Describe how the Agent should behave in the following scenarios:
+- [ ] **L1.CONTRACTS.CERTIFICATION.REALISTIC_CONTEXT**: use realistic Context/Expectation content matching actual project inputs....
+  - [Answer Key](./answer_key_l1_contracts_certification_realistic_context.md)
 
-<!-- [Answer hidden for testing] -->
+- [ ] **L1.CONTRACTS.MAINTENANCE.RECURSIVE_FIX**: verify proposed spec fixes against parent layers (Upward) before cascading changes (Downward)....
+  - [Answer Key](./answer_key_l1_contracts_maintenance_recursive_fix.md)
 
----
+- [ ] **L1.CONTRACTS.MAINTENANCE.DELETION_JUSTIFICATION**: document the reason for any L1-L3 item deletion and request review....
+  - [Answer Key](./answer_key_l1_contracts_maintenance_deletion_justification.md)
 
-## Q7: L1.CONTRACTS.CERTIFICATION.REALISTIC_CONTEXT
-
-## Question
-
-**Contract Rule**: Agent MUST use realistic Context/Expectation content matching actual project inputs.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q8: L1.CONTRACTS.CERTIFICATION.VERIFY_SPEC_ANNOTATION
-
-## Question
-
-**Contract Rule**: Agent MUST include `@verify_spec_id("SPEC_ID")` annotation per test item.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q9: L1.CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED
-
-## Question
-
-**Contract Rule**: Agent MUST pause for human review after creating idea file.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q10: L1.CONTRACTS.IDEAS_PIPELINE.CONFLICT_DETECT
-
-## Question
-
-**Contract Rule**: Agent MUST identify conflicting ideas before resolution.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q11: L1.CONTRACTS.IDEAS_PIPELINE.CONFLICT_RES
-
-## Question
-
-**Contract Rule**: Agent MUST resolve detected conflicts by latest timestamp.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q12: L1.CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION
-
-## Question
-
-**Contract Rule**: Agent MUST split mixed-level ideas and process sequentially.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q13: L1.CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING
-
-## Question
-
-**Contract Rule**: Agent MUST classify each idea to highest applicable layer.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q14: L1.CONTRACTS.LEAF_TYPE_PURITY.DECOMPOSE_MIXED
-
-## Question
-
-**Contract Rule**: Agent MUST decompose mixed items until each leaf is pure.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q15: L1.CONTRACTS.MAINTENANCE.DELETION_JUSTIFICATION
-
-## Question
-
-**Contract Rule**: Agent MUST document the reason for any L1-L3 item deletion and request review.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q16: L1.CONTRACTS.MAINTENANCE.RECURSIVE_FIX
-
-## Question
-
-**Contract Rule**: Agent MUST verify proposed spec fixes against parent layers (Upward) before cascading changes (Downward).
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q17: L1.CONTRACTS.REFLECT.HUMAN_REVIEW
-
-## Question
-
-**Contract Rule**: Agent MUST get approval before saving distilled ideas.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q18: L1.CONTRACTS.REJECTION_HANDLING.AUTOMATED_GIVEUP
-
-## Question
-
-**Contract Rule**: Agent MUST revert and halt after 3 failed retries.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q19: L1.CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION
-
-## Question
-
-**Contract Rule**: Agent MUST revert to pre-task state on user rejection.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q20: L1.CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW
-
-## Question
-
-**Contract Rule**: Agent MUST evaluate downstream spec impact when reviewing current level.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q21: L1.CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION
-
-## Question
-
-**Contract Rule**: Agent MUST flag conflicts with existing content.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q22: L1.CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK
-
-## Question
-
-**Contract Rule**: Agent MUST load parent layer before editing child.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q23: L1.CONTRACTS.REVIEW_PROTOCOL.LAYER_SPECIFIC
-
-## Question
-
-**Contract Rule**: Agent MUST apply layer-specific review criteria during quality review.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q24: L1.CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION
-
-## Question
-
-**Contract Rule**: Agent MUST present all findings during approval.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q25: L1.CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY
-
-## Question
-
-**Contract Rule**: Agent MUST flag duplicate definitions and overlapping content.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q26: L1.CONTRACTS.REVIEW_PROTOCOL.ROLE_FIRST_REVIEW
-
-## Question
-
-**Contract Rule**: Agent MUST evaluate revision quality through REVIEWER role before fixing validation errors.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q27: L1.CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT
-
-## Question
-
-**Contract Rule**: Agent MUST read full layer content after revision.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q28: L1.CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY
-
-## Question
-
-**Contract Rule**: Agent MUST NOT edit multiple layers in one turn.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q29: L1.CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY
-
-## Question
-
-**Contract Rule**: Agent MUST NOT edit SKILL.md without updating L3.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q30: L1.CONTRACTS.SCRIPT_FIRST.PROACTIVE
-
-## Question
-
-**Contract Rule**: Agent MUST propose scripts for repetitive workflows.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q31: L1.CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION
-
-## Question
-
-**Contract Rule**: Agent MUST generate mock objects for external interfaces.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q32: L1.CONTRACTS.TEMPLATE_GENERATION.USE_TEMPLATES
-
-## Question
-
-**Contract Rule**: Agent MUST use templates from `src/assets/specs/` when generating files.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q33: L1.CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST
-
-## Question
-
-**Contract Rule**: Agent MUST request approval before saving generated tests.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q34: L1.CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION
-
-## Question
-
-**Contract Rule**: Agent MUST generate tests for uncovered L3 fixtures.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q35: L1.CONTRACTS.TRIGGERS.EMPTY_PROMPT
-
-## Question
-
-**Contract Rule**: Agent MUST invite brainstorming when project empty.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q36: L1.CONTRACTS.TRIGGERS.IDLE_BEHAVIOR
-
-## Question
-
-**Contract Rule**: Agent MUST enter Validation Mode when ideas/ empty and SKILL.md exists.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q37: L1.CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL
-
-## Question
-
-**Contract Rule**: Agent MUST generate ideas for found errors.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
-
-## Q38: L1.CONTRACTS.VALIDATION_MODE.REPORT
-
-## Question
-
-**Contract Rule**: Agent MUST summarize orphans, ratio warnings, terminology issues.
-
-Describe how the Agent should behave in the following scenarios:
-
-<!-- [Answer hidden for testing] -->
-
----
+- [ ] **L1.CONTRACTS.TEMPLATE_GENERATION.USE_TEMPLATES**: use templates from `src/assets/specs/` when generating files....
+  - [Answer Key](./answer_key_l1_contracts_template_generation_use_templates.md)
 

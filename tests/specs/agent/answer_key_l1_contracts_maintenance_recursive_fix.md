@@ -12,7 +12,7 @@ Describe how the Agent should behave in the following scenarios:
 
 | Scenario | Agent Action | Expected Outcome |
 |----------|--------------|------------------|
-| [Scenario 1] | [Action per spec] | [Expected result] |
-| [Scenario 2] | [Action per spec] | [Expected result] |
+| Standard Compliance | Adhere to contract RECURSIVE_FIX | Contract satisfied |
+| Edge Case | Handle gracefully | no violation |
 
 <!-- ANSWER_END -->

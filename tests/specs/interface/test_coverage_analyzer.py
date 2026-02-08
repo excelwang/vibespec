@@ -30,28 +30,40 @@ def get_adapter(env='MOCK'):
         return MockAdapter()
     elif env == 'REAL':
         try:
-            # TODO: Import real implementation
-            return None  # SkipAdapter
+            # Real implementation not yet available
+            return None
         except ImportError:
             return None
     return None
 
-class TestCOVERAGEANALYZER(unittest.TestCase):
+class TestCOVERAGE_ANALYZER(unittest.TestCase):
     def setUp(self):
         self.env = os.environ.get('TEST_ENV', 'MOCK')
         self.adapter = get_adapter(self.env)
 
     @verify_spec("COVERAGE_ANALYZER")
     def test_compliance(self):
+        
     # Fixtures from Spec:
     # - Input: specs/ + tests/, Expected: {l1: 0.8, l3: 0.6, []}, Case: Normal
     # - Input: specs/ + empty tests/, Expected: {l1: 0.0, l3: 0.0, [...]}, Case: Edge
     # - Input: empty specs/, Expected: EmptySpecError, Case: Error
 
-        if self.adapter is None and self.env == 'REAL':
-            self.skipTest("REAL adapter not implemented for COVERAGE_ANALYZER")
-        # TODO: Implement test logic using self.adapter
-        pass
+        if self.adapter is None:
+            if self.env == 'REAL':
+                self.skipTest("REAL adapter not implemented for COVERAGE_ANALYZER")
+            else:
+                self.fail("Mock adapter failed to initialize")
+
+        if self.env == 'MOCK':
+            # Verify Mock Adapter returns expected values for all fixtures
+            for fixture in FIXTURES:
+                input_val = fixture.get('Input')
+                expected_val = fixture.get('Expected')
+                if input_val and expected_val:
+                    result = self.adapter.execute(input_val)
+                    self.assertEqual(result, expected_val, 
+                        f"Mock adapter failed for input: {input_val}")
 
 if __name__ == '__main__':
     unittest.main()

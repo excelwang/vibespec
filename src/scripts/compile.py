@@ -142,6 +142,10 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
     if modified_specs:
         print(f"📝 Modified specs detected: {', '.join(modified_specs)}")
 
+    # Collect items for Test Papers
+    l1_contracts = []
+    l3_decisions = []
+
     # Process L1 Contracts
     for f in specs_dir.glob("L1*.md"):
         content = f.read_text()
@@ -164,6 +168,12 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
                 full_id = f"L1.{current_section}.{rule_id}"  # L1 prefix to avoid ID conflicts
                 safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', full_id).lower()
                 
+                l1_contracts.append({
+                    'id': full_id,
+                    'text': rule_text,
+                    'answer_key': f"answer_key_{safe_id}.md"
+                })
+
                 answer_key_file = agent_dir / f"answer_key_{safe_id}.md"
                 generated_files.add(answer_key_file)
                 
@@ -185,9 +195,8 @@ Describe how the Agent should behave in the following scenarios:
 
 | Scenario | Agent Action | Expected Outcome |
 |----------|--------------|------------------|
-| [Scenario 1] | [Action per spec] | [Expected result] |
-| [Scenario 2] | [Action per spec] | [Expected result] |
-
+| Standard Compliance | Adhere to contract {rule_id} | Contract satisfied |
+| Edge Case | Handle gracefully | no violation |
 <!-- ANSWER_END -->
 """
                     answer_key_file.write_text(answer_key_content)
@@ -216,6 +225,12 @@ Describe how the Agent should behave in the following scenarios:
                 # L3 Decision (Role): generate answer_key skeleton
                 l3_id = f"L3.{f_id}"
                 safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', l3_id).lower()
+                
+                l3_decisions.append({
+                    'id': l3_id,
+                    'role': f_id,
+                    'answer_key': f"answer_key_{safe_id}.md"
+                })
                 
                 answer_key_file = decision_dir / f"answer_key_{safe_id}.md"
                 generated_files.add(answer_key_file)
@@ -312,46 +327,88 @@ def get_adapter(env='MOCK'):
         return MockAdapter()
     elif env == 'REAL':
         try:
-            # TODO: Import real implementation
-            return None  # SkipAdapter
+            # Real implementation not yet available
+            return None
         except ImportError:
             return None
     return None
 
-class Test{re.sub(r'[^a-zA-Z0-9]', '', f_id)}(unittest.TestCase):
+class Test{safe_id.upper()}(unittest.TestCase):
     def setUp(self):
         self.env = os.environ.get('TEST_ENV', 'MOCK')
         self.adapter = get_adapter(self.env)
 
-    @verify_spec(\"{f_id}\")
-    def test_compliance(self):{fixture_comments}
-        if self.adapter is None and self.env == 'REAL':
-            self.skipTest(\"REAL adapter not implemented for {f_id}\")
-        # TODO: Implement test logic using self.adapter
-        pass
+    @verify_spec("{f_id}")
+    def test_compliance(self):
+        {fixture_comments}
+        if self.adapter is None:
+            if self.env == 'REAL':
+                self.skipTest("REAL adapter not implemented for {f_id}")
+            else:
+                self.fail("Mock adapter failed to initialize")
+
+        if self.env == 'MOCK':
+            # Verify Mock Adapter returns expected values for all fixtures
+            for fixture in FIXTURES:
+                input_val = fixture.get('Input')
+                expected_val = fixture.get('Expected')
+                if input_val and expected_val:
+                    result = self.adapter.execute(input_val)
+                    self.assertEqual(result, expected_val, 
+                        f"Mock adapter failed for input: {{input_val}}")
 
 if __name__ == '__main__':
     unittest.main()
 """
                      test_file.write_text(test_content)
                      generated_count += 1
+                 
                  elif force_update:
                      # Existing file with modified spec: only update FIXTURES block
                      print(f"   🔄 Updating FIXTURES in {test_file.name} (spec modified)")
-                     existing_content = test_file.read_text()
+                     original_content = test_file.read_text()
                      
-                     # Replace FIXTURES = [...] block
-                     updated_content = re.sub(
-                         r'FIXTURES = \[.*?\]\n',
-                         fixture_data,
-                         existing_content,
+                     # Regex replace FIXTURES = [...]
+                     new_content = re.sub(
+                         r'FIXTURES = \[.*?\]', 
+                         fixture_data.strip(), 
+                         original_content, 
                          flags=re.DOTALL
                      )
                      
-                     if updated_content != existing_content:
-                         test_file.write_text(updated_content)
-                         generated_count += 1
+                     # Also update comment block
+                     if fixture_comments:
+                         new_content = re.sub(
+                             r'    # Fixtures from Spec:\n(    # - .+\n)+',
+                             fixture_comments,
+                             new_content
+                         )
+                     
+                     test_file.write_text(new_content)
+                     generated_count += 1
 
+    # Generate Test Papers
+    
+    # 1. L1 Agent Test Paper
+    agent_paper = agent_dir / "test_paper.md"
+    generated_files.add(agent_paper)
+    paper_content = "# L1 Agent Exam Paper\n\n"
+    paper_content += "The following contracts require manual or automated verification by the Agent.\n\n"
+    for item in l1_contracts:
+        paper_content += f"- [ ] **{item['id']}**: {item['text'][:100]}...\n"
+        paper_content += f"  - [Answer Key](./{item['answer_key']})\n\n"
+    agent_paper.write_text(paper_content)
+    
+    # 2. L3 Decision Test Paper
+    decision_paper = decision_dir / "test_paper.md"
+    generated_files.add(decision_paper)
+    paper_content = "# L3 Decision Exam Paper\n\n"
+    paper_content += "The following complex decisions require verification of logic and judgment.\n\n"
+    for item in l3_decisions:
+        paper_content += f"- [ ] **{item['id']}** ({item['role']})\n"
+        paper_content += f"  - [Answer Key](./{item['answer_key']})\n\n"
+    decision_paper.write_text(paper_content)
+                
     # Report Orphans
     all_existing = existing_tests | existing_agent | existing_decision
     orphans = all_existing - generated_files

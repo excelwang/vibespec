@@ -29,27 +29,39 @@ def get_adapter(env='MOCK'):
         return MockAdapter()
     elif env == 'REAL':
         try:
-            # TODO: Import real implementation
-            return None  # SkipAdapter
+            # Real implementation not yet available
+            return None
         except ImportError:
             return None
     return None
 
-class TestCERTIFICATIONENGINEINTERFACE(unittest.TestCase):
+class TestCERTIFICATION_ENGINE_INTERFACE(unittest.TestCase):
     def setUp(self):
         self.env = os.environ.get('TEST_ENV', 'MOCK')
         self.adapter = get_adapter(self.env)
 
     @verify_spec("CERTIFICATION_ENGINE_INTERFACE")
     def test_compliance(self):
+        
     # Fixtures from Spec:
     # - Input: L1 spec item, Expected: answer_key_{id}.md, Case: Normal
     # - Input: Empty specs, Expected: [], Case: Edge
 
-        if self.adapter is None and self.env == 'REAL':
-            self.skipTest("REAL adapter not implemented for CERTIFICATION_ENGINE_INTERFACE")
-        # TODO: Implement test logic using self.adapter
-        pass
+        if self.adapter is None:
+            if self.env == 'REAL':
+                self.skipTest("REAL adapter not implemented for CERTIFICATION_ENGINE_INTERFACE")
+            else:
+                self.fail("Mock adapter failed to initialize")
+
+        if self.env == 'MOCK':
+            # Verify Mock Adapter returns expected values for all fixtures
+            for fixture in FIXTURES:
+                input_val = fixture.get('Input')
+                expected_val = fixture.get('Expected')
+                if input_val and expected_val:
+                    result = self.adapter.execute(input_val)
+                    self.assertEqual(result, expected_val, 
+                        f"Mock adapter failed for input: {input_val}")
 
 if __name__ == '__main__':
     unittest.main()

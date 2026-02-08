@@ -75,51 +75,39 @@ def scan_existing_tests(config: dict) -> set:
     """Scan tests for @verify_spec decorators or YAML spec_id/id fields."""
     covered_ids = set()
     
-    # 1. Scan Python tests in unit and e2e dirs
-    for py_dir in [Path(config['unit_dir']), Path(config['e2e_dir'])]:
-        if py_dir.exists():
-            for py_file in py_dir.rglob("*.py"):
-                content = py_file.read_text()
-                # @verify_spec("ID")
-                for match in re.finditer(r'@verify_spec\(["\']([^"\']+)["\']\)', content):
-                    covered_ids.add(match.group(1))
+    # 1. Scan Python tests in specs directory
+    specs_path = Path(config['specs_dir'])
+    if specs_path.exists():
+        for py_file in specs_path.rglob("*.py"):
+            content = py_file.read_text()
+            # @verify_spec("ID")
+            for match in re.finditer(r'@verify_spec\(["\']([^"\']+)["\']\)', content):
+                covered_ids.add(match.group(1))
     
-    # 2. Scan YAML tests in agent/ directory
-    agent_dir = Path(config['agent_dir'])
-    if agent_dir.exists():
-        for yaml_file in agent_dir.rglob("*.yaml"):
-            content = yaml_file.read_text()
-            
-            # spec_id: SPEC_ID (top-level)
-            spec_id_match = re.search(r'^spec_id:\s*(\S+)', content, re.MULTILINE)
-            if spec_id_match:
-                base_id = spec_id_match.group(1)
-                covered_ids.add(base_id)
+    # 2. Scan Markdown tests in agent/ & decision/ directory
+    for subdir in ['agent', 'decision']:
+        target_dir = Path(config['specs_dir']) / subdir
+        if target_dir.exists():
+            for md_file in target_dir.rglob("*.md"):
+                content = md_file.read_text()
                 
-                # For agent contracts, also extract sub-contract IDs
-                # - id: SUB_ID
-                for sub_match in re.finditer(r'^\s*-\s*id:\s*(\w+)', content, re.MULTILINE):
-                    sub_id = sub_match.group(1)
-                    covered_ids.add(f"{base_id}.{sub_id}")
-    
+                # <!-- @verify_spec("ID") -->
+                match = re.search(r'<!-- @verify_spec\("([^"]+)"\) -->', content)
+                if match:
+                    covered_ids.add(match.group(1))
+
     return covered_ids
 
-
-    
 def run_pytest(config: dict) -> tuple:
     """Run pytest on Python script tests."""
-    target_dirs = [
-        str(Path(config['e2e_dir']).resolve()),
-        str(Path(config['unit_dir']).resolve())
-    ]
+    # Target the entire specs directory for pytest discovery
+    target_dir = str(Path(config['specs_dir']).resolve())
     
-    valid_dirs = [d for d in target_dirs if Path(d).exists() and list(Path(d).glob("*.py"))]
-    
-    if not valid_dirs:
+    if not Path(target_dir).exists():
         return 0, 0, 0, "No script tests found"
     
     try:
-        cmd = [sys.executable, "-m", "pytest"] + valid_dirs + ["-v", "--tb=short"]
+        cmd = [sys.executable, "-m", "pytest", target_dir, "-v", "--tb=short"]
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -137,7 +125,10 @@ def run_pytest(config: dict) -> tuple:
         return 0, 0, 0, str(e)
 
 def load_config():
-    config = {'agent_dir': 'tests/specs/agent', 'e2e_dir': 'tests/specs/script/e2e', 'unit_dir': 'tests/specs/script/unit'}
+    config = {
+        'agent_dir': 'tests/specs/agent', 
+        'specs_dir': 'tests/specs'
+    }
     if Path("vibespec.yaml").exists():
         for line in Path("vibespec.yaml").read_text().splitlines():
              if ":" in line:
@@ -219,28 +210,23 @@ def main():
     l3_component_cov = sum(1 for i in l3_component if i['id'] in covered_ids)
     
     # Totals
-    acceptance_total = len(l1_agent) + len(l1_script) # Wait, user wanted Agent + Script in acceptance?
-    # No, user said: acceptance/{agent, scripts} and runtime/{roles, components}
-    # So Acceptance = L1 (Agent + Script), Runtime = L3 (Roles + Components)
+    acceptance_total = len(l1_agent) + len(l1_script)
+    runtime_total = len(l3_decision) + len(l3_component)
     
     acceptance_covered = l1_agent_cov + l1_script_cov
     runtime_covered = l3_decision_cov + l3_component_cov
-    
-    acceptance_total = len(l1_agent) + len(l1_script)
-    runtime_total = len(l3_decision) + len(l3_component)
 
     print("\n" + "=" * 55)
     print("=== Vibespec Test Coverage Dashboard ===")
     
     print(f"\n📂 [acceptance] (L1 Contracts)")
     print(f"   Agent Dir: {config['agent_dir']}")
-    print(f"   E2E Dir:   {config['e2e_dir']}")
     print(f"   Coverage: {acceptance_covered}/{acceptance_total} ({(acceptance_covered/acceptance_total*100 if acceptance_total else 0):.1f}%)")
     print(f"     - 🤖 Agent Contracts (YAML):   {l1_agent_cov}/{len(l1_agent)}")
     print(f"     - 📜 Script Contracts (Python): {l1_script_cov}/{len(l1_script)}")
     
     print(f"\n📂 [runtime] (L3 System)")
-    print(f"   Unit Dir:  {config['unit_dir']}")
+    print(f"   Specs Dir: {config['specs_dir']}")
     print(f"   Coverage: {runtime_covered}/{runtime_total} ({(runtime_covered/runtime_total*100 if runtime_total else 0):.1f}%)")
     print(f"     - 🧠 Role Decisions (YAML):    {l3_decision_cov}/{len(l3_decision)}")
     print(f"     - ⚙️  Components (Python):       {l3_component_cov}/{len(l3_component)}")

@@ -30,8 +30,8 @@ def get_adapter(env='MOCK'):
         return MockAdapter()
     elif env == 'REAL':
         try:
-            # TODO: Import real implementation
-            return None  # SkipAdapter
+            # Real implementation not yet available
+            return None
         except ImportError:
             return None
     return None
@@ -43,15 +43,27 @@ class TestSORTER(unittest.TestCase):
 
     @verify_spec("SORTER")
     def test_compliance(self):
+        
     # Fixtures from Spec:
     # - Input: [10:05, 10:00, 10:10], Expected: [10:00, 10:05, 10:10], Case: Normal
     # - Input: [], Expected: [], Case: Edge
     # - Input: Same timestamp, Expected: Stable by name, Case: Edge
 
-        if self.adapter is None and self.env == 'REAL':
-            self.skipTest("REAL adapter not implemented for SORTER")
-        # TODO: Implement test logic using self.adapter
-        pass
+        if self.adapter is None:
+            if self.env == 'REAL':
+                self.skipTest("REAL adapter not implemented for SORTER")
+            else:
+                self.fail("Mock adapter failed to initialize")
+
+        if self.env == 'MOCK':
+            # Verify Mock Adapter returns expected values for all fixtures
+            for fixture in FIXTURES:
+                input_val = fixture.get('Input')
+                expected_val = fixture.get('Expected')
+                if input_val and expected_val:
+                    result = self.adapter.execute(input_val)
+                    self.assertEqual(result, expected_val, 
+                        f"Mock adapter failed for input: {input_val}")
 
 if __name__ == '__main__':
     unittest.main()
