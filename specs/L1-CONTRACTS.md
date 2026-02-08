@@ -92,7 +92,12 @@ invariants:
   > Verification: Prompt shown when preconditions met.
   (Ref: VISION.AUTOMATION.EVOLUTION)
 
-- **CONFLICT_RES**: Agent MUST resolve conflicts by latest timestamp.
+- **CONFLICT_DETECT**: Agent MUST identify conflicting ideas before resolution.
+  > Responsibility: Analysis — detect overlapping or contradictory statements.
+  > Verification: Conflict pairs logged before resolution applied.
+  (Ref: VISION.SCOPE.IDEAS)
+
+- **CONFLICT_RES**: Agent MUST resolve detected conflicts by latest timestamp.
   > Responsibility: Truth source — most recent intent wins.
   > Verification: Later idea values supersede earlier ones.
   (Ref: VISION.SCOPE.IDEAS)
@@ -121,9 +126,9 @@ invariants:
   > Verification: Coverage >= 100%.
   (Ref: VISION.TRACEABILITY.GOAL)
 
-- **REDUNDANCY**: Agent MUST flag duplicate definitions.
-  > Responsibility: Lean specs — avoid maintenance burden.
-  > Verification: Warning on redundant sections.
+- **REDUNDANCY**: Agent MUST flag duplicate definitions and overlapping content.
+  > Responsibility: Lean specs — avoid maintenance burden from duplicated/overlapping items.
+  > Verification: Warning on redundant sections or items with overlapping scope.
   (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
 
 - **CONTRADICTION**: Agent MUST flag conflicts with existing content.
@@ -149,6 +154,11 @@ invariants:
 - **SKILL_TRACEABILITY**: Agent MUST NOT edit SKILL.md without updating L3.
   > Responsibility: Traceability — SKILL.md is derived artifact.
   > Verification: L3 updated before SKILL.md.
+  (Ref: VISION.TRACEABILITY.CHAIN)
+
+- **CASCADE_REVIEW**: Agent MUST evaluate downstream spec impact when reviewing current level.
+  > Responsibility: Coherence — identify required updates to child-level specs.
+  > Verification: Review output includes proposed reorganization for L(N+1).
   (Ref: VISION.TRACEABILITY.CHAIN)
 
 ---
@@ -549,17 +559,7 @@ standard_terms:
 
 (Ref: VISION.UBIQUITOUS_LANGUAGE)
 
----
 
-## [standard] CONTRACTS.FORMAL_NOTATION
-
-- **PREFER_FORMALISMS**: Agent SHOULD use diagrams in L2, pseudocode in L3.
-  > Responsibility: Clarity — formal notation over prose.
-  > Verification: Warning on prose-only sections.
-
-(Ref: VISION.FORMAL_SYNTAX)
-
----
 
 ## [system] CONTRACTS.TESTING_WORKFLOW
 
@@ -587,4 +587,28 @@ standard_terms:
   > Responsibility: Actionability — convert failures to work items.
   > Verification: Idea generated for failing tests.
 
+- **TEST_GRANULARITY**: Script AND Agent tests MUST be organized at H2 (##) level spec granularity.
+  > Responsibility: Maintainability — one test per H2 section for easy updates.
+  > Naming: `test_{item_id}.*` or `answer_key_{item_id}.md` (extension per project framework).
+  > Verification: Each test artifact maps to exactly one `## [...]` spec section.
+
 (Ref: VISION.SCOPE.COV), (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+
+---
+
+## [system] CONTRACTS.CERTIFICATION
+
+- **ANSWER_KEY_GRANULAR**: Agent MUST generate individual `answer_key_{item_id}.md` files per H2 spec section.
+  > Responsibility: Maintainability — one answer file per spec item for easy updates.
+  > Verification: `tests/specs/agent/answer_key_*.md` files match H2 sections.
+  (Ref: VISION.CERTIFICATION.COMPLIANCE, CONTRACTS.TESTING_WORKFLOW.TEST_GRANULARITY)
+
+- **COMBINE_QUESTION_PAPER**: Script MUST combine all answer_key files and strip answers to generate `question_paper.md`.
+  > Responsibility: Assessment — produce unified exam from individual answer keys.
+  > Verification: `tests/specs/agent/question_paper.md` contains all items with blank answers.
+  (Ref: VISION.CERTIFICATION.PROOF)
+
+- **REALISTIC_CONTEXT**: Agent MUST use realistic Context/Expectation content matching actual project inputs.
+  > Responsibility: Relevance — test scenarios must reflect real user/script inputs, not placeholders.
+  > Verification: answer_key files contain concrete, project-specific examples.
+  (Ref: VISION.CERTIFICATION.COMPLIANCE)

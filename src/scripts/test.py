@@ -78,40 +78,53 @@ def scan_existing_tests(tests_dir: Path) -> set:
     if not tests_dir.exists():
         return covered_ids
     
-    # Scan Python tests
-    for py_file in tests_dir.rglob("*.py"):
-        content = py_file.read_text()
-        # @verify_spec("ID")
-        for match in re.finditer(r'@verify_spec\(["\']([^"\']+)["\']\)', content):
-            covered_ids.add(match.group(1))
+    # 1. Scan Python tests in acceptance/scripts and runtime/components
+    for py_dir in [tests_dir / "acceptance/scripts", tests_dir / "runtime/components"]:
+        if py_dir.exists():
+            for py_file in py_dir.rglob("*.py"):
+                content = py_file.read_text()
+                # @verify_spec("ID")
+                for match in re.finditer(r'@verify_spec\(["\']([^"\']+)["\']\)', content):
+                    covered_ids.add(match.group(1))
     
-    # Scan YAML tests
-    for yaml_file in tests_dir.rglob("*.yaml"):
-        content = yaml_file.read_text()
-        
-        # spec_id: SPEC_ID (top-level)
-        spec_id_match = re.search(r'^spec_id:\s*(\S+)', content, re.MULTILINE)
-        if spec_id_match:
-            base_id = spec_id_match.group(1)
-            covered_ids.add(base_id)
-            
-            # For agent contracts, also extract sub-contract IDs
-            # - id: SUB_ID
-            for sub_match in re.finditer(r'^\s*-\s*id:\s*(\w+)', content, re.MULTILINE):
-                sub_id = sub_match.group(1)
-                covered_ids.add(f"{base_id}.{sub_id}")
+    # 2. Scan YAML tests in acceptance/agent and runtime/roles
+    for yaml_dir in [tests_dir / "acceptance/agent", tests_dir / "runtime/roles"]:
+        if yaml_dir.exists():
+            for yaml_file in yaml_dir.rglob("*.yaml"):
+                content = yaml_file.read_text()
+                
+                # spec_id: SPEC_ID (top-level)
+                spec_id_match = re.search(r'^spec_id:\s*(\S+)', content, re.MULTILINE)
+                if spec_id_match:
+                    base_id = spec_id_match.group(1)
+                    covered_ids.add(base_id)
+                    
+                    # For agent contracts, also extract sub-contract IDs
+                    # - id: SUB_ID
+                    for sub_match in re.finditer(r'^\s*-\s*id:\s*(\w+)', content, re.MULTILINE):
+                        sub_id = sub_match.group(1)
+                        covered_ids.add(f"{base_id}.{sub_id}")
     
     return covered_ids
 
+
+    
 def run_pytest(tests_dir: Path) -> tuple:
-    """Run pytest on script tests."""
-    scripts_dir = tests_dir / "scripts"
-    if not scripts_dir.exists() or not list(scripts_dir.glob("*.py")):
+    """Run pytest on Python script tests."""
+    target_dirs = [
+        str(tests_dir / "script/e2e"),
+        str(tests_dir / "script/unit")
+    ]
+    
+    valid_dirs = [d for d in target_dirs if Path(d).exists() and list(Path(d).glob("*.py"))]
+    
+    if not valid_dirs:
         return 0, 0, 0, "No script tests found"
     
     try:
+        cmd = ["python3", "-m", "pytest"] + valid_dirs + ["-v", "--tb=short"]
         result = subprocess.run(
-            ["python3", "-m", "pytest", str(scripts_dir), "-v", "--tb=short"],
+            cmd,
             capture_output=True,
             text=True,
             cwd=tests_dir.parent
@@ -185,14 +198,48 @@ def main():
         print(f"   ⏭️  Skipped: {skipped}")
     
     # Phase 5: Summary
-    print("\n" + "=" * 40)
-    print("=== Vibe-Spec Test Coverage ===")
-    print(f"L1 Contracts: {l1_covered}/{len(l1_contracts)} ({l1_pct:.1f}%)")
-    print(f"L3 Items: {l3_covered}/{len(l3_items)} ({l3_pct:.1f}%)")
-    print("=" * 40)
+    # Define groups
+    l1_agent = [c for c in l1_contracts if c['subject'] == 'Agent']
+    l1_script = [c for c in l1_contracts if c['subject'] == 'Script']
+    l3_decision = [i for i in l3_items if i['type'] == 'decision']
+    l3_component = [i for i in l3_items if i['type'] != 'decision'] # Includes interface & algorithm
+
+    # Calculate coverage
+    l1_agent_cov = sum(1 for c in l1_agent if c['id'] in covered_ids)
+    l1_script_cov = sum(1 for c in l1_script if c['id'] in covered_ids)
+    l3_decision_cov = sum(1 for i in l3_decision if i['id'] in covered_ids)
+    l3_component_cov = sum(1 for i in l3_component if i['id'] in covered_ids)
+    
+    # Totals
+    acceptance_total = len(l1_agent) + len(l1_script) # Wait, user wanted Agent + Script in acceptance?
+    # No, user said: acceptance/{agent, scripts} and runtime/{roles, components}
+    # So Acceptance = L1 (Agent + Script), Runtime = L3 (Roles + Components)
+    
+    acceptance_covered = l1_agent_cov + l1_script_cov
+    runtime_covered = l3_decision_cov + l3_component_cov
+    
+    acceptance_total = len(l1_agent) + len(l1_script)
+    runtime_total = len(l3_decision) + len(l3_component)
+
+    print("\n" + "=" * 55)
+    print("=== Vibe-Spec Test Coverage Dashboard ===")
+    
+    print(f"\n📂 [acceptance] (L1 Contracts)")
+    print(f"   path: tests/specs/acceptance/")
+    print(f"   Coverage: {acceptance_covered}/{acceptance_total} ({ (acceptance_covered/acceptance_total*100 if acceptance_total else 0):.1f}%)")
+    print(f"     - 🤖 Agent Contracts (YAML):   {l1_agent_cov}/{len(l1_agent)}")
+    print(f"     - 📜 Script Contracts (Python): {l1_script_cov}/{len(l1_script)}")
+    
+    print(f"\n📂 [runtime] (L3 System)")
+    print(f"   path: tests/specs/runtime/")
+    print(f"   Coverage: {runtime_covered}/{runtime_total} ({ (runtime_covered/runtime_total*100 if runtime_total else 0):.1f}%)")
+    print(f"     - 🧠 Role Decisions (YAML):    {l3_decision_cov}/{len(l3_decision)}")
+    print(f"     - ⚙️  Components (Python):       {l3_component_cov}/{len(l3_component)}")
+    
+    print("\n" + "=" * 55)
     
     if l1_pct == 100 and l3_pct == 100:
-        print("✅ Full coverage!")
+        print("✅ Full coverage achieved across all types!")
         return 0
     else:
         print(f"⚠️  Coverage gaps detected. Run TEST_DESIGNER to generate tests.")

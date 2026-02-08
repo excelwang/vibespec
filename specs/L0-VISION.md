@@ -33,6 +33,11 @@ User wants vibe-skill to be a **specification management framework** (not a code
 - **EVOLUTION**: User wants vibe-skill to evolve by rigidifying patterns into code.
 - **ITEM_CLASSIFICATION**: User wants vibe-skill to tag L3 items with execution type (PROMPT_NATIVE | SCRIPT | PROMPT_FALLBACK).
 
+## [system] VISION.CERTIFICATION
+
+- **COMPLIANCE**: User wants vibe-skill to validate that agents correctly execute L1 Agent Acceptance and L3 Role Decisions prescribed in `specs/`.
+- **PROOF**: User wants vibe-skill to generate certification artifacts (exams) to prove this compliance.
+
 ## [system] VISION.EXTENSIBILITY
 
 - **PROJECT_RULES**: User wants vibe-skill to allow project-specific validation rules.
