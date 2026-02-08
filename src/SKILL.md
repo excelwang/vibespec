@@ -34,6 +34,11 @@ Manage the refinement of raw thoughts into traceable specifications.
 2. Synchronize project artifacts (e.g., source code, skill files) with `vibe-spec-full.md`.
 3. Report update status and any manual verification needed.
 
+### `vibe-spec reload`
+1. Re-read this SKILL.md file.
+2. Confirm to user: "SKILL.md reloaded."
+3. Apply any updated instructions immediately.
+
 ### `vibe-spec test [SPEC_ID]`
 
 **Test Directory Structure**:

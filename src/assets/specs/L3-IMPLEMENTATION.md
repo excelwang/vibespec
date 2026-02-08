@@ -2,16 +2,50 @@
 version: 1.0.0
 ---
 
-# L3: Implementation
+# L3: Runtime
 
-## [system] IMPLEMENTATION.COMPONENT_IMPL
-Implementation details for a component.
-1. **FEATURE_IMPL**: Description. [Type: SCRIPT]
-   ```pseudocode
-   function feature_name(args):
-     // implementation
-   ```
-   (Ref: ARCHITECTURE.COMPONENT)
-2. **FEATURE_FALLBACK**: Description. [Type: PROMPT_FALLBACK]
-   > Rationale for not scripting: [explanation]
-   (Ref: ARCHITECTURE.COMPONENT)
+> **Type Markers**:
+> - `[interface]` = Script component API
+> - `[decision]` = Agent decision logic
+> - `[algorithm]` = Deterministic procedure
+
+---
+
+## [system] COMPONENT_NAME
+
+> Component implementation details
+
+#### [interface] INTERFACE_NAME
+
+**Purpose**: [Brief description]
+
+- **Input**: `type`
+- **Output**: `type`
+
+(Ref: ROLES.RELEVANT_ROLE), (Ref: COMPONENTS.RELEVANT_COMPONENT)
+
+---
+
+#### [decision] DECISION_NAME
+
+**Purpose**: [Brief description]
+
+- **Given**: [Context conditions]
+- **When**: [Trigger event]
+- **Then**: [Expected behavior]
+
+(Ref: CONTRACTS.RELEVANT_CONTRACT)
+
+---
+
+#### [algorithm] ALGORITHM_NAME
+
+**Purpose**: [Brief description]
+
+```pseudocode
+function algorithm_name(input):
+  // steps
+  return output
+```
+
+(Ref: COMPONENTS.RELEVANT_COMPONENT)

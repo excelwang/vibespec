@@ -41,23 +41,23 @@ version: 3.0.0
  
  #### QUALITY_AUDITOR
  
- **Role**: Deep quality inspection
+ **Role**: Deep quality inspection with role-first assessment
  
  - Observes: Spec content, alignment rules
- - Decides: Compliance with pillars
- - Acts: Flags non-compliance
- 
- (Ref: CONTRACTS.REVIEW_PROTOCOL.QUALITY_ALIGNMENT), (Ref: CONTRACTS.REVIEW_PROTOCOL.FOCUS_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY)
+ - Decides: Compliance with pillars, quality before validation
+ - Acts: Flags non-compliance, assesses via role evaluation FIRST
+
+ (Ref: CONTRACTS.REVIEW_PROTOCOL.QUALITY_ALIGNMENT), (Ref: CONTRACTS.REVIEW_PROTOCOL.FOCUS_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.ROLE_FIRST_REVIEW)
  
  #### CONSISTENCY_CHECKER
  
- **Role**: Logical consistency check
+ **Role**: Logical consistency and cascade check
  
  - Observes: Parent/Child Specs
- - Decides: Omissions, redundancies
- - Acts: Blocks invalid edits
- 
- (Ref: CONTRACTS.REVIEW_PROTOCOL.OMISSION_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY), (Ref: CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY)
+ - Decides: Omissions, redundancies, downstream impact
+ - Acts: Blocks invalid edits, evaluates cascade impact
+
+ (Ref: CONTRACTS.REVIEW_PROTOCOL.OMISSION_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY), (Ref: CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW)
 
 #### TRACEABILITY_GUARDIAN
 
@@ -136,6 +136,16 @@ version: 3.0.0
 - **Acts**: Proposes new scripts via idea pipeline
 
 (Ref: CONTRACTS.SCRIPT_FIRST.PROACTIVE), (Ref: CONTRACTS.SCRIPT_FIRST.GOAL)
+
+#### RELOAD_HANDLER
+
+**Role**: Reloads skill definitions
+
+- **Observes**: User `vibespec reload` command
+- **Decides**: Whether SKILL.md changed
+- **Acts**: Re-reads SKILL.md, confirms reload to user
+
+(Ref: CONTRACTS.RELOAD.RELOAD_TRIGGER)
 
 #### TEST_VERIFIER
 

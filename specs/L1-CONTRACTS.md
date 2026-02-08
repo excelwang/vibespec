@@ -156,6 +156,11 @@ invariants:
   > Verification: L3 updated before SKILL.md.
   (Ref: VISION.TRACEABILITY.CHAIN)
 
+- **ROLE_FIRST_REVIEW**: Agent MUST evaluate revision quality through REVIEWER role before fixing validation errors.
+  > Responsibility: Quality-first — assess content quality before mechanical fixes.
+  > Verification: REVIEWER role assessment logged before validate.py execution.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)
+
 - **CASCADE_REVIEW**: Agent MUST evaluate downstream spec impact when reviewing current level.
   > Responsibility: Coherence — identify required updates to child-level specs.
   > Verification: Review output includes proposed reorganization for L(N+1).
@@ -612,3 +617,12 @@ standard_terms:
   > Responsibility: Relevance — test scenarios must reflect real user/script inputs, not placeholders.
   > Verification: answer_key files contain concrete, project-specific examples.
   (Ref: VISION.CERTIFICATION.COMPLIANCE)
+
+---
+
+## [system] CONTRACTS.RELOAD
+
+- **RELOAD_TRIGGER**: When user inputs `vibespec reload`, Agent MUST re-read SKILL.md.
+  > Responsibility: Hot-reload — apply skill changes without restarting session.
+  > Verification: Agent confirms SKILL.md re-loaded after trigger.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
