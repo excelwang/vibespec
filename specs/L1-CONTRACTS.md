@@ -126,10 +126,7 @@ invariants:
   > Verification: Parent layer loaded on edit start.
   (Ref: VISION.TRACEABILITY.CHAIN)
 
-- **OMISSION_CHECK**: Agent MUST verify all parent keys are represented in child.
-  > Responsibility: Completeness — zero missing requirements.
-  > Verification: Coverage >= 100%.
-  (Ref: VISION.TRACEABILITY.GOAL)
+
 
 - **REDUNDANCY**: Agent MUST flag duplicate definitions and overlapping content.
   > Responsibility: Lean specs — avoid maintenance burden from duplicated/overlapping items.

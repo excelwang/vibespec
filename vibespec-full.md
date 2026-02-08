@@ -255,10 +255,7 @@ RELIABILITY: AUTHORITATIVE
   > Verification: Parent layer loaded on edit start.
   (Ref: VISION.TRACEABILITY.CHAIN)
 
-- **OMISSION_CHECK**: Agent MUST verify all parent keys are represented in child.
-  > Responsibility: Completeness — zero missing requirements.
-  > Verification: Coverage >= 100%.
-  (Ref: VISION.TRACEABILITY.GOAL)
+
 
 - **REDUNDANCY**: Agent MUST flag duplicate definitions and overlapping content.
   > Responsibility: Lean specs — avoid maintenance burden from duplicated/overlapping items.
@@ -380,6 +377,11 @@ RELIABILITY: AUTHORITATIVE
   > Responsibility: Discoverability — reduce cognitive load.
   > Verification: Help output on `--help` flag.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+
+- **AGENT_FRIENDLY_OUTPUT**: Script MUST produce output that is actionable, locatable, and structured.
+  > Responsibility: Clarity — enable agents to parse and act on results.
+  > Verification: Output includes file paths, line numbers, IDs, and action recommendations.
+  (Ref: VISION.CODE_QUALITY_GOALS.OBSERVABILITY)
 
 ---
 
@@ -786,6 +788,11 @@ standard_terms:
   > Verification: Agent outputs usage help and stops execution.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
 
+- **FIRST_RUN_COMPREHENSION**: On first `vibespec` invocation, Agent MUST read all L0-L3 specs before executing.
+  > Responsibility: Context — ensure deep project understanding before action.
+  > Verification: Agent summarizes project understanding before proceeding.
+  (Ref: VISION.AGENT_AS_DEVELOPER.FULL_CONTEXT)
+
 ---
 
 
@@ -871,7 +878,7 @@ RELIABILITY: AUTHORITATIVE
  - Decides: Omissions, redundancies, downstream impact
  - Acts: Blocks invalid edits, evaluates cascade impact
 
- (Ref: CONTRACTS.REVIEW_PROTOCOL.OMISSION_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION), (Ref: CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW)
+ (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY), (Ref: CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION), (Ref: CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW)
 
  #### PROCESS_ENFORCER
  
@@ -891,7 +898,7 @@ RELIABILITY: AUTHORITATIVE
 - **Decides**: Orphan detection, dangling refs, staleness detection
 - **Acts**: Flags violations, generates fix ideas
 
-(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY)
+(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL)
 
 ### ROLES.USER_INTERACTION
 
@@ -925,7 +932,7 @@ RELIABILITY: AUTHORITATIVE
  - Decides: Engagement strategy
  - Acts: Invites brainstorming
  
- (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE)
+ (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY), (Ref: CONTRACTS.STARTUP_MENU.FIRST_RUN_COMPREHENSION)
 
 ### ROLES.AUTOMATION
 
@@ -949,7 +956,7 @@ RELIABILITY: AUTHORITATIVE
 - **Decides**: Key decisions, architectural shifts, new requirements
 - **Acts**: Creates idea files, requests approval
 
-(Ref: CONTRACTS.REFLECT.CONTEXT_BASED), (Ref: CONTRACTS.IDEAS_PIPELINE.TERM_ANALYSIS), (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL)
+(Ref: CONTRACTS.REFLECT.CONTEXT_BASED), (Ref: CONTRACTS.IDEAS_PIPELINE.TERM_ANALYSIS), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE)
 
 #### PATTERN_SCOUT
 
@@ -1151,7 +1158,7 @@ RELIABILITY: AUTHORITATIVE
 - Input: `specs_path`
 - Output: `ValidationResult`
 
-(Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE), (Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS)
+(Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE), (Ref: CONTRACTS.SCRIPT_USABILITY.AGENT_FRIENDLY_OUTPUT)
 
 #### COMPILE_SCRIPT
 
