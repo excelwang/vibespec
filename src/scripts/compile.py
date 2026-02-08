@@ -310,6 +310,7 @@ def compile_specs(specs_dir: Path, output_file: Path, tests_dir: Path = None):
         content.append(f"- [{f.stem}: {f.stem.split('-')[1] if '-' in f.stem else f.stem}](#{anchor})\n")
     content.append("\n---\n\n")
 
+
     # 3. Concatenate Files
     for f in files:
         file_text = f.read_text()
@@ -320,13 +321,29 @@ def compile_specs(specs_dir: Path, output_file: Path, tests_dir: Path = None):
             body = parts[2].strip()
         else:
             body = file_text.strip() # Handle files without frontmatter or with different structure
+            
+        # NOISE REDUCTION: Remove (Ref: ...) and **Fixtures**
+        # 1. Remove (Ref: ...) tags and surrounding punctuation
+        body = re.sub(r'\(Ref: .*?\)', '', body)
+        # 2. Remove Implements: [...] tags (Contract, Component, Role)
+        body = re.sub(r'>?\s*Implements: \[.*?\]', '', body)
+        # 3. Remove **Fixtures** sections (up to next section or EOF)
+        body = re.sub(r'\*\*Fixtures\*\*:(.|\n)*?(?=\n---|##|\Z)', '', body)
+        # 4. Remove **Coverage** sections (up to next section or EOF)
+        body = re.sub(r'\*\*Coverage\*\*:(.|\n)*?(?=\n---|##|\Z)', '', body)
+        
+        # 5. Clean up artifacts
+        # Remove lines that are just commas/spaces (leftover from Ref lists)
+        body = re.sub(r'^\s*,[\s,]*$', '', body, flags=re.MULTILINE)
+        # Clean up multiple empty lines
+        body = re.sub(r'\n{3,}', '\n\n', body)
 
         # Add Context Anchor
         content.append(f"<a id='source-{f.stem.lower()}'></a>\n")
         content.append(f"# Source: {f.name}\n")
         content.append(f"RELIABILITY: {'Use for Context' if 'L0' in f.name else 'AUTHORITATIVE'}\n")
         content.append("---\n\n")
-        content.append(body)
+        content.append(body.strip())
         content.append("\n\n")
 
     # 4. Write Output
@@ -342,7 +359,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
         description='Compile Vibespec files into a unified document.',
-        epilog='Example: python compile.py specs/ specs/.compiled.md'
+        epilog='Example: python compile.py specs/ specs/.compiled-full-spec.md'
     )
     parser.add_argument('specs_dir', nargs='?', help='Directory containing L*.md spec files')
     parser.add_argument('output_file', nargs='?', help='Output file path for compiled spec')
@@ -354,7 +371,7 @@ if __name__ == "__main__":
     config = load_config(project_root)
     
     specs_dir = Path(args.specs_dir) if args.specs_dir else Path(config.get('build', {}).get('specs_dir', 'specs/'))
-    output_file = Path(args.output_file) if args.output_file else Path(config.get('build', {}).get('compiled_spec', 'specs/.compiled.md'))
+    output_file = Path(args.output_file) if args.output_file else Path(config.get('build', {}).get('compiled_spec', 'specs/.compiled-full-spec.md'))
     tests_dir = Path(args.tests_dir) if args.tests_dir else Path('tests')
     
     compile_specs(specs_dir, output_file, tests_dir)

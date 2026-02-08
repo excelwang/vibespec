@@ -162,7 +162,7 @@ def build(project_root: Path = None):
     # AUTHORITATIVE PROMPT
     print("\n🔥 **ATTENTION ENGINEER** 🔥")
     print("You are about to materialize the **Project Specs**.")
-    print("The file specs/.compiled.md is not a suggestion—it is the **LAW**.")
+    print("The file specs/.compiled-full-spec.md is not a suggestion—it is the **LAW**.")
     print("Every Contract is a promise. Every Interface is a covenant.")
     print("Do not improvise. Do not guess.")
     print("Your mission is **Perfection**:")

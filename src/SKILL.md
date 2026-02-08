@@ -41,7 +41,7 @@ Manage the refinement of raw thoughts into traceable specifications.
 
 ### `vibespec compile`
 1. Run `scripts/compile.py` (CONTRACTS.COMPILATION).
-2. Assemble all L0-L3 specs into `specs/.compiled.md`.
+2. Assemble all L0-L3 specs into `specs/.compiled-full-spec.md`.
 3. Generate Meta-Tests for all L3 items.
 4. Report status to user.
 

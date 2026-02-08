@@ -4,11 +4,11 @@
 
 ## Proposal
 
-The `tests/specs/` artifacts (Meta-Tests) MUST be generated during the **Compile Phase**, alongside `specs/.compiled.md`.
+The `tests/specs/` artifacts (Meta-Tests) MUST be generated during the **Compile Phase**, alongside `specs/.compiled-full-spec.md`.
 
 **Workflow**:
 1. `vibespec compile` runs.
-2. It aggregates specs into `.compiled.md`.
+2. It aggregates specs into `.compiled-full-spec.md`.
 3. It ALSO extracts testable contracts (L1) and runtime fixtures (L3) into `tests/specs/`.
 4. These tests serve as **Meta-Tests** (Governance Tests), enforcing architecture and contract compliance.
 5. **User Benefit**: User writes `tests/src/` only for implementation details not covered by specs.

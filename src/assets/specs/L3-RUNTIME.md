@@ -16,7 +16,7 @@ version: 1.0.0
 
 > Implements: [Component: COMPONENTS.CORE.NAME]
 
-```typescript
+```code
 interface InterfaceName {
   method(arg: Type): ReturnType
 }

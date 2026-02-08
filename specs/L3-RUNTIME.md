@@ -14,7 +14,7 @@ version: 3.0.0
 
 > Implements: [Component: COMPONENTS.COMPILER_PIPELINE.SCANNER]
 
-```typescript
+```code
 interface Scanner {
   scan(path: string): File[]
 }
@@ -37,7 +37,7 @@ interface Scanner {
 
 > Implements: [Component: COMPONENTS.COMPILER_PIPELINE.PARSER]
 
-```typescript
+```code
 interface Parser {
   parse(file: File): {metadata: Frontmatter, body: string}
 }
@@ -58,7 +58,7 @@ interface Parser {
 
 > Implements: [Component: COMPONENTS.COMPILER_PIPELINE.VALIDATOR]
 
-```typescript
+```code
 interface Validator {
   validate(specs: ParsedSpec[]): ValidationResult
 }
@@ -84,7 +84,7 @@ interface ValidationResult {
 
 > Implements: [Component: COMPONENTS.COMPILER_PIPELINE.ASSEMBLER]
 
-```typescript
+```code
 interface Assembler {
   assemble(specs: ParsedSpec[]): Document
 }
@@ -105,7 +105,7 @@ interface Assembler {
 
 > Implements: [Component: COMPONENTS.VALIDATOR_CORE.RULE_ENGINE]
 
-```typescript
+```code
 interface RuleEngine {
   execute(rules: Rule[], specs: Spec[]): Violation[]
 }
@@ -124,7 +124,7 @@ interface RuleEngine {
 
 > Implements: [Component: COMPONENTS.VALIDATOR_CORE.RESPONSIVENESS_CHECKER]
 
-```typescript
+```code
 interface ResponsivenessChecker {
   check(graph: SpecGraph): CoverageResult
 }
@@ -143,7 +143,7 @@ interface ResponsivenessChecker {
 
 > Implements: [Component: COMPONENTS.IDEAS_PROCESSOR.BATCH_READER]
 
-```typescript
+```code
 interface BatchReader {
   read(path: string): Idea[]
 }
@@ -162,7 +162,7 @@ interface BatchReader {
 
 > Implements: [Component: COMPONENTS.IDEAS_PROCESSOR.SORTER]
 
-```typescript
+```code
 interface Sorter {
   sort(ideas: Idea[]): Idea[]
 }
@@ -331,7 +331,7 @@ function validate_coverage(specs: Spec[]) -> Violation[]:
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.COVERAGE_ANALYZER]
 
-```typescript
+```code
 interface CoverageAnalyzer {
   analyze(specs_dir: Path, tests_dir: Path): CoverageReport
 }
@@ -358,7 +358,7 @@ interface CoverageReport {
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEST_EXECUTOR]
 
-```typescript
+```code
 interface TestExecutor {
   run(tests_dir: Path, env: 'MOCK' | 'REAL'): ExecutionResult
 }
@@ -389,7 +389,7 @@ type TestResultState = 'PASS' | 'FAIL' | 'SKIP' | 'ERROR'
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEST_REPORTER]
 
-```typescript
+```code
 interface TestReporter {
   format(coverage: CoverageReport, execution: ExecutionResult): string
 }
@@ -410,7 +410,7 @@ interface TestReporter {
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.ADAPTER_FACTORY]
 
-```typescript
+```code
 interface AdapterFactory {
   get(interface_id: string, env: 'MOCK' | 'REAL'): Adapter
 }
@@ -454,7 +454,7 @@ interface SkipAdapter {
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.BUILDER]
 
-```typescript
+```code
 interface Builder {
   build(compiled_spec: Path, skills: string[]): BuildResult
 }
@@ -481,7 +481,7 @@ interface BuildResult {
 
 > Implements: [Component: COMPONENTS.COMPILER_PIPELINE.SECTION_PARSER]
 
-```typescript
+```code
 interface SectionParser {
   parse(content: string): Section[]
 }
@@ -500,7 +500,7 @@ interface SectionParser {
 
 > Implements: [Component: COMPONENTS.VALIDATOR_CORE.CUSTOM_RULES_LOADER]
 
-```typescript
+```code
 interface CustomRulesLoader {
   load(specsDir: Path): Rule[]
 }
@@ -519,7 +519,7 @@ interface CustomRulesLoader {
 
 > Implements: [Component: COMPONENTS.IDEAS_PROCESSOR.ARCHIVER]
 
-```typescript
+```code
 interface Archiver {
   archive(ideas: Idea[]): void
 }
@@ -538,7 +538,7 @@ interface Archiver {
 
 > Implements: [Component: COMPONENTS.SCRIPTS.SKILL_LOADER]
 
-```typescript
+```code
 interface SkillLoader {
   load(path: Path): SkillDef
 }
@@ -557,7 +557,7 @@ interface SkillLoader {
 
 > Implements: [Component: COMPONENTS.SCRIPTS.INIT_SCRIPT]
 
-```typescript
+```code
 interface InitScript {
   init(projectDir: Path): InitResult
   generateConfig(): Path
@@ -584,7 +584,7 @@ interface InitScript {
 
 > Implements: [Component: COMPONENTS.SCRIPTS.VALIDATE_SCRIPT]
 
-```typescript
+```code
 interface ValidateScript {
   validate(specsDir: Path): ValidationResult
 }
@@ -597,13 +597,15 @@ interface ValidateScript {
 | invalid specs | {errors: N} | Normal |
 | no specs | EmptyError | Edge |
 
+(Ref: CONTRACTS.STRICT_TESTABILITY.L1_WORKFLOW_COVERAGE)
+
 ---
 
 ## [interface] COMPILE_SCRIPT
 
 > Implements: [Component: COMPONENTS.SCRIPTS.COMPILE_SCRIPT]
 
-```typescript
+```code
 interface CompileScript {
   compile(specsDir: Path, output: Path): void
 }
@@ -628,7 +630,7 @@ interface CompileScript {
 
 > Implements: [Component: COMPONENTS.SCRIPTS.BUILD_SCRIPT]
 
-```typescript
+```code
 interface BuildScript {
   build(config: Path): BuildReport
 }
@@ -652,7 +654,7 @@ interface BuildScript {
 
 > Implements: [Component: COMPONENTS.TRIGGER_ROUTER.COMMAND_ROUTER]
 
-```typescript
+```code
 interface CommandRouter {
   route(command: string): Handler
 }
@@ -671,7 +673,7 @@ interface CommandRouter {
 
 > Implements: [Component: COMPONENTS.TRIGGER_ROUTER.WORKFLOW_DISPATCHER]
 
-```typescript
+```code
 interface WorkflowDispatcher {
   dispatch(trigger: Trigger): void
 }
@@ -690,7 +692,7 @@ interface WorkflowDispatcher {
 
 > Implements: [Component: COMPONENTS.QUALITY.LINT_CHECKER]
 
-```typescript
+```code
 interface LintChecker {
   check(spec: Spec): LintResult
 }
@@ -709,7 +711,7 @@ interface LintChecker {
 
 > Implements: [Component: COMPONENTS.QUALITY.ASSERTION_CHECKER]
 
-```typescript
+```code
 interface AssertionChecker {
   check(spec: Spec): AssertionResult
 }
@@ -728,7 +730,7 @@ interface AssertionChecker {
 
 > Implements: [Component: COMPONENTS.QUALITY.NOTATION_CHECKER]
 
-```typescript
+```code
 interface NotationChecker {
   check(spec: Spec): NotationResult
 }
@@ -747,7 +749,7 @@ interface NotationChecker {
 
 > Implements: [Component: COMPONENTS.QUALITY.TERM_CHECKER]
 
-```typescript
+```code
 interface TermChecker {
   check(spec: Spec, vocab: Vocabulary): TermResult
 }
@@ -766,7 +768,7 @@ interface TermChecker {
 
 > Implements: [Component: COMPONENTS.QUALITY.PURITY_CHECKER]
 
-```typescript
+```code
 interface PurityChecker {
   check(spec: Spec): PurityResult
 }
@@ -785,7 +787,7 @@ interface PurityChecker {
 
 > Implements: [Component: COMPONENTS.QUALITY.SCRIPT_SCANNER]
 
-```typescript
+```code
 interface ScriptScanner {
   scan(spec: Spec): ScriptRef[]
 }
@@ -804,7 +806,7 @@ interface ScriptScanner {
 
 > Implements: [Component: COMPONENTS.REPORTING.ERROR_PRINTER]
 
-```typescript
+```code
 interface ErrorPrinter {
   print(errors: Violation[]): string
 }
@@ -823,7 +825,7 @@ interface ErrorPrinter {
 
 > Implements: [Component: COMPONENTS.REPORTING.DIFF_VIEWER]
 
-```typescript
+```code
 interface DiffViewer {
   diff(before: Spec, after: Spec): DiffResult
 }
@@ -842,7 +844,7 @@ interface DiffViewer {
 
 > Implements: [Component: COMPONENTS.REPORTING.SUMMARY_GENERATOR]
 
-```typescript
+```code
 interface SummaryGenerator {
   generate(result: ValidationResult): string
 }
@@ -861,7 +863,7 @@ interface SummaryGenerator {
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.ATOMIC_WRITER]
 
-```typescript
+```code
 interface AtomicWriter {
   write(path: Path, content: string): void
 }
@@ -880,7 +882,7 @@ interface AtomicWriter {
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.STATS_COLLECTOR]
 
-```typescript
+```code
 interface StatsCollector {
   collect(specs: Spec[]): Stats
 }
@@ -1122,7 +1124,7 @@ interface StatsCollector {
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEMPLATE_LOADER]
 
-```typescript
+```code
 interface TemplateLoader {
   load(templateDir: string): Map<LayerType, Template>
 }
@@ -1140,7 +1142,7 @@ interface TemplateLoader {
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.CERTIFICATION_ENGINE]
 
-```typescript
+```code
 interface CertificationEngine {
   generateAnswerKey(spec: Spec): AnswerKeyFile
   combineQuestionPaper(keys: AnswerKeyFile[]): QuestionPaper
@@ -1152,6 +1154,8 @@ interface CertificationEngine {
 |-------|----------|------|
 | L1 spec item | answer_key_{id}.md | Normal |
 | Empty specs | [] | Edge |
+
+(Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_LAYER), (Ref: CONTRACTS.CERTIFICATION.VERIFY_SPEC_ANNOTATION), (Ref: CONTRACTS.CERTIFICATION.ERROR_PRONE_FOCUS)
 
 ---
 
@@ -1182,7 +1186,7 @@ interface CertificationEngine {
 3. Construct E2E workflow: `Idea -> Spec -> Impl -> Verify`.
 4. Output: `[workflow] PROJECT_E2E_SCENARIO`
 
-```typescript
+```code
 function generateScenario(project: ProjectContext): Workflow
 ```
 
@@ -1198,7 +1202,7 @@ function generateScenario(project: ProjectContext): Workflow
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.SCENARIO_DRIVER]
 
-```typescript
+```code
 interface ScenarioDriver {
   run(workflow: Workflow): Result
 }
@@ -1218,26 +1222,217 @@ interface ScenarioDriver {
 
 **Purpose**: End-to-end test covering all Roles and Components in a realistic project scenario.
 
-**Steps**:
-1. `SCANNER.scan("specs/")` → File[]
-2. `PARSER.parse(files)` → Spec[]
-3. `VALIDATOR.validate(specs)` → ValidationResult
-4. `ASSEMBLER.assemble(specs)` → CompiledSpec
-5. [Role] `ARCHITECT.review(compiled)` → ReviewResult (mocked)
-6. [Role] `IMPLEMENTER.implement(approved)` → Implementation (mocked)
-7. `TEST_EXECUTOR.run(tests, MOCK)` → TestResult
-8. `TEST_REPORTER.format(result)` → Report
+**Steps - Init Phase**:
+1. `COMMAND_ROUTER.route("init")` → InitCommand
+2. `TEMPLATE_LOADER.load()` → Templates  
+3. `BOOTSTRAP_AGENT.initialize()` → ProjectStructure (mocked)
+
+**Steps - Spec Phase**:
+4. `SCANNER.scan("specs/")` → File[]
+5. `PARSER.parse(files)` → Spec[]
+6. `CUSTOM_RULES_LOADER.load()` → Rules
+7. `RULE_ENGINE.apply(specs, rules)` → EnrichedSpecs
+8. `VALIDATOR.validate(specs)` → ValidationResult
+9. `TERM_CHECKER.check(specs)` → TermResult
+10. `ASSERTION_CHECKER.check(specs)` → AssertResult
+
+**Steps - Compile Phase**:
+11. `ASSEMBLER.assemble(specs)` → CompiledSpec
+12. `SORTER.sort(specs)` → OrderedSpecs
+13. `BATCH_READER.read(files)` → BatchContent
+14. `RESPONSIVENESS_CHECKER.check()` → ResponsivenessResult
+15. `STATS_COLLECTOR.collect(specs)` → Stats
+16. `SUMMARY_GENERATOR.generate(stats)` → Summary
+17. `DIFF_VIEWER.diff(old, new)` → DiffResult
+18. `ERROR_PRINTER.print(errors)` → FormattedErrors
+
+**Steps - Review Phase (Role)**:
+19. [Role] `ARCHITECT.review(compiled)` → ReviewResult (mocked)
+20. [Role] `REVIEWER.approve(compiled)` → Approval (mocked)
+21. [Role] `TRACEABILITY_GUARDIAN.verify(refs)` → TraceResult (mocked)
+22. [Role] `CONSISTENCY_CHECKER.check(specs)` → ConsistencyResult (mocked)
+23. [Role] `QUALITY_AUDITOR.audit(specs)` → QualityResult (mocked)
+
+**Steps - Build Phase**:
+24. `BUILDER.build(approved)` → BuildResult
+25. [Role] `IMPLEMENTER.implement(approved)` → Implementation (mocked)
+26. [Role] `PATTERN_SCOUT.scan(code)` → Patterns (mocked)
+27. [Role] `INSIGHT_MINER.analyze(patterns)` → Insights (mocked)
+
+**Steps - Test Phase**:
+28. `COVERAGE_ANALYZER.analyze(tests)` → CoverageResult
+29. `ADAPTER_FACTORY.create(iface, MOCK)` → Adapter
+30. `TEST_EXECUTOR.run(tests, MOCK)` → TestResult
+31. `WORKFLOW_TEST_EXECUTOR.run(workflow, MOCK)` → WorkflowResult
+32. `TEST_REPORTER.format(result)` → Report
+33. [Role] `TEST_DESIGNER.design(gaps)` → NewTests (mocked)
+34. [Role] `TEST_VERIFIER.verify(results)` → Verification (mocked)
+
+**Steps - Certification Phase**:
+35. `CERTIFICATION_ENGINE.generate(specs)` → AnswerKeys
+36. `SCENARIO_DRIVER.run(workflow)` → ScenarioResult
+37. `ARCHIVER.archive(approved)` → ArchiveResult
+
+**Steps - User Interaction (Role)**:
+38. [Role] `USER_LIAISON.report(summary)` → UserReport (mocked)
+39. [Role] `ONBOARDING_ASSISTANT.guide(user)` → OnboardingResult (mocked)
+
+**Steps - Recovery (Role)**:
+40. [Role] `RECOVERY_AGENT.recover(error)` → RecoveryResult (mocked)
+41. [Role] `RELOAD_HANDLER.reload(context)` → ReloadResult (mocked)
+
+**Steps - Script Execution**:
+42. `VALIDATE_SCRIPT.validate(specs)` → ValidationResult
+43. `COMPILE_SCRIPT.compile(specs)` → CompiledDoc
+44. `BUILD_SCRIPT.build(spec)` → BuildOutput
+45. `WORKFLOW_DISPATCHER.dispatch(trigger)` → WorkflowResult
+46. [Role] `AUTOMATE_CONTROLLER.orchestrate(steps)` → AutomationResult (mocked)
+47. [Role] `PROCESS_ENFORCER.enforce(action)` → EnforceResult (mocked)
 
 **Coverage**:
-- Roles: ARCHITECT, IMPLEMENTER, REVIEWER (all mocked)
-- Components: SCANNER, PARSER, VALIDATOR, ASSEMBLER, TEST_EXECUTOR, TEST_REPORTER
+- Roles: ARCHITECT, REVIEWER, TRACEABILITY_GUARDIAN, CONSISTENCY_CHECKER, QUALITY_AUDITOR, IMPLEMENTER, PATTERN_SCOUT, INSIGHT_MINER, TEST_DESIGNER, TEST_VERIFIER, USER_LIAISON, ONBOARDING_ASSISTANT, BOOTSTRAP_AGENT, RECOVERY_AGENT, RELOAD_HANDLER, AUTOMATE_CONTROLLER, PROCESS_ENFORCER (all mocked)
+- Components: SCANNER, PARSER, VALIDATOR, ASSEMBLER, RULE_ENGINE, CUSTOM_RULES_LOADER, RESPONSIVENESS_CHECKER, BATCH_READER, SORTER, ARCHIVER, VALIDATE_SCRIPT, COMPILE_SCRIPT, BUILD_SCRIPT, COMMAND_ROUTER, WORKFLOW_DISPATCHER, ERROR_PRINTER, SUMMARY_GENERATOR, DIFF_VIEWER, TERM_CHECKER, ASSERTION_CHECKER, STATS_COLLECTOR, COVERAGE_ANALYZER, TEST_EXECUTOR, TEST_REPORTER, ADAPTER_FACTORY, WORKFLOW_TEST_EXECUTOR, BUILDER, CERTIFICATION_ENGINE, TEMPLATE_LOADER, SCENARIO_DRIVER
 
 **Fixtures**:
 | Scenario | Expected | Case |
 |----------|----------|------|
 | Full compile + test flow | All steps pass | Normal |
-| Validation fails at step 3 | Workflow halts, reports error | Error |
-| Role returns reject | Workflow handles rejection | Edge |
+| Validation fails at step 8 | Workflow halts, reports error | Error |
+
+---
+
+## [workflow] BOOTSTRAP_WORKFLOW
+
+> Implements: [Contract: CONTRACTS.BOOTSTRAP.INITIALIZATION]
+
+**Purpose**: Initialize project structure and configuration from templates.
+
+**Steps**:
+1. `COMMAND_ROUTER.route("init")` → InitCommand
+2. `TEMPLATE_LOADER.load()` → Templates
+3. `BOOTSTRAP_AGENT.initialize()` → ProjectStructure
+4. `SKILL_LOADER.load()` → Skills
+
+(Ref: CONTRACTS.BOOTSTRAP.CONFIG_TEMPLATE), (Ref: CONTRACTS.BOOTSTRAP.DETECTION)
+(Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD), (Ref: CONTRACTS.SKILL_DISTRIBUTION.ENTRY_POINT), (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE), (Ref: CONTRACTS.SKILL_DISTRIBUTION.TRIGGER_WORDS)
+
+---
+
+## [workflow] IDEA_TO_SPEC_WORKFLOW
+
+> Implements: [Contract: CONTRACTS.IDEAS_PIPELINE.BATCH_READ]
+
+**Purpose**: Ingest raw ideas and refine them into formal specifications.
+
+**Steps**:
+1. `BATCH_READER.read("ideas/")` → BatchContent
+2. `SORTER.sort(content)` → OrderedIdeas
+3. [Role] `INSIGHT_MINER.analyze(ideas)` → Insights
+4. [Role] `ARCHITECT.design(insights)` → DraftSpecs
+5. `ARCHIVER.archive(ideas)` → ArchiveResult
+
+(Ref: CONTRACTS.IDEAS_PIPELINE.TIMESTAMP_ORDER)
+(Ref: CONTRACTS.METADATA.FRONTMATTER)
+
+---
+
+## [workflow] SPEC_VALIDATION_WORKFLOW
+
+> Implements: [Contract: CONTRACTS.VALIDATION_MODE.FULL_SCAN]
+
+**Purpose**: Rigorous validation of specification integrity, quality, and compliance.
+
+**Steps**:
+1. `SCANNER.scan("specs/")` → File[]
+2. `PARSER.parse(files)` → Spec[]
+3. `CUSTOM_RULES_LOADER.load()` → Rules
+4. `RULE_ENGINE.apply(specs, rules)` → EnrichedSpecs
+5. `VALIDATOR.validate(specs)` → ValidationResult
+6. `TERM_CHECKER.check(specs)` → TermResult
+7. `ASSERTION_CHECKER.check(specs)` → AssertResult
+
+(Ref: CONTRACTS.QUANTIFIED_VALIDATION.ATOMICITY), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.DEPTH), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.RFC2119), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.TERMINOLOGY)
+(Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.MILLERS_LAW)
+(Ref: CONTRACTS.L3_QUALITY.INTERFACE_COMPATIBILITY)
+(Ref: CONTRACTS.L3_TYPE_ANNOTATION.SCRIPT_NO_LLM), (Ref: CONTRACTS.L3_TYPE_ANNOTATION.TYPE_REQUIRED)
+(Ref: CONTRACTS.LEAF_TYPE_PURITY.PURE_LEAF)
+(Ref: CONTRACTS.CUSTOM_RULES.RULE_FILE), (Ref: CONTRACTS.CUSTOM_RULES.RULE_SCHEMA)
+
+---
+
+## [workflow] COMPILATION_WORKFLOW
+
+> Implements: [Contract: CONTRACTS.COMPILATION.LLM_OPTIMIZED]
+
+**Purpose**: Compile specs into authoritative documentation and build deliverables.
+
+**Steps**:
+1. `ASSEMBLER.assemble(specs)` → CompiledSpec
+2. `RESPONSIVENESS_CHECKER.check()` → ResponsivenessResult
+3. `SUMMARY_GENERATOR.generate(stats)` → Summary
+4. `DIFF_VIEWER.diff(old, new)` → DiffResult
+5. `COMPILE_SCRIPT.compile(specs)` → CompiledDoc
+6. `BUILD_SCRIPT.build(spec)` → BuildOutput
+
+(Ref: CONTRACTS.COMPILATION.NAVIGATION), (Ref: CONTRACTS.COMPILATION.NOISE_REDUCTION)
+(Ref: CONTRACTS.BUILD_STRATEGY.AUTHORITATIVE_PROMPT), (Ref: CONTRACTS.BUILD_STRATEGY.GAP_CATEGORIES), (Ref: CONTRACTS.BUILD_STRATEGY.SKILL_SYNC)
+(Ref: CONTRACTS.SCRIPT_FIRST.DETERMINISM), (Ref: CONTRACTS.SCRIPT_FIRST.GOAL), (Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS)
+(Ref: CONTRACTS.SCRIPT_USABILITY.AGENT_FRIENDLY_OUTPUT), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE)
+
+---
+
+## [workflow] TESTING_CERTIFICATION_WORKFLOW
+
+> Implements: [Contract: CONTRACTS.TESTING_WORKFLOW.WORKFLOW_VERIFICATION]
+
+**Purpose**: Verify system correctness and certify compliance.
+
+**Steps**:
+1. `CERTIFICATION_ENGINE.generate(specs)` → AnswerKeys
+2. `COVERAGE_ANALYZER.analyze(tests)` → CoverageResult
+3. `ADAPTER_FACTORY.create(iface, MOCK)` → Adapter
+4. `TEST_EXECUTOR.run(tests, MOCK)` → TestResult
+5. `TEST_REPORTER.format(result)` → Report
+6. `SCENARIO_DRIVER.run(workflow)` → ScenarioResult
+
+(Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE), (Ref: CONTRACTS.STRICT_TESTABILITY.RESULT_STATES), (Ref: CONTRACTS.STRICT_TESTABILITY.RFC2119_ENFORCEMENT), (Ref: CONTRACTS.STRICT_TESTABILITY.SKIP_UNIMPLEMENTED)
+(Ref: CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.META_TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.UNCOVERED_LIST)
+(Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER)
+(Ref: CONTRACTS.ALGEBRAIC_VALIDATION.TEST_COVERAGE)
+
+---
+
+## [workflow] AUTOMATION_WORKFLOW
+
+> Implements: [Contract: CONTRACTS.TRIGGERS.TRIGGER_SCAN]
+
+**Purpose**: Event-driven automation handling and error recovery.
+
+**Steps**:
+1. `WORKFLOW_DISPATCHER.dispatch(trigger)` → WorkflowResult
+2. [Role] `AUTOMATE_CONTROLLER.orchestrate(steps)` → AutomationResult
+3. `ERROR_PRINTER.print(errors)` → FormattedErrors
+4. [Role] `RECOVERY_AGENT.recover(error)` → RecoveryResult
+
+(Ref: CONTRACTS.TRIGGERS.TRIGGER_ALIASES), (Ref: CONTRACTS.TRIGGERS.TRIGGER_BUG), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE), (Ref: CONTRACTS.TRIGGERS.TRIGGER_REVIEW)
+(Ref: CONTRACTS.REJECTION_HANDLING.NO_PARTIAL_COMMITS)
+
+---
+
+## [workflow] TRACEABILITY_WORKFLOW
+
+> Implements: [Contract: CONTRACTS.TRACEABILITY.COMPLETENESS]
+
+**Purpose**: Verify linkage between all layers and components.
+
+**Steps**:
+1. `SCANNER` / `PARSER` (reused)
+2. [Role] `TRACEABILITY_GUARDIAN.verify(refs)` → TraceResult
+3. `STATS_COLLECTOR.collect(specs)` → Stats
+
+(Ref: CONTRACTS.TRACEABILITY.ANCHORING), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.TRACEABILITY.IN_PLACE_REFS), (Ref: CONTRACTS.TRACEABILITY.L2_L3_IMPLEMENTATION), (Ref: CONTRACTS.TRACEABILITY.SEMANTIC_IDS)
+
+---
 
 (Ref: CONTRACTS.STRICT_TESTABILITY.FULL_WORKFLOW_REQUIRED), (Ref: CONTRACTS.STRICT_TESTABILITY.WORKFLOW_INTEROP_COVERAGE), (Ref: CONTRACTS.STRICT_TESTABILITY.ROLE_ALWAYS_MOCK)
 
@@ -1247,7 +1442,7 @@ interface ScenarioDriver {
 
 > Implements: [Component: COMPONENTS.INFRASTRUCTURE.WORKFLOW_TEST_EXECUTOR]
 
-```typescript
+```code
 interface WorkflowTestExecutor {
   run(workflow_id: string, env: 'MOCK' | 'REAL'): WorkflowResult
 }

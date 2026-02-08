@@ -532,9 +532,9 @@ invariants:
   > Responsibility: Completeness — end-to-end test for entire system.
   > Verification: `workflow/test_full_workflow.py` invokes all roles and components.
 
-- **L1_WORKFLOW_COVERAGE**: Validator MUST ensure every L1 Script item has at least one L3 workflow reference.
+- **L1_WORKFLOW_COVERAGE**: Validator MUST ensure every L1 Script item is covered by a realistic L3 workflow scenario.
   > Responsibility: Traceability — L1 requirements verified through integration tests.
-  > Verification: `validate.py` checks L1→L3 workflow traceability.
+  > Verification: `validate.py` checks L1→L3 workflow traceability. Refs must be part of a valid `[workflow]` item's Steps or Coverage section.
 
 (Ref: VISION.SCOPE.COV)
 
@@ -545,7 +545,7 @@ invariants:
 - **LLM_OPTIMIZED**: Script MUST produce single continuous markdown.
 
 - **NAVIGATION**: Script MUST include TOC and preamble.
-- **NOISE_REDUCTION**: Script MUST strip frontmatter.
+- **NOISE_REDUCTION**: Script MUST strip frontmatter, `(Ref: ...)` tags, and `**Fixtures**` sections.
 
 (Ref: VISION.COMPILATION_STRUCTURE)
 
@@ -574,9 +574,9 @@ invariants:
   > Verification: `src/SKILL.md` reflects configured skills.
   (Ref: VISION.SCOPE.SKILL)
 
-- **AUTHORITATIVE_PROMPT**: Script MUST present `specs/.compiled.md` as non-negotiable Law to Agent.
+- **AUTHORITATIVE_PROMPT**: Script MUST present `specs/.compiled-full-spec.md` as non-negotiable Law to Agent.
   > Responsibility: Compliance — prevent agent improvisation.
-  > Verification: Build script outputs "The file specs/.compiled.md is not a suggestion—it is the LAW."
+  > Verification: Build script outputs "The file specs/.compiled-full-spec.md is not a suggestion—it is the LAW."
 
 
 (Ref: VISION.VIBE_CODING.HUMAN_GATE), (Ref: VISION.VIBE_CODING.TRUTH)

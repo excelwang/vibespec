@@ -10,7 +10,7 @@ project:
 
 # Build configuration (vibespec build)
 build:
-  compiled_spec: specs/.compiled.md
+  compiled_spec: specs/.compiled-full-spec.md
   skill_output: src/SKILL.md
   specs_dir: specs/
 

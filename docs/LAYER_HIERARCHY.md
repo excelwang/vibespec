@@ -170,7 +170,7 @@ L3-RUNTIME.md
 > Implements: [Component: COMPONENTS.COMPILER_PIPELINE.SCANNER]
 
 **Interface**:
-```typescript
+```code
 interface Scanner {
   scan(path: string): File[]
 }

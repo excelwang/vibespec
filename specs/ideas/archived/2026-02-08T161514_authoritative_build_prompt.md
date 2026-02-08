@@ -7,7 +7,7 @@
 When running `vibespec build`, present a highly motivating and authoritative prompt to the Agent.
 
 **Key Content**:
-1. **Assertion of Truth**: `specs/.compiled.md` is the absolute source of truth.
+1. **Assertion of Truth**: `specs/.compiled-full-spec.md` is the absolute source of truth.
 2. **Quality Mandate**: Emphasize rigor, precision, and alignment with contracts.
 3. **Motivational Tone**: Inspire the Agent to act as a world-class engineer building a masterpiece.
 
@@ -16,7 +16,7 @@ When running `vibespec build`, present a highly motivating and authoritative pro
 > "🔥 **ATTENTION ENGINEER** 🔥
 >
 > You are about to materialize the **Project Specs**.
-> The file `specs/.compiled.md` is not a suggestion—it is the **LAW**.
+> The file `specs/.compiled-full-spec.md` is not a suggestion—it is the **LAW**.
 >
 > Every Contract is a promise. Every Interface is a covenant.
 > Do not improvise. Do not guess.

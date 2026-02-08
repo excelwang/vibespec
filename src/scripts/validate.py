@@ -434,7 +434,86 @@ def validate_specs(specs_dir: Path) -> tuple:
                     if output_type not in consumer_inputs:
                         warnings.append(f"L3 Compatibility: `{iface_id}` output `{output_type}` may not match `{consumer_id}` inputs.")
 
-    # 9. Custom Rules
+    # 9. L1_WORKFLOW_COVERAGE: L1 Script items must have L3 workflow refs
+    l1_script_items = set()
+    l3_workflow_refs = set()
+    
+    for spec_id, data in specs.items():
+        if data['layer'] == 1:
+            for item_id, item_data in data['items'].items():
+                header = item_data['header']
+                # Check for Script in header: - **ID**: Script MUST/SHOULD/MAY
+                if re.search(r'Script (MUST|SHOULD|MAY)', header):
+                    l1_script_items.add(item_id)
+        elif data['layer'] == 3:
+            for item_id, item_data in data['items'].items():
+                header = item_data['header']
+                body = item_data['body']
+                # Check if it's a workflow
+                if '[workflow]' in header:
+                    # Extract all refs from workflow body
+                    ref_matches = re.findall(r'\(Ref: ([^\)]+)\)', body)
+                    for refs in ref_matches:
+                        for ref in refs.split(','):
+                            ref = ref.strip()
+                            l3_workflow_refs.add(ref)
+                    
+                    # Extract Implements: [Contract: ID]
+                    impl_matches = re.findall(r'Implements:\s*\[Contract:\s*([\w.]+)\]', body)
+                    for impl in impl_matches:
+                         l3_workflow_refs.add(impl)
+    
+    # Check coverage
+    for l1_item in l1_script_items:
+        # Check if any workflow refs this L1 item
+        covered = any(l1_item in ref or ref.endswith('.' + l1_item.split('.')[-1]) for ref in l3_workflow_refs)
+        if not covered:
+            warnings.append(f"L1_WORKFLOW_COVERAGE: `{l1_item}` (Script) has no L3 workflow ref.")
+
+    # 10. FULL_WORKFLOW_REQUIRED: L3 must have FULL_WORKFLOW covering all Roles and Components
+    l2_roles = set()
+    l2_components = set()
+    full_workflow_body = None
+    
+    for spec_id, data in specs.items():
+        if data['layer'] == 2:
+            for item_id in data['items']:
+                if 'ROLES.' in item_id and item_id.count('.') >= 2:
+                    # Leaf role (e.g., ROLES.SPEC_MANAGEMENT.ARCHITECT)
+                    l2_roles.add(item_id)
+                elif 'COMPONENTS.' in item_id and item_id.count('.') >= 2:
+                    # Leaf component
+                    l2_components.add(item_id)
+        elif data['layer'] == 3:
+            for item_id, item_data in data['items'].items():
+                if item_id == 'FULL_WORKFLOW' or 'FULL_WORKFLOW' in item_id:
+                    full_workflow_body = item_data.get('body', '')
+    
+    if full_workflow_body is None:
+        errors.append("FULL_WORKFLOW_REQUIRED: L3 missing `[workflow] FULL_WORKFLOW`.")
+    else:
+        # Check role coverage
+        uncovered_roles = []
+        for role in l2_roles:
+            role_name = role.split('.')[-1]
+            if role_name not in full_workflow_body and role not in full_workflow_body:
+                uncovered_roles.append(role)
+        
+        if uncovered_roles:
+            warnings.append(f"FULL_WORKFLOW_REQUIRED: FULL_WORKFLOW missing roles: {uncovered_roles[:5]}...")
+            
+        # Check component coverage (just check main components are mentioned)
+        mentioned_components = 0
+        for comp in l2_components:
+            comp_name = comp.split('.')[-1]
+            if comp_name in full_workflow_body:
+                mentioned_components += 1
+        
+        coverage_pct = (mentioned_components / len(l2_components) * 100) if l2_components else 100
+        if coverage_pct < 50:
+            warnings.append(f"FULL_WORKFLOW_REQUIRED: FULL_WORKFLOW only covers {coverage_pct:.0f}% of components.")
+
+    # 11. Custom Rules
     custom_rules = extract_rules_from_l1(specs)
     if custom_rules:
         ce, cw = apply_custom_rules(custom_rules, specs)
