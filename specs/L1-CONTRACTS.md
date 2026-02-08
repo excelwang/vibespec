@@ -597,6 +597,10 @@ invariants:
   > Responsibility: Compliance — prevent agent improvisation.
   > Verification: Build script outputs "The file specs/.compiled-full-spec.md is not a suggestion—it is the LAW."
 
+- **AGENT_DIRECTIVE_COMPLIANCE**: Script MUST inject `meta.agent_directive` from `vibespec.yaml` into the Prompt.
+  > Responsibility: Customization — project-specific agent instructions.
+  > Verification: Build output includes "🧠 AGENT DIRECTIVE: {content}".
+
 
 (Ref: VISION.VIBE_CODING.HUMAN_GATE), (Ref: VISION.VIBE_CODING.TRUTH)
 

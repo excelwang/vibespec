@@ -19,15 +19,31 @@ from datetime import datetime
 # --- Config & Utils ---
 
 def load_config(project_root: Path) -> dict:
-    """Load configuration from vibespec.yaml."""
-    config_file = project_root / 'vibespec.yaml'
-    if not config_file.exists():
-        print(f"❌ Error: vibespec.yaml not found in {project_root}")
-        sys.exit(1)
+    """Load configuration from vibespec.yaml and vibe-project.yaml."""
+    config = {}
     
+    # 1. Load Tool Config (vibespec.yaml)
+    tool_config_file = project_root / 'vibespec.yaml'
+    if tool_config_file.exists():
+        config.update(parse_yaml(tool_config_file))
+    else:
+        print(f"⚠️  vibespec.yaml not found in {project_root}")
+
+    # 2. Load Project Config (vibe-project.yaml)
+    project_config_file = project_root / 'vibe-project.yaml'
+    if project_config_file.exists():
+        config.update(parse_yaml(project_config_file))
+    else:
+        # Fallback: Check if merged in vibespec.yaml (legacy/transition)
+        pass
+        
+    return config
+
+def parse_yaml(file_path: Path) -> dict:
+    """Simple YAML parser."""
     config = {}
     current_section = None
-    content = config_file.read_text()
+    content = file_path.read_text()
     
     for line in content.split('\n'):
         # 1. Handle Section Headers (e.g., "meta:")
@@ -57,7 +73,7 @@ def load_config(project_root: Path) -> dict:
                 value = [v.strip() for v in value[1:-1].split(',')]
                 
             config[current_section][key] = value
-    
+            
     return config
 
 def verify_compiled_spec(compiled_path: Path) -> bool:

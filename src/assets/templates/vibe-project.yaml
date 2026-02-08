@@ -1,0 +1,13 @@
+# Vibe Project Definition
+# Defines Project Identity and Agent Context
+
+meta:
+  version: "1.0"
+  agent_directive: "When interpreting specs, you MUST identify the specific ROLE, COMPONENT and L3 items responsible for the action. Do not rely solely on abstract top-level contracts. Find the concrete definition in L2 and L3 Specs."
+
+project:
+  name: "Your Project"
+  version: "3.2.0"
+  type: "skill"     # Types: skill, library, app
+  skills:           # You MUST use those skills to help you to build this project
+    - "a-skill-for-the-agent" 

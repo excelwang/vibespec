@@ -69,14 +69,17 @@ def main():
     config_template = assets_dir / "templates" / "vibespec.yaml"
     specs_templates = assets_dir / "specs"
     
-    output_path = project_dir / "vibespec.yaml"
+    
+    output_path_tool = project_dir / "vibespec.yaml"
+    output_path_project = project_dir / "vibe-project.yaml"
     
     print(f"=== Vibespec Init ===")
     if project_name:
         print(f"Project: {project_name}")
     
-    # 1. Generate Config
-    generate_config(output_path, config_template, project_name)
+    # 1. Generate Configs
+    generate_config(output_path_tool, assets_dir / "templates" / "vibespec.yaml", project_name)
+    generate_config(output_path_project, assets_dir / "templates" / "vibe-project.yaml", project_name)
     
     # 2. Create specs/ directory
     specs_dir = project_dir / "specs"
