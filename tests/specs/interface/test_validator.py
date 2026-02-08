@@ -33,9 +33,10 @@ def get_adapter(env='MOCK'):
         return MockAdapter()
     elif env == 'REAL':
         try:
-            # Real implementation not yet available
-            return None
-        except ImportError:
+            from ..real_adaptor.validator import ValidatorAdapter
+            return ValidatorAdapter()
+        except ImportError as e:
+            print(f"Failed to import Real Adapter: {e}")
             return None
     return None
 
