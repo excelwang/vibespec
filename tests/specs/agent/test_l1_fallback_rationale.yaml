@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: FALLBACK_RATIONALE
+# ref: FALLBACK_RATIONALE
+# Responsibility: Transparency — explain automation barriers.
+# Verification: All PROMPT_FALLBACK items have rationale.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: All PROMPT_FALLBACK items have rationale."

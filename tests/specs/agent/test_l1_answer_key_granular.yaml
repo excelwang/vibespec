@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: ANSWER_KEY_GRANULAR
+# ref: ANSWER_KEY_GRANULAR
+# Responsibility: Maintainability — one answer file per spec item for easy updates.
+# Verification: `tests/specs/agent/answer_key_*.md` files match H2 sections.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: `tests/specs/agent/answer_key_*.md` files match H2 sections."

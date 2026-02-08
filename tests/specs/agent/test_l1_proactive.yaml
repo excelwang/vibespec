@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: PROACTIVE
+# ref: PROACTIVE
+# Responsibility: Evolution — drive increasing autonomy.
+# Verification: Script proposal after 3+ repetitions.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Script proposal after 3+ repetitions."

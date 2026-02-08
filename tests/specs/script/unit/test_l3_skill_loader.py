@@ -6,6 +6,11 @@ import unittest
 
 class TestSKILLLOADER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: valid SKILL.md, Expected: SkillDef, Case: Normal
+    # - Input: no SKILL.md, Expected: null, Case: Edge
+    # - Input: malformed, Expected: ParseError, Case: Error
+
         # TODO: Implement compliance verification for SKILL_LOADER
         pass
 

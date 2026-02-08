@@ -6,6 +6,11 @@ import unittest
 
 class TestWORKFLOWDISPATCHER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: FileSave trigger, Expected: RunValidation, Case: Normal
+    # - Input: Unknown trigger, Expected: NoOp, Case: Edge
+    # - Input: null, Expected: DispatchError, Case: Error
+
         # TODO: Implement compliance verification for WORKFLOW_DISPATCHER
         pass
 

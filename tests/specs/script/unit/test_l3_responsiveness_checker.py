@@ -6,6 +6,11 @@ import unittest
 
 class TestRESPONSIVENESSCHECKER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: Full coverage, Expected: {coverage: 100%}, Case: Normal
+    # - Input: Orphan items, Expected: {orphans: [...]}, Case: Edge
+    # - Input: Fanout > 7, Expected: {violations: [Miller]}, Case: Error
+
         # TODO: Implement compliance verification for RESPONSIVENESS_CHECKER
         pass
 

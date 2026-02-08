@@ -6,6 +6,10 @@ import unittest
 
 class TestSCENARIOGENERATION(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Context: User Model exists, Generated Scenario: Add field 'phone' to User, Rationale: CRUD mutability check, Case: Normal
+    # - Context: Empty Project, Generated Scenario: Add 'Hello World' feature, Rationale: Bootstrap check, Case: Edge
+
         # TODO: Implement compliance verification for SCENARIO_GENERATION
         pass
 

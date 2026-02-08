@@ -6,6 +6,11 @@ import unittest
 
 class TestERRORPRINTER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: [error1], Expected: "❌ error1", Case: Normal
+    # - Input: [], Expected: "", Case: Edge
+    # - Input: null, Expected: PrintError, Case: Error
+
         # TODO: Implement compliance verification for ERROR_PRINTER
         pass
 

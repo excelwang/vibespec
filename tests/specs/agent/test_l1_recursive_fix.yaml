@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: RECURSIVE_FIX
+# ref: RECURSIVE_FIX
+# Responsibility: Integrity — prevent local fixes from breaking global contracts.
+# Verification: Fix proposal includes parent compliance check.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Fix proposal includes parent compliance check."

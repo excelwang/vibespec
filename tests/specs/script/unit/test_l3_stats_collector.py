@@ -6,6 +6,11 @@ import unittest
 
 class TestSTATSCOLLECTOR(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: [spec1, spec2], Expected: {count: 2, ...}, Case: Normal
+    # - Input: [], Expected: {count: 0}, Case: Edge
+    # - Input: null, Expected: StatsError, Case: Error
+
         # TODO: Implement compliance verification for STATS_COLLECTOR
         pass
 

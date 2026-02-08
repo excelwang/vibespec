@@ -42,71 +42,167 @@ def load_config(project_root: Path) -> dict:
     return config
 
 
+def parse_markdown_table(text):
+    """Simple parser to extract data from a markdown table."""
+    cases = []
+    lines = text.strip().split('\n')
+    if len(lines) < 3: return cases
+    
+    # Identify header and data lines
+    header_line = lines[0]
+    # Check for separator line (---)
+    if not re.match(r'^[|\s\-:]+$', lines[1]):
+        return cases
+    
+    headers = [h.strip() for h in header_line.split('|') if h.strip()]
+    
+    for line in lines[2:]:
+        cols = [c.strip() for c in line.split('|') if c.strip() or (line.startswith('|') and line.endswith('|'))]
+        # Clean up empty columns if | was used as border
+        if line.startswith('|') and line.endswith('|'):
+            cols = [c.strip() for c in line.split('|')][1:-1]
+        else:
+            cols = [c.strip() for c in line.split('|')]
+            
+        if len(cols) >= len(headers):
+            case = dict(zip(headers, cols))
+            cases.append(case)
+    return cases
+
+def extract_l1_rule_details(text):
+    """Extract Responsibility and Verification from L1 rule body."""
+    res = re.search(r'> Responsibility: (.*)', text)
+    ver = re.search(r'> Verification: (.*)', text)
+    return {
+        'responsibility': res.group(1).strip() if res else "",
+        'verification': ver.group(1).strip() if ver else ""
+    }
+
 def generate_meta_tests(specs_dir: Path, tests_dir: Path):
     """Generate Meta-Tests in structured directories."""
-    # Structure: tests/specs/script/unit/
     unit_tests_dir = tests_dir / "specs" / "script" / "unit"
     unit_tests_dir.mkdir(parents=True, exist_ok=True)
     
-    # Structure: tests/specs/agent/
-    agent_tests_dir = tests_dir / "specs" / "agent"
-    agent_tests_dir.mkdir(parents=True, exist_ok=True)
+    agent_dir = tests_dir / "specs" / "agent"
+    agent_dir.mkdir(parents=True, exist_ok=True)
     
     generated_count = 0
-    
     existing_tests = set(unit_tests_dir.glob("test_*.py"))
+    existing_agent = set(agent_dir.glob("test_*.yaml"))
+    
     generated_files = set()
 
+    # Process L1 Contracts
+    for f in specs_dir.glob("L1*.md"):
+        content = f.read_text()
+        spec_prefix = f.name.split('-')[0].lower()
+        
+        # Advanced L1 regex to capture body for Responsibility/Verification
+        rules = re.finditer(r'^- \*\*(?P<id>[A-Z0-9_]+)\*\*: (?P<subject>Agent|Script|Agent/Script|Script/Agent) (?P<priority>MUST|SHOULD|MAY)(?P<body>.*?)(?=\n-|\n#|\n---|\Z)', content, re.DOTALL | re.MULTILINE)
+        
+        for match in rules:
+            f_id = match.group('id')
+            subject = match.group('subject')
+            body = match.group('body')
+            details = extract_l1_rule_details(body)
+            safe_id = f_id.lower()
+            
+            if 'Agent' in subject and 'Script' not in subject:
+                test_file = agent_dir / f"test_{spec_prefix}_{safe_id}.yaml"
+                generated_files.add(test_file)
+                if not test_file.exists():
+                    test_content = f"""# Acceptance Test for L1 Contract: {f_id}
+# ref: {f_id}
+# Responsibility: {details['responsibility']}
+# Verification: {details['verification']}
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: {details['verification']}"
+"""
+                    test_file.write_text(test_content)
+                    generated_count += 1
+            else:
+                test_file = unit_tests_dir / f"test_{spec_prefix}_{safe_id}.py"
+                generated_files.add(test_file)
+                if not test_file.exists():
+                    test_content = f"""# Unit Test for L1 Contract: {f_id}
+# ref: {f_id}
+# Responsibility: {details['responsibility']}
+# Verification: {details['verification']}
+
+import unittest
+
+class Test{f_id.replace('_', '')}(unittest.TestCase):
+    def test_compliance(self):
+        \"\"\"Check compliance: {details['verification']}\"\"\"
+        pass
+"""
+                    test_file.write_text(test_content)
+                    generated_count += 1
+
+    # Process L3 Runtime
     for f in specs_dir.glob("L3*.md"):
         content = f.read_text()
+        spec_prefix = f.name.split('-')[0].lower()
         
-        # Find fixtures: ## [interface|decision|algorithm] ID
-        fixtures = re.findall(r'^## \[(interface|decision|algorithm)\]\s+(.+)$', content, re.MULTILINE)
+        # Advanced L3 regex to capture body for Fixtures
+        fixtures = re.finditer(r'^## \[(?P<type>interface|decision|algorithm|workflow)\]\s+(?P<id>.+?)\n(?P<body>.*?)(?=\n##|\n---|\Z)', content, re.DOTALL | re.MULTILINE)
         
-        for f_type, f_id in fixtures:
-            # Sanitize ID for filename
+        for match in fixtures:
+            f_type = match.group('type')
+            f_id = match.group('id').strip()
+            body = match.group('body')
+            
+            # Extract first table if exists
+            table_match = re.search(r'(\|.*\|.*\n\|[- :|]*\|.*\n(?:\|.*\|.*\n)*)', body)
+            table_cases = parse_markdown_table(table_match.group(1)) if table_match else []
+            
             safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', f_id).lower()
             
-            # Extract spec level prefix (e.g. L3) from filename
-            spec_prefix = f.name.split('-')[0].lower() # "L3" -> "l3"
-            
-            # DISPATCH BASED ON TYPE
-            # [decision] -> Agent Role -> YAML Acceptance Test
             if f_type == 'decision':
-                 # Structure: tests/specs/acceptance/
-                 acceptance_dir = tests_dir / "specs" / "acceptance"
-                 acceptance_dir.mkdir(parents=True, exist_ok=True)
-                 
-                 test_file = acceptance_dir / f"test_{spec_prefix}_{safe_id}.yaml"
+                 test_file = agent_dir / f"test_{spec_prefix}_{safe_id}.yaml"
                  generated_files.add(test_file)
-                 
                  if not test_file.exists():
+                     cases_yaml = ""
+                     if table_cases:
+                         for c in table_cases:
+                             name = c.get('Case', c.get('Scenario', 'Unnamed Case'))
+                             cases_yaml += f"  - name: \"{name}\"\n"
+                             for k, v in c.items():
+                                 if k not in ['Case', 'Scenario']:
+                                     cases_yaml += f"    {k.lower()}: \"{v}\"\n"
+                     else:
+                         cases_yaml = "  - name: \"Default Case\"\n    input: \"TODO\"\n    expected: \"TODO\"\n"
+                         
                      test_content = f"""# Acceptance Test for {f_id} ({f_type})
 # Generated by Vibespec Compiler
 # ref: {f_id}
 
 cases:
-  - name: "Example Case"
-    input: "TODO"
-    expected: "TODO"
+{cases_yaml}
 """
                      test_file.write_text(test_content)
                      generated_count += 1
-
-            # [interface], [algorithm] -> Script Component -> Python Unit Test
-            elif f_type in ['interface', 'algorithm', 'workflow']:
+            else:
                  test_file = unit_tests_dir / f"test_{spec_prefix}_{safe_id}.py"
                  generated_files.add(test_file)
-                 
                  if not test_file.exists():
+                     fixture_comments = ""
+                     if table_cases:
+                         fixture_comments = "\n    # Fixtures from Spec:\n"
+                         for c in table_cases:
+                             case_str = ", ".join([f"{k}: {v}" for k, v in c.items()])
+                             fixture_comments += f"    # - {case_str}\n"
+
                      test_content = f"""# Meta-Test for {f_id} ({f_type})
 # Generated by Vibespec Compiler
 # ref: {f_id}
 
 import unittest
 
-class Test{f_id.replace('_', '').replace('.', '')}(unittest.TestCase):
-    def test_compliance(self):
+class Test{re.sub(r'[^a-zA-Z0-9]', '', f_id)}(unittest.TestCase):
+    def test_compliance(self):{fixture_comments}
         # TODO: Implement compliance verification for {f_id}
         pass
 
@@ -115,27 +211,24 @@ if __name__ == '__main__':
 """
                      test_file.write_text(test_content)
                      generated_count += 1
-            else:
-                # Optional: Check for drift provided we can parse the ref
-                pass
 
     # Report Orphans
-    orphans = existing_tests - generated_files
+    all_existing = existing_tests | existing_agent
+    orphans = all_existing - generated_files
     if orphans:
         print(f"⚠️  Orphaned tests found (spec deleted?):")
-        for o in orphans:
+        for o in sorted(list(orphans)):
             print(f"   - {o.name}")
                 
     skipped_count = len(generated_files) - generated_count
     if generated_count > 0 or skipped_count > 0:
-        print(f"✅ Generated {generated_count} unit meta-tests (Skipped {skipped_count} existing) in {unit_tests_dir}")
+        print(f"✅ Generated {generated_count} meta-tests (Skipped {skipped_count} existing)")
 
     # Structural & Naming Validation
     specs_root = tests_dir / "specs"
     if specs_root.exists():
         naming_rules = {
-            "agent": re.compile(r"^(answer_key|generated_question_paper)_[a-z0-9_]+\.md$"),
-            "acceptance": re.compile(r"^test_[a-z0-9]+_[a-z0-9_]+\.yaml$"),
+            "agent": re.compile(r"^test_[a-z0-9]+_[a-z0-9_]+\.yaml$"),
             "unit": re.compile(r"^test_[a-z0-9]+_[a-z0-9_]+\.py$"),
             "e2e": re.compile(r"^test_[a-z0-9]+_[a-z0-9_]+\.py$")
         }
@@ -149,8 +242,6 @@ if __name__ == '__main__':
                 category = None
                 if str(f).startswith(str(specs_root / "agent")):
                     category = "agent"
-                elif str(f).startswith(str(specs_root / "acceptance")):
-                    category = "acceptance"
                 elif str(f).startswith(str(specs_root / "script" / "unit")):
                     category = "unit"
                 elif str(f).startswith(str(specs_root / "script" / "e2e")):

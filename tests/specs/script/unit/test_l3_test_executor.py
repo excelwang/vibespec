@@ -6,6 +6,12 @@ import unittest
 
 class TestTESTEXECUTOR(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: tests/ + MOCK, Expected: {passed: 5, failed: 0, skipped: 0}, Case: Normal
+    # - Input: tests/ + REAL (all impl), Expected: {passed: 4, failed: 1, skipped: 0}, Case: Normal
+    # - Input: tests/ + REAL (no impl), Expected: {passed: 0, failed: 0, skipped: 5}, Case: Edge (SKIP)
+    # - Input: empty tests/, Expected: {passed: 0, failed: 0, skipped: 0}, Case: Edge
+
         # TODO: Implement compliance verification for TEST_EXECUTOR
         pass
 

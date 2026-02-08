@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: USE_TEMPLATES
+# ref: USE_TEMPLATES
+# Responsibility: Consistency — ensure uniform formatting across all generated specs.
+# Verification: Generated files match template structure.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Generated files match template structure."

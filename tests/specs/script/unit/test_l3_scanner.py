@@ -6,6 +6,11 @@ import unittest
 
 class TestSCANNER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: "specs/", Expected: File[], Case: Normal
+    # - Input: "", Expected: PathError, Case: Error
+    # - Input: "nonexistent/", Expected: [], Case: Edge
+
         # TODO: Implement compliance verification for SCANNER
         pass
 

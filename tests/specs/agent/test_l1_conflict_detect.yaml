@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: CONFLICT_DETECT
+# ref: CONFLICT_DETECT
+# Responsibility: Analysis — detect overlapping or contradictory statements.
+# Verification: Conflict pairs logged before resolution applied.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Conflict pairs logged before resolution applied."

@@ -6,6 +6,11 @@ import unittest
 
 class TestCUSTOMRULESLOADER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: specs/ with rules, Expected: Rule[], Case: Normal
+    # - Input: empty specs/, Expected: [], Case: Edge
+    # - Input: invalid YAML, Expected: LoadError, Case: Error
+
         # TODO: Implement compliance verification for CUSTOM_RULES_LOADER
         pass
 

@@ -6,6 +6,11 @@ import unittest
 
 class TestCOVERAGEANALYZER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: specs/ + tests/, Expected: {l1: 0.8, l3: 0.6, []}, Case: Normal
+    # - Input: specs/ + empty tests/, Expected: {l1: 0.0, l3: 0.0, [...]}, Case: Edge
+    # - Input: empty specs/, Expected: EmptySpecError, Case: Error
+
         # TODO: Implement compliance verification for COVERAGE_ANALYZER
         pass
 

@@ -6,6 +6,11 @@ import unittest
 
 class TestSUMMARYGENERATOR(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: 0 errors, Expected: "✅ Valid", Case: Normal
+    # - Input: N errors, Expected: "❌ N errors", Case: Error
+    # - Input: null, Expected: SummaryError, Case: Error
+
         # TODO: Implement compliance verification for SUMMARY_GENERATOR
         pass
 

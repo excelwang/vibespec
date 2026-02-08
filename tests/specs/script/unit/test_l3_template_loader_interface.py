@@ -6,6 +6,10 @@ import unittest
 
 class TestTEMPLATELOADERINTERFACE(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: "src/assets/specs/", Expected: Map{L0, L1, L2, L3}, Case: Normal
+    # - Input: "nonexistent/", Expected: PathError, Case: Error
+
         # TODO: Implement compliance verification for TEMPLATE_LOADER_INTERFACE
         pass
 

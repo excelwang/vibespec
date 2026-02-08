@@ -6,6 +6,11 @@ import unittest
 
 class TestSECTIONPARSER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: "## ID", Expected: [{tag: "system", id: "ID"}], Case: Normal
+    # - Input: "## ID", Expected: [{tag: null, id: "ID"}], Case: Edge
+    # - Input: "", Expected: [], Case: Edge
+
         # TODO: Implement compliance verification for SECTION_PARSER
         pass
 

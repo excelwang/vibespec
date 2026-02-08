@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: REPORT
+# ref: REPORT
+# Responsibility: Feedback — actionable maintenance report.
+# Verification: All findings listed.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: All findings listed."

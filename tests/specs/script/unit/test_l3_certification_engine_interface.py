@@ -6,6 +6,10 @@ import unittest
 
 class TestCERTIFICATIONENGINEINTERFACE(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: L1 spec item, Expected: answer_key_{id}.md, Case: Normal
+    # - Input: Empty specs, Expected: [], Case: Edge
+
         # TODO: Implement compliance verification for CERTIFICATION_ENGINE_INTERFACE
         pass
 

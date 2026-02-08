@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: CONTRADICTION
+# ref: CONTRADICTION
+# Responsibility: Consistency — detect axiom breakage.
+# Verification: Error on logical contradiction.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Error on logical contradiction."

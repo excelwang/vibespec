@@ -6,6 +6,11 @@ import unittest
 
 class TestPURITYCHECKER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: pure spec, Expected: {pure: true}, Case: Normal
+    # - Input: impl details in L0, Expected: {pure: false}, Case: Error
+    # - Input: mixed concerns, Expected: {warnings: [Impure]}, Case: Edge
+
         # TODO: Implement compliance verification for PURITY_CHECKER
         pass
 

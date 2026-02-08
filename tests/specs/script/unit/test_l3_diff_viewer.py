@@ -6,6 +6,11 @@ import unittest
 
 class TestDIFFVIEWER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: changed spec, Expected: {added: N, removed: M}, Case: Normal
+    # - Input: identical, Expected: {added: 0, removed: 0}, Case: Edge
+    # - Input: null input, Expected: DiffError, Case: Error
+
         # TODO: Implement compliance verification for DIFF_VIEWER
         pass
 

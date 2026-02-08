@@ -6,6 +6,11 @@ import unittest
 
 class TestTERMCHECKER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: controlled terms, Expected: {violations: []}, Case: Normal
+    # - Input: banned term, Expected: {violations: [TermViolation]}, Case: Error
+    # - Input: unknown term, Expected: {warnings: [UnknownTerm]}, Case: Edge
+
         # TODO: Implement compliance verification for TERM_CHECKER
         pass
 

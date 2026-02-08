@@ -6,6 +6,11 @@ import unittest
 
 class TestBATCHREADER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: "ideas/" with files, Expected: Idea[], Case: Normal
+    # - Input: Empty dir, Expected: [], Case: Edge
+    # - Input: No permission, Expected: ReadError, Case: Error
+
         # TODO: Implement compliance verification for BATCH_READER
         pass
 

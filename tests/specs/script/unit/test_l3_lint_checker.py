@@ -6,6 +6,11 @@ import unittest
 
 class TestLINTCHECKER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: valid spec, Expected: {issues: []}, Case: Normal
+    # - Input: missing tag, Expected: {issues: [TagWarning]}, Case: Edge
+    # - Input: malformed, Expected: LintError, Case: Error
+
         # TODO: Implement compliance verification for LINT_CHECKER
         pass
 

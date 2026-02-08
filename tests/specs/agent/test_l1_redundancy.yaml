@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: REDUNDANCY
+# ref: REDUNDANCY
+# Responsibility: Lean specs — avoid maintenance burden from duplicated/overlapping items.
+# Verification: Warning on redundant sections or items with overlapping scope.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Warning on redundant sections or items with overlapping scope."

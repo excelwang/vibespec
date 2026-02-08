@@ -6,6 +6,11 @@ import unittest
 
 class TestSCRIPTSCANNER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: L3 with scripts, Expected: [ScriptRef], Case: Normal
+    # - Input: no scripts, Expected: [], Case: Edge
+    # - Input: broken ref, Expected: ScanError, Case: Error
+
         # TODO: Implement compliance verification for SCRIPT_SCANNER
         pass
 

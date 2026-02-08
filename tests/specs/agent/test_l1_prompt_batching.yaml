@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: PROMPT_BATCHING
+# ref: PROMPT_BATCHING
+# Responsibility: Efficiency — reduce LLM call overhead.
+# Verification: No unbatched adjacent prompts.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: No unbatched adjacent prompts."

@@ -6,6 +6,12 @@ import unittest
 
 class TestINITSCRIPT(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: empty dir, Expected: L0 + Config, Case: Normal
+    # - Input: existing project, Expected: SKIP, Case: Edge
+    # - Input: minimal init, Expected: Config Only, Case: Config Gen
+    # - Input: no permissions, Expected: InitError, Case: Error
+
         # TODO: Implement compliance verification for INIT_SCRIPT
         pass
 

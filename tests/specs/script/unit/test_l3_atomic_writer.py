@@ -6,6 +6,11 @@ import unittest
 
 class TestATOMICWRITER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: valid path, Expected: void (file written), Case: Normal
+    # - Input: readonly path, Expected: WriteError, Case: Error
+    # - Input: concurrent write, Expected: AtomicGuard, Case: Edge
+
         # TODO: Implement compliance verification for ATOMIC_WRITER
         pass
 

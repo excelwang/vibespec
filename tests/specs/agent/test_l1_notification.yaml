@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: NOTIFICATION
+# ref: NOTIFICATION
+# Responsibility: Transparency — enable informed decisions.
+# Verification: All findings shown to user.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: All findings shown to user."

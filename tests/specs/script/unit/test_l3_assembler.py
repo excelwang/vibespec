@@ -6,6 +6,11 @@ import unittest
 
 class TestASSEMBLER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: [L0, L1, L2, L3], Expected: Merged Document, Case: Normal
+    # - Input: [], Expected: EmptyDoc, Case: Edge
+    # - Input: Circular deps, Expected: AssemblyError, Case: Error
+
         # TODO: Implement compliance verification for ASSEMBLER
         pass
 

@@ -6,6 +6,11 @@ import unittest
 
 class TestARCHIVER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: [idea1, idea2], Expected: void (files moved), Case: Normal
+    # - Input: [], Expected: void (no-op), Case: Edge
+    # - Input: read-only dir, Expected: ArchiveError, Case: Error
+
         # TODO: Implement compliance verification for ARCHIVER
         pass
 

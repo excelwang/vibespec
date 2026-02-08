@@ -6,6 +6,11 @@ import unittest
 
 class TestCOMMANDROUTER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: "validate", Expected: ValidateHandler, Case: Normal
+    # - Input: "unknown", Expected: HelpHandler, Case: Edge
+    # - Input: "", Expected: HelpHandler, Case: Edge
+
         # TODO: Implement compliance verification for COMMAND_ROUTER
         pass
 

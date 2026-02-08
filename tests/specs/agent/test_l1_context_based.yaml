@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: CONTEXT_BASED
+# ref: CONTEXT_BASED
+# Responsibility: Efficiency — use existing context.
+# Verification: Ideas extracted without external log access.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Ideas extracted without external log access."

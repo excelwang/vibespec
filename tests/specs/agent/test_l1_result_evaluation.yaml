@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: RESULT_EVALUATION
+# ref: RESULT_EVALUATION
+# Responsibility: Actionability — convert failures to work items.
+# Verification: Idea generated for failing tests.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Idea generated for failing tests."

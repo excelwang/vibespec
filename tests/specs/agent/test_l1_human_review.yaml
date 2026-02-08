@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: HUMAN_REVIEW
+# ref: HUMAN_REVIEW
+# Responsibility: Human gate — verify AI insights.
+# Verification: Approval requested before file creation.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Approval requested before file creation."

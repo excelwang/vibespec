@@ -6,6 +6,11 @@ import unittest
 
 class TestVALIDATESCRIPT(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: valid specs, Expected: {errors: 0}, Case: Normal
+    # - Input: invalid specs, Expected: {errors: N}, Case: Normal
+    # - Input: no specs, Expected: EmptyError, Case: Edge
+
         # TODO: Implement compliance verification for VALIDATE_SCRIPT
         pass
 

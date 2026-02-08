@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: CASCADE_REVIEW
+# ref: CASCADE_REVIEW
+# Responsibility: Coherence — identify required updates to child-level specs.
+# Verification: Review output includes proposed reorganization for L(N+1).
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Review output includes proposed reorganization for L(N+1)."

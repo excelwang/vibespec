@@ -6,6 +6,11 @@ import unittest
 
 class TestRULEENGINE(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: Valid rules + specs, Expected: [], Case: Normal
+    # - Input: Invalid rule, Expected: RuleError, Case: Error
+    # - Input: Partial match, Expected: [Violation], Case: Edge
+
         # TODO: Implement compliance verification for RULE_ENGINE
         pass
 

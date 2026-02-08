@@ -6,6 +6,11 @@ import unittest
 
 class TestTESTREPORTER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: {80%, 60%} + {5, 0}, Expected: Formatted string, Case: Normal
+    # - Input: {0%, 0%} + {0, 0}, Expected: "No tests" warning, Case: Edge
+    # - Input: null coverage, Expected: ReportError, Case: Error
+
         # TODO: Implement compliance verification for TEST_REPORTER
         pass
 

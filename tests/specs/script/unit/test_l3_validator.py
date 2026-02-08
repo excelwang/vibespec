@@ -6,6 +6,11 @@ import unittest
 
 class TestVALIDATOR(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: Valid specs, Expected: {errors: [], warnings: []}, Case: Normal
+    # - Input: Dangling ref, Expected: {errors: [DanglingRef]}, Case: Error
+    # - Input: Orphan item, Expected: {warnings: [Orphan]}, Case: Edge
+
         # TODO: Implement compliance verification for VALIDATOR
         pass
 

@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: SELF_AUDIT
+# ref: SELF_AUDIT
+# Responsibility: Quality — catch errors before human review.
+# Verification: Self-check performed on each edit.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Self-check performed on each edit."

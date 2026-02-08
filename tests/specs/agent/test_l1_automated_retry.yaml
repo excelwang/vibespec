@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: AUTOMATED_RETRY
+# ref: AUTOMATED_RETRY
+# Responsibility: Recovery — minimize human intervention for minor issues.
+# Verification: Max 3 retry attempts.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Max 3 retry attempts."

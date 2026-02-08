@@ -6,6 +6,11 @@ import unittest
 
 class TestCOMPILESCRIPT(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: specs/ -> out.md, Expected: void, Case: Normal
+    # - Input: no specs, Expected: CompileError, Case: Error
+    # - Input: invalid output, Expected: WriteError, Case: Error
+
         # TODO: Implement compliance verification for COMPILE_SCRIPT
         pass
 

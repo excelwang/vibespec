@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: FIX_PROPOSAL
+# ref: FIX_PROPOSAL
+# Responsibility: Closing loop — convert issues to work items.
+# Verification: Idea file created for each issue.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Idea file created for each issue."

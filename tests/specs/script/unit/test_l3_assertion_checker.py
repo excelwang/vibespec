@@ -6,6 +6,11 @@ import unittest
 
 class TestASSERTIONCHECKER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: RFC2119 compliant, Expected: {pass: true}, Case: Normal
+    # - Input: low keyword density, Expected: {pass: false}, Case: Edge
+    # - Input: empty spec, Expected: AssertionError, Case: Error
+
         # TODO: Implement compliance verification for ASSERTION_CHECKER
         pass
 

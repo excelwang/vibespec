@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: MOCK_GENERATION
+# ref: MOCK_GENERATION
+# Responsibility: Isolation — unit tests must not depend on environment.
+# Verification: Mocks used in generated tests.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Mocks used in generated tests."

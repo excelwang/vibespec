@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: REALISTIC_CONTEXT
+# ref: REALISTIC_CONTEXT
+# Responsibility: Relevance — test scenarios must reflect real user/script inputs, not placeholders.
+# Verification: answer_key files contain concrete, project-specific examples.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: answer_key files contain concrete, project-specific examples."

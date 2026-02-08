@@ -6,6 +6,11 @@ import unittest
 
 class TestBUILDER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: spec + [skill], Expected: SUCCESS, [src/SKILL.md updated], Case: Normal
+    # - Input: spec + [no_skill], Expected: PARTIAL, "Manual implementation required", Case: Edge
+    # - Input: invalid spec, Expected: ERROR, "Traceability broken", Case: Error
+
         # TODO: Implement compliance verification for BUILDER
         pass
 

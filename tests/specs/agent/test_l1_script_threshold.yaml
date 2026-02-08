@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: SCRIPT_THRESHOLD
+# ref: SCRIPT_THRESHOLD
+# Responsibility: Decision quality — balance automation vs complexity.
+# Verification: SCRIPT assigned for eligible tasks.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: SCRIPT assigned for eligible tasks."

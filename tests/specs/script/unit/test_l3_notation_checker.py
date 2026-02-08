@@ -6,6 +6,11 @@ import unittest
 
 class TestNOTATIONCHECKER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: valid notation, Expected: {issues: []}, Case: Normal
+    # - Input: informal language, Expected: {issues: [Warn]}, Case: Edge
+    # - Input: mixed case IDs, Expected: {issues: [Error]}, Case: Error
+
         # TODO: Implement compliance verification for NOTATION_CHECKER
         pass
 

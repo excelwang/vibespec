@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: LEVEL_SEEKING
+# ref: LEVEL_SEEKING
+# Responsibility: Shift-left — prevent detail pollution.
+# Verification: Each segment has correct layer assignment.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Each segment has correct layer assignment."

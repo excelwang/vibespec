@@ -6,6 +6,11 @@ import unittest
 
 class TestPARSER(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: Valid spec, Expected: {metadata, body}, Case: Normal
+    # - Input: No frontmatter, Expected: {metadata: {}, body}, Case: Edge
+    # - Input: Binary file, Expected: ParseError, Case: Error
+
         # TODO: Implement compliance verification for PARSER
         pass
 

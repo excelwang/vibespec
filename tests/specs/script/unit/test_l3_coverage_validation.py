@@ -6,6 +6,11 @@ import unittest
 
 class TestCOVERAGEVALIDATION(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: L0.A → L1.B, Expected: [], Case: Normal
+    # - Input: L0.A (orphan), Expected: [OrphanViolation], Case: Edge
+    # - Input: L0.A → 8 items, Expected: [FanoutViolation], Case: Error
+
         # TODO: Implement compliance verification for COVERAGE_VALIDATION
         pass
 

@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: REWRITE_THRESHOLD
+# ref: REWRITE_THRESHOLD
+# Responsibility: Human oversight — large changes require confirmation.
+# Verification: notify_user called when gap > 70%.
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: notify_user called when gap > 70%."

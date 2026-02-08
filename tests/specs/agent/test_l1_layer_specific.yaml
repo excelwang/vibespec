@@ -1,0 +1,8 @@
+# Acceptance Test for L1 Contract: LAYER_SPECIFIC
+# ref: LAYER_SPECIFIC
+# Responsibility: Precision — each layer has distinct validation focus.
+# Verification: Review checklist matches layer type (L0=Vision, L1=Contracts, L2=Arch, L3=Impl).
+
+cases:
+  - name: "Compliance Check"
+    expected: "Passes verification: Review checklist matches layer type (L0=Vision, L1=Contracts, L2=Arch, L3=Impl)."

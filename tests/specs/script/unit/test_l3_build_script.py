@@ -6,6 +6,11 @@ import unittest
 
 class TestBUILDSCRIPT(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: valid config, Expected: Report, Case: Normal
+    # - Input: no config, Expected: Error, Case: Missing Config
+    # - Input: drift detected, Expected: Warning, Case: Drift
+
         # TODO: Implement compliance verification for BUILD_SCRIPT
         pass
 

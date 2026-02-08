@@ -6,6 +6,9 @@ import unittest
 
 class TestSCENARIODRIVERINTERFACE(unittest.TestCase):
     def test_compliance(self):
+    # Fixtures from Spec:
+    # - Input: Valid Workflow, Expected: PASS, Case: Normal
+
         # TODO: Implement compliance verification for SCENARIO_DRIVER_INTERFACE
         pass
 
