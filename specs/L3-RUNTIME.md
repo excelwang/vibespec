@@ -970,3 +970,77 @@ interface StatsCollector {
 | New user | Full tutorial | Learning curve |
 | Experienced | Quick tips | Efficiency |
 | Stuck user | Contextual help | Unblock |
+
+---
+
+## [decision] RELOAD_DECISION
+
+> Implements: [Role: ROLES.AUTOMATION.RELOAD_HANDLER]
+
+**Decision Logic**:
+1. Receive `vibespec reload` command
+2. Re-read SKILL.md from disk
+3. Confirm reload to user
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| SKILL.md exists | Reload and confirm | Hot-reload |
+| SKILL.md missing | Error message | Fail gracefully |
+
+---
+
+## [decision] AUTOMATE_DECISION
+
+> Implements: [Role: ROLES.AUTOMATION.AUTOMATE_CONTROLLER]
+
+**Decision Logic**:
+1. Receive `vibespec automate` command
+2. Scan pending ideas
+3. Process each idea sequentially (L1 → L2 → L3)
+4. Auto-fix all warnings
+5. Report final status
+
+**Fixtures**:
+| Situation | Decision | Rationale |
+|-----------|----------|-----------|
+| 3 ideas, 5 warnings | Process all, fix all | Full automation |
+| 0 ideas, 2 warnings | Fix warnings only | Incremental |
+| Validation error | Stop and report | Fail-fast |
+
+---
+
+## [interface] TEMPLATE_LOADER_INTERFACE
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEMPLATE_LOADER]
+
+```typescript
+interface TemplateLoader {
+  load(templateDir: string): Map<LayerType, Template>
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| "src/assets/specs/" | Map{L0, L1, L2, L3} | Normal |
+| "nonexistent/" | PathError | Error |
+
+---
+
+## [interface] CERTIFICATION_ENGINE_INTERFACE
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.CERTIFICATION_ENGINE]
+
+```typescript
+interface CertificationEngine {
+  generateAnswerKey(spec: Spec): AnswerKeyFile
+  combineQuestionPaper(keys: AnswerKeyFile[]): QuestionPaper
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|-------|----------|------|
+| L1 spec item | answer_key_{id}.md | Normal |
+| Empty specs | [] | Edge |

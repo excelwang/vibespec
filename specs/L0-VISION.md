@@ -66,7 +66,7 @@ User wants vibe-spec to be a **specification management framework** (not a code 
 
 - **HUMAN_CENTRIC**: User wants vibe-spec to produce atomic, readable specs.
 - **LLM_CENTRIC**: User wants vibe-spec to generate concise, deterministic prompts.
-- **SYSTEM_CENTRIC**: User wants vibe-spec to manage complexity via scripts, not memory.
+- **SYSTEM_CENTRIC**: User wants vibe-spec to manage complexity via scripts (see AUTOMATION.SCRIPT_FIRST).
 - **SEPARATION**: User wants vibe-spec to strictly separate assertions from their rationale.
 
 ## [system] VISION.AGENT_AS_DEVELOPER

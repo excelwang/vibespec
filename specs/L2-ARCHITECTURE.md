@@ -67,7 +67,7 @@ version: 3.0.0
 - **Decides**: Orphan detection, dangling refs, staleness detection
 - **Acts**: Flags violations, generates fix ideas
 
-(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL)
+(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.IDEAS_PIPELINE.CONFLICT_DETECT)
 
 ### ROLES.USER_INTERACTION
 
@@ -81,7 +81,7 @@ version: 3.0.0
 - **Decides**: Information format, urgency level
 - **Acts**: Calls notify_user, waits for response
 
-(Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION), (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED), (Ref: CONTRACTS.BOOTSTRAP.APPROVAL_GATE)
+(Ref: CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION), (Ref: CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED), (Ref: CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY)
 
 #### BOOTSTRAP_AGENT
 
@@ -91,7 +91,7 @@ version: 3.0.0
 - **Decides**: Whether bootstrap needed, scope formulation
 - **Acts**: Prompts for scope, converts to SHALL/SHALL_NOT, creates L0
 
-(Ref: CONTRACTS.BOOTSTRAP.DETECTION), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_REFORM), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY)
+(Ref: CONTRACTS.BOOTSTRAP.DETECTION), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_REFORM), (Ref: CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY)
  
  #### ONBOARDING_ASSISTANT
  
@@ -101,7 +101,7 @@ version: 3.0.0
  - Decides: Engagement strategy
  - Acts: Invites brainstorming
  
- (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT)
+ (Ref: CONTRACTS.TRIGGERS.EMPTY_PROMPT), (Ref: CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY), (Ref: CONTRACTS.BOOTSTRAP.APPROVAL_GATE)
 
 ### ROLES.AUTOMATION
 
@@ -115,7 +115,7 @@ version: 3.0.0
 - **Decides**: Retry vs revert, whether to change approach
 - **Acts**: Attempts fix (max 3), reverts on failure
 
-(Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_RETRY), (Ref: CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION), (Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_GIVEUP)
+(Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_RETRY), (Ref: CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE)
 
 #### INSIGHT_MINER
 
@@ -125,7 +125,7 @@ version: 3.0.0
 - **Decides**: Key decisions, architectural shifts, new requirements
 - **Acts**: Creates idea files, requests approval
 
-(Ref: CONTRACTS.REFLECT.CONTEXT_BASED), (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE)
+(Ref: CONTRACTS.REFLECT.CONTEXT_BASED), (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW), (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL)
 
 #### PATTERN_SCOUT
 
@@ -146,6 +146,16 @@ version: 3.0.0
 - **Acts**: Re-reads SKILL.md, confirms reload to user
 
 (Ref: CONTRACTS.RELOAD.RELOAD_TRIGGER)
+
+#### AUTOMATE_CONTROLLER
+
+**Role**: Controls automate mode execution
+
+- **Observes**: User `vibespec automate` command, pending ideas, validation warnings
+- **Decides**: Processing order, warning fix strategy
+- **Acts**: Processes ideas, auto-accepts suggestions, auto-fixes warnings
+
+(Ref: CONTRACTS.AUTOMATE_MODE.AUTOMATE_TRIGGER), (Ref: CONTRACTS.AUTOMATE_MODE.AUTO_ACCEPT), (Ref: CONTRACTS.AUTOMATE_MODE.AUTO_FIX_WARNINGS)
 
 #### TEST_VERIFIER
 
@@ -489,7 +499,7 @@ version: 3.0.0
   3. Scan tests for `@verify_spec("ID")` or YAML `id:` matches
   4. Compute coverage percentages
 
-(Ref: CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.UNCOVERED_LIST), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.TEST_COVERAGE)
+(Ref: CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.UNCOVERED_LIST), (Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GRANULARITY)
 
 #### TEST_EXECUTOR
 
@@ -498,7 +508,7 @@ version: 3.0.0
 - Input: `tests_dir: Path, env: MOCK|REAL`
 - Output: `ExecutionResult{passed, failed, skipped}`
 
-(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE)
+(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.TEST_COVERAGE)
 
 #### TEST_REPORTER
 
@@ -517,3 +527,21 @@ version: 3.0.0
 - Output: `UpdateStatus`
 
 (Ref: VISION.VIBE_CODING.TRUTH), (Ref: VISION.AGENT_AS_DEVELOPER.PRIMARY_CONSUMER), (Ref: CONTRACTS.BUILD_STRATEGY.GAP_CATEGORIES)
+
+#### CERTIFICATION_ENGINE
+
+**Component**: Produces certification artifacts
+
+- Input: `specs: Spec[]`
+- Output: `answer_key_{id}.md, question_paper.md`
+
+(Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_GRANULAR), (Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER), (Ref: CONTRACTS.CERTIFICATION.REALISTIC_CONTEXT)
+
+#### TEMPLATE_LOADER
+
+**Component**: Loads spec templates
+
+- Input: `template_dir: Path`
+- Output: `templates: Map<LayerType, Template>`
+
+(Ref: CONTRACTS.TEMPLATE_GENERATION.USE_TEMPLATES), (Ref: CONTRACTS.TEMPLATE_GENERATION.TEMPLATE_FILES)

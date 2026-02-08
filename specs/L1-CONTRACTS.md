@@ -626,3 +626,36 @@ standard_terms:
   > Responsibility: Hot-reload — apply skill changes without restarting session.
   > Verification: Agent confirms SKILL.md re-loaded after trigger.
   (Ref: VISION.AUTOMATION.EVOLUTION)
+
+---
+
+## [system] CONTRACTS.TEMPLATE_GENERATION
+
+- **USE_TEMPLATES**: Agent MUST use templates from `src/assets/specs/` when generating files.
+  > Responsibility: Consistency — ensure uniform formatting across all generated specs.
+  > Verification: Generated files match template structure.
+  (Ref: VISION.PHILOSOPHY.MAINTAINABILITY)
+
+- **TEMPLATE_FILES**: Templates MUST include: IDEA_TEMPLATE.md, L0-VISION.md, L1-CONTRACTS.md, L2-ARCHITECTURE.md, L3-IMPLEMENTATION.md.
+  > Responsibility: Completeness — provide templates for all spec types.
+  > Verification: All template files exist in `src/assets/specs/`.
+  (Ref: VISION.TRACEABILITY.CHAIN)
+
+---
+
+## [system] CONTRACTS.AUTOMATE_MODE
+
+- **AUTOMATE_TRIGGER**: When user inputs `vibespec automate`, Agent MUST enter automate mode.
+  > Responsibility: Efficiency — enable hands-off batch processing.
+  > Verification: Agent processes all ideas without human approval gates.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+
+- **AUTO_ACCEPT**: In automate mode, Agent MUST auto-accept own suggestions.
+  > Responsibility: Speed — skip approval delays for routine changes.
+  > Verification: No notify_user calls with BlockedOnUser=true.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
+
+- **AUTO_FIX_WARNINGS**: In automate mode, Agent MUST auto-fix validation warnings.
+  > Responsibility: Completeness — resolve all cascade warnings automatically.
+  > Verification: Validation passes with 0 warnings after automate completes.
+  (Ref: VISION.VIBE_CODING.SHIFT_LEFT)

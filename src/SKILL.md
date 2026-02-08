@@ -39,6 +39,14 @@ Manage the refinement of raw thoughts into traceable specifications.
 2. Confirm to user: "SKILL.md reloaded."
 3. Apply any updated instructions immediately.
 
+### `vibe-spec automate`
+1. Enter **AUTOMATE MODE**: Skip all human approval gates.
+2. Process ALL pending ideas in `specs/ideas/`.
+3. Auto-accept all agent suggestions.
+4. Auto-fix all validation warnings (cascade L1→L2→L3).
+5. Run until: 0 pending ideas AND 0 warnings.
+6. Report final status to user.
+
 ### `vibe-spec test [SPEC_ID]`
 
 **Test Directory Structure**:
@@ -236,6 +244,9 @@ Use standalone scripts (zero dependencies) for mechanical operations:
   - L1: "Rules/Invariants". No architecture components, script logic.
   - L2: "Components/Data Flow". No class methods, variable names.
   - L3: "How". No vague vision statements.
+- **Template-Based**: Use templates from `src/assets/specs/` when generating files:
+  - `IDEA_TEMPLATE.md` → idea files
+  - `L0-VISION.md`, `L1-CONTRACTS.md`, `L2-ARCHITECTURE.md`, `L3-IMPLEMENTATION.md` → spec files
 
 ---
 
