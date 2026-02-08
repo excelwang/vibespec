@@ -528,6 +528,11 @@ interface InitScript {
 | minimal init | Config Only | Config Gen |
 | no permissions | InitError | Error |
 
+**Standards**:
+- **USE_TEMPLATE**: `generateConfig()` MUST read from `src/assets/vibespec.yaml`.
+  - Template defines: `unit_dir` and `agent_dir` per L3 Structure standards.
+  - User customization applied on top of template.
+
 ---
 
 ## [interface] VALIDATE_SCRIPT

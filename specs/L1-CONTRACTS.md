@@ -277,9 +277,9 @@ invariants:
   > Verification: Required files exist after init.
   (Ref: VISION.SCOPE.VAL)
 
-- **CONFIG_GENERATION**: Script MUST auto-generate `vibespec.yaml` if missing.
-  > Responsibility: Zero Friction — eliminate manual setup.
-  > Verification: `vibespec.yaml` exists after init/repair.
+- **CONFIG_GENERATION**: Script MUST auto-generate `vibespec.yaml` from a versioned template if missing.
+  > Responsibility: Consistency — ensure new projects start with L3-compliant structure.
+  > Verification: `src/assets/vibespec.yaml` exists and matches spec.
   (Ref: VISION.AUTOMATION.EVOLUTION)
 
 ---
