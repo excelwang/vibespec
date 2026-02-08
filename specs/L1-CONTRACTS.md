@@ -277,9 +277,9 @@ invariants:
   > Verification: Required files exist after init.
   (Ref: VISION.SCOPE.VAL)
 
-- **CONFIG_GENERATION**: Script MUST auto-generate `vibespec.yaml` from a versioned template if missing.
-  > Responsibility: Consistency — ensure new projects start with L3-compliant structure.
-  > Verification: `src/assets/vibespec.yaml` exists and matches spec.
+- **CONFIG_TEMPLATE**: Script MUST auto-generate `vibespec.yaml` using the standard template `assets/templates/vibespec.yaml`.
+  > Responsibility: Standardization — prevent configuration drift at project inception.
+  > Verification: `vibespec.yaml` matches template structure.
   (Ref: VISION.AUTOMATION.EVOLUTION)
 
 ---
@@ -552,6 +552,11 @@ invariants:
 - **GAP_CATEGORIES**: Script MUST classify gaps as MISSING, OUTDATED, or ORPHAN.
   > Responsibility: Clarity — different gap types require different actions.
   > Verification: Report includes categorized gap list.
+
+- **SKILL_SYNC**: Script MUST synchronize `src/SKILL.md` with `skills` list in `vibespec.yaml`.
+  > Responsibility: Consistency — `vibespec.yaml` is single source of truth for active skills.
+  > Verification: `src/SKILL.md` reflects configured skills.
+  (Ref: VISION.SCOPE.SKILL)
 
 - **AUTHORITATIVE_PROMPT**: Script MUST present `specs/.compiled.md` as non-negotiable Law to Agent.
   > Responsibility: Compliance — prevent agent improvisation.

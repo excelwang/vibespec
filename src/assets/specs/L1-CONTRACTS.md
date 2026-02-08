@@ -4,9 +4,15 @@ version: 1.0.0
 
 # L1: Contracts
 
-## [standard] CONTRACTS.EXAMPLE
+> **Subject**: Agent | Script. Pattern: `[Agent|Script] MUST [action]`
+> - Responsibility: WHO is accountable
+> - Verification: HOW to measure compliance
 
-- **RULE_NAME**: Agent/Script MUST/SHOULD/MAY [action].
-  > Responsibility: [Why this rule exists].
-  > Verification: [How to verify compliance].
+---
+
+## CONTRACTS.EXAMPLE
+
+- **Example**: Agent/Script MUST [action].
+  > Responsibility: [Why this rule exists]
+  > Verification: [How to measure compliance]
   (Ref: VISION.SCOPE)

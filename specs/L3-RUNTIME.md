@@ -529,9 +529,10 @@ interface InitScript {
 | no permissions | InitError | Error |
 
 **Standards**:
-- **USE_TEMPLATE**: `generateConfig()` MUST read from `src/assets/vibespec.yaml`.
+- **USE_CONFIG_TEMPLATE**: `generateConfig()` MUST read from `assets/templates/vibespec.yaml`.
   - Template defines: `unit_dir` and `agent_dir` per L3 Structure standards.
   - User customization applied on top of template.
+  (Ref: CONTRACTS.BOOTSTRAP.CONFIG_TEMPLATE)
 
 ---
 
@@ -595,6 +596,11 @@ interface BuildScript {
 | valid config | Report | Normal |
 | no config | Error | Missing Config |
 | drift detected | Warning | Drift |
+
+**Standards**:
+- **SKILL_LOAD_SYNC**: `build()` MUST read `project.skills` from `vibespec.yaml`.
+  - Ensures agents operate with explicit skill set.
+  (Ref: CONTRACTS.BUILD_STRATEGY.SKILL_SYNC)
 
 ---
 

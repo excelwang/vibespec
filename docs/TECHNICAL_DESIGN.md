@@ -1,13 +1,13 @@
 # Technical Architecture & Design Principles
 
-Vibe-Specs is not just a documentation standard; it is a **meta-framework** that enforces correctness through traceability and rigorous testing protocols.
+vibespecs is not just a documentation standard; it is a **meta-framework** that enforces correctness through traceability and rigorous testing protocols.
 
 ## 1. Traceability & The Compiler
 
-The `vibe-specs` compiler ensures that every technical decision is traceable back to a user requirement.
+The `vibespecs` compiler ensures that every technical decision is traceable back to a user requirement.
 
 ### Implicit Metadata System (Evolution)
-Vibe-Spec has evolved to minimize boilerplate. Metadata is now **derived** rather than declared:
+vibespec has evolved to minimize boilerplate. Metadata is now **derived** rather than declared:
 
 - **Layer & ID**: Derived from filename `L{N}-{ID}.md`.
     - `L0-VISION.md` -> Layer 0, ID: `VISION`
@@ -55,7 +55,7 @@ We use **Hypothesis** (Python's property-based testing library) to generate thou
 
 ## 4. The "Single Source of Truth" Artifact
 
-The final output of the framework is `VIBE-SPECS.md`. This is a compiled, flattened, authoritative document generated from the `specs/` directory.
+The final output of the framework is `vibespecS.md`. This is a compiled, flattened, authoritative document generated from the `specs/` directory.
 
 - It strips away file system noise.
 - It orders sections logically by layer.
@@ -68,7 +68,7 @@ This artifacts serves as the **Context Context** for the AI Coding Agent. Instea
 To bridge the gap between "Raw Thoughts" and "Formal Specs", we use a dedicated pipeline:
 
 1.  **Capture**: Raw ideas saved to `specs/ideas/YYYY-MM-DDTHHMM-desc.md`.
-2.  **Batch Processing**: `vibe-spec` reads pending ideas in timestamp order.
+2.  **Batch Processing**: `vibespec` reads pending ideas in timestamp order.
 3.  **Refinement Cycle**:
     - L0 Scope Check (Stop if out-of-scope).
     - Layer-by-Layer Refinement (L0 -> L1 -> L2 -> L3).
@@ -77,8 +77,8 @@ To bridge the gap between "Raw Thoughts" and "Formal Specs", we use a dedicated 
 
 ## 6. Self-Hosting (Bootstrap) Philosophy
 
-Vibe-Spec is a **self-hosting** tool. This means we use Vibe-Spec to define Vibe-Spec.
+vibespec is a **self-hosting** tool. This means we use vibespec to define vibespec.
 
 - The repository's [specs/](specs/) directory contains the bootstrap specifications for the compiler, validator, and traceability engine.
-- Every release of Vibe-Spec is verified against its own L0-L3 specs.
+- Every release of vibespec is verified against its own L0-L3 specs.
 - This "Dogfooding" ensures that the tool remains practical, intuitive, and capable of handling its own complexity.

@@ -32,8 +32,8 @@ def main():
     
     project_dir = Path.cwd()
     # Resolve template path relative to this script
-    # Layout: src/scripts/init.py -> src/templates/vibespec.yaml
-    template_path = Path(__file__).resolve().parent.parent / "assets" / "vibespec.yaml"
+    # Layout: src/scripts/init.py -> src/assets/templates/vibespec.yaml
+    template_path = Path(__file__).resolve().parent.parent / "assets" / "templates" / "vibespec.yaml"
     output_path = project_dir / "vibespec.yaml"
     
     print(f"=== Vibespec Init ===")

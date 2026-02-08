@@ -11,31 +11,31 @@ version: 1.0.0
 
 ---
 
-## [system] ROLES.EXAMPLE
+## ROLES.CORE
 
-> Role group description
+> **Guidance**: Active entities that Observe, Decide, and Act.
 
-#### ROLE_NAME
+#### [Role Name]
 
-**Role**: [Brief purpose]
+**Role**: [Single sentence responsibility]
 
-- **Observes**: [What this role monitors]
-- **Decides**: [What decisions it makes]
-- **Acts**: [What actions it performs]
+- **Observes**: [Inputs, events, state]
+- **Decides**: [Logic, branching, choices]
+- **Acts**: [Outputs, side effects, calls]
 
-(Ref: CONTRACTS.RELEVANT_CONTRACT)
+(Ref: CONTRACTS.EXAMPLE)
 
 ---
 
-## [system] COMPONENTS.EXAMPLE
+## COMPONENTS.CORE
 
-> Component group description
+> **Guidance**: Passive entities that process Input -> Output.
 
-#### COMPONENT_NAME
+#### [Component Name]
 
-**Component**: [Brief purpose]
+**Component**: [Single sentence responsibility]
 
-- **Input**: [What it receives]
-- **Output**: [What it produces]
+- **Input**: [Data structures, arguments]
+- **Output**: [Return values, artifacts]
 
-(Ref: CONTRACTS.RELEVANT_CONTRACT)
+(Ref: CONTRACTS.EXAMPLE)

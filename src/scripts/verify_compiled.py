@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 def verify_compiled(file_path: Path):
-    """Verify structural integrity and semantic traceability of VIBE-SPECS.md."""
+    """Verify structural integrity and semantic traceability of vibespecS.md."""
     if not file_path.exists():
         print(f"❌ File not found: {file_path}")
         sys.exit(1)
@@ -20,7 +20,7 @@ def verify_compiled(file_path: Path):
     errors = []
     
     # --- 1. Structural Checks ---
-    if "VIBE-SPECS SYSTEM CONTEXT" not in content[:200]:
+    if "vibespecS SYSTEM CONTEXT" not in content[:200]:
         errors.append("Structure: Missing System Context Preamble")
         
     for layer in ['L0', 'L1', 'L2', 'L3']:

@@ -4,23 +4,23 @@ version: 1.0.0
 
 # L0: Vision
 
-## [standard] VISION.SCOPE
+## VISION.SCOPE
 
-> Define what your system IS, not what it does.
+> **Guidance**: Define what the system IS (In-Scope) and what it IS NOT (Out-of-Scope).
 
 ### In-Scope
-1. [Capability 1]
-2. [Capability 2]
+1. **[Core Capability 1]**: [Description of key functionality]
+2. **[Core Capability 2]**: [Description of key functionality]
 
 ### Out-of-Scope
-1. [Non-goal 1]
-2. [Non-goal 2]
+1. **[Constraint 1]**: [What we will explicitly NOT do]
+2. **[Constraint 2]**: [Delegated responsibilities]
 
 ---
 
-## [standard] VISION.PHILOSOPHY
+## VISION.PHILOSOPHY
 
-> Core principles guiding the project.
+> **Guidance**: Define the non-negotiable architectural principles.
 
 1. **MAINTAINABILITY**: Code is read more than written; clarity over cleverness.
 2. **OBSERVABILITY**: If you cannot see it, assume it is broken.

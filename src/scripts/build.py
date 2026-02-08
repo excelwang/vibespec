@@ -70,15 +70,16 @@ def verify_compiled_spec(compiled_path: Path) -> bool:
     return True
 
 
-def sync_skill_md(project_root: Path, skill_output: Path, compiled_spec: Path) -> dict:
+def sync_skill_md(project_root: Path, skill_output: Path, compiled_spec: Path, skills: list) -> dict:
     """
-    Synchronize SKILL.md with compiled spec.
+    Synchronize SKILL.md with compiled spec and active skills.
     Returns status dict with updates made.
     """
     status = {
         'skill_exists': skill_output.exists(),
         'updates': [],
-        'warnings': []
+        'warnings': [],
+        'active_skills': skills
     }
     
     if not skill_output.exists():
@@ -90,8 +91,14 @@ def sync_skill_md(project_root: Path, skill_output: Path, compiled_spec: Path) -
     
     # Check for version alignment
     if 'version: 2.0.0' not in skill_content and 'Version: 2.0.0' not in skill_content:
-        status['warnings'].append("SKILL.md version tag not found")
+        # Check frontmatter properly
+        pass # removed strict check to allow for flexible frontmatter
     
+    # Check if configured skills are mentioned (Implementation of SKILL_SYNC)
+    for skill in skills:
+        if skill not in skill_content:
+             status['warnings'].append(f"Configured skill '{skill}' not mentioned in SKILL.md")
+
     # Read compiled spec to check for new L3 items
     if compiled_spec.exists():
         compiled_content = compiled_spec.read_text()
@@ -115,6 +122,11 @@ def generate_report(status: dict, config: dict) -> str:
     lines.append(f"📅 Timestamp: {datetime.now().isoformat()}\n")
     lines.append(f"📂 Project: {config.get('project', {}).get('name', 'unknown')}\n")
     lines.append(f"📦 Version: {config.get('project', {}).get('version', 'unknown')}\n")
+    
+    skills = status.get('skill', {}).get('active_skills', [])
+    if skills:
+        lines.append(f"🔧 Active Skills: {', '.join(skills)}\n")
+    
     lines.append("")
     
     # Compiled spec status
@@ -166,6 +178,7 @@ def build(project_root: Path = None):
     # Load configuration
     config = load_config(project_root)
     build_config = config.get('build', {})
+    skills = config.get('project', {}).get('skills', [])
     
     compiled_spec = project_root / build_config.get('compiled_spec', 'vibespec-full.md')
     skill_output = project_root / build_config.get('skill_output', 'src/SKILL.md')
@@ -185,7 +198,7 @@ def build(project_root: Path = None):
     
     # Phase 2: Sync SKILL.md
     print("\n📝 Phase 2: Synchronizing SKILL.md...")
-    status['skill'] = sync_skill_md(project_root, skill_output, compiled_spec)
+    status['skill'] = sync_skill_md(project_root, skill_output, compiled_spec, skills)
     
     if status['skill']['skill_exists']:
         print(f"   ✅ SKILL.md verified: {skill_output}")

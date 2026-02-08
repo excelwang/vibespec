@@ -28,5 +28,14 @@ EXAMPLE: 2026-02-07T1200-add-auth-contract.md
 
 ## Verification Plan
 <!-- How will we know this is working? if applicable -->
-- [ ] Validation: `validate.py` should pass.
-- [ ] Manual Check: User approval required.
+## Verification Plan
+<!-- How will we know this is working? -->
+
+### Automated Validation
+- [ ] `vibespec validate` passes without new errors.
+- [ ] No circular dependencies introduced.
+
+### Manual Review Criteria
+- [ ] **Alignment**: Does this support the L0 VISION? (Ref: VISION.SCOPE)
+- [ ] **Traceability**: Are all new L2/L3 items anchored to parent specs?
+- [ ] **Testability**: Can we write a test case for this change?

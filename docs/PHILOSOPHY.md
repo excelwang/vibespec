@@ -1,4 +1,4 @@
-# Vibe-Spec 设计理念
+# vibespec 设计理念
 
 ## 核心哲学
 
@@ -51,7 +51,7 @@ L3-COMPILER     ──→  Unit Tests
 
 ### 5. 外部工具职责分离
 
-Vibe-Spec 核心职责：
+vibespec 核心职责：
 - 管理 L0 → L1 → L2 → L3 层级规范
 - 确保每个 item 有可追溯的 ID
 - 验证层级间的引用完整性

@@ -1,7 +1,7 @@
 ---
 name: vibespec
-version: 2.0.0
-description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates. Use when user says "vibespec", "vibe spec", "vibespec", "refine specs", wants to capture a new idea, or wants to validate existing specifications. Supports (1) idea capture with `vibespec <content>`, (2) idea refinement with `vibespec`, (3) project bootstrapping when specs/ is missing, and (4) validation mode for self-hosting projects.
+description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates. Use when user says "vibespec", "vibe spec", "vibespec", "refine specs", wants to capture a new idea, or wants to validate existing specifications. Supports (1) idea capture with `vibespec content`, (2) idea refinement with `vibespec`, (3) project bootstrapping when specs/ is missing, and (4) validation mode for self-hosting projects.
+license: Apache-2.0
 ---
 
 # Vibespec Skill

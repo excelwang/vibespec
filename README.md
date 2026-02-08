@@ -1,10 +1,10 @@
-# Vibe-Spec
+# vibespec
 
 > Spec-Driven Vibe Coding Framework
 
 A hierarchical specification system for LLM-driven development. Define specs in layers (L0-L3), validate traceability, and compile to a single authoritative document for AI coding assistants.
 
-**This project is self-hosting**: It uses Vibe-Spec to define its own goals, architecture, and contracts. See the [specs/](specs/) directory for a live demonstration.
+**This project is self-hosting**: It uses vibespec to define its own goals, architecture, and contracts. See the [specs/](specs/) directory for a live demonstration.
 
 ## Installation
 
@@ -31,12 +31,12 @@ Validate the framework using its own bootstrap specifications:
 python3 scripts/validate.py specs/
 
 # Compile to a single authoritative document
-python3 scripts/compile.py specs/ VIBE-SPECS.md
+python3 scripts/compile.py specs/ vibespecS.md
 ```
 
 ## The Spec Hierarchy
 
-Vibe-Spec enforces a 4-layer hierarchy with **implicit metadata** (Layer/ID derived from filename, Exports from headings):
+vibespec enforces a 4-layer hierarchy with **implicit metadata** (Layer/ID derived from filename, Exports from headings):
 
 - **L0: Vision** ([L0-VISION.md](specs/L0-VISION.md)) - High-level goals (e.g., Full-Chain Traceability).
 - **L1: Contracts** ([L1-CONTRACTS.md](specs/L1-CONTRACTS.md)) - Semantic rules (e.g., Unique IDs, Layer order).
@@ -45,7 +45,7 @@ Vibe-Spec enforces a 4-layer hierarchy with **implicit metadata** (Layer/ID deri
 
 ## Testing & Verification
 
-Vibe-Spec provides a testing framework to verify that your code adheres to its specs.
+vibespec provides a testing framework to verify that your code adheres to its specs.
 
 ### 1. Annotate your tests
 
@@ -60,7 +60,7 @@ def test_metadata_parsing():
 
 ### 2. Run with coverage collection
 
-When you run your tests via `pytest`, Vibe-Spec tracks which specs were verified by passing tests.
+When you run your tests via `pytest`, vibespec tracks which specs were verified by passing tests.
 
 ```bash
 uv run pytest

@@ -1,16 +1,16 @@
 # Layer Hierarchy System
 
-> Design document for vibe-spec's layered specification architecture
+> Design document for vibespec's layered specification architecture
 
 ## Overview
 
-vibe-spec uses a four-layer specification system (L0-L3) to define software systems. Each layer has a distinct **subject** and **responsibility**, forming a strict traceability chain between layers.
+vibespec uses a four-layer specification system (L0-L3) to define software systems. Each layer has a distinct **subject** and **responsibility**, forming a strict traceability chain between layers.
 
 ## Layer Subject System
 
 | Layer | Subject | Responsibility | Focus |
 |-------|---------|----------------|-------|
-| **L0** | User → vibe-spec | Vision & Expectations | Why (Purpose) |
+| **L0** | User → vibespec | Vision & Expectations | Why (Purpose) |
 | **L1** | Agent \| Script | Behavior Contracts + Metrics | What (Rules) |
 | **L2** | Role \| Component | Architectural Entities | Who (Actors) |
 | **L3** | Role/Component Interaction | Implementation Details | How (Mechanics) |
@@ -31,13 +31,13 @@ Annotate specific sections to control their mutability and purpose:
 
 ### Subject Pattern
 ```
-User wants vibe-spec to [do something / have capability]
+User wants vibespec to [do something / have capability]
 ```
 
 ### Examples
 ```markdown
-- **SCOPE.IDEAS**: User wants vibe-spec to process idea files in timestamp order.
-- **TARGET_PROJECT.MODULARITY**: User wants vibe-spec to produce specs that help even weak agents build modular software.
+- **SCOPE.IDEAS**: User wants vibespec to process idea files in timestamp order.
+- **TARGET_PROJECT.MODULARITY**: User wants vibespec to produce specs that help even weak agents build modular software.
 ```
 
 ### Responsibilities
