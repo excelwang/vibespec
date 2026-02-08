@@ -39,6 +39,12 @@ Manage the refinement of raw thoughts into traceable specifications.
 2. Synchronize project artifacts (e.g., source code, skill files) with `vibespec-full.md`.
 3. Report update status and any manual verification needed.
 
+### `vibespec compile`
+1. Run `scripts/compile.py` (CONTRACTS.COMPILATION).
+2. Assemble all L0-L3 specs into `specs/.compiled.md`.
+3. Generate Meta-Tests for all L3 items.
+4. Report status to user.
+
 ### `vibespec review [SPEC_ID]`
 1. Locate the target spec based on `SPEC_ID`.
 2. Perform **Review Protocol** checks:
