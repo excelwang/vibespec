@@ -175,7 +175,7 @@ version: 3.0.0
 - **Decides**: Pass/Fail based on behavior, Mocking strategy
 - **Acts**: Generates mock-based test code, reports result with evidence
 
-(Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.RESULT_EVALUATION)
+(Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.WORKFLOW_VERIFICATION), (Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_FIRST)
 
 #### TEST_DESIGNER
 
@@ -187,7 +187,7 @@ version: 3.0.0
 
 > Rationale: Script implementation would be prohibitively complex due to semantic understanding requirements.
 
-(Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST), (Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_FIRST)
+(Ref: CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST), (Ref: CONTRACTS.CERTIFICATION.CONTEXTUAL_SCENARIO)
 
 #### IMPLEMENTER
 
@@ -527,7 +527,7 @@ version: 3.0.0
 - Input: `coverage: CoverageReport, execution: ExecutionResult`
 - Output: `string` (formatted report)
 
-(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT)
+(Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.RESULT_EVALUATION)
 
 #### BUILDER
 
@@ -555,3 +555,12 @@ version: 3.0.0
 - Output: `templates: Map<LayerType, Template>`
 
 (Ref: CONTRACTS.TEMPLATE_GENERATION.USE_TEMPLATES), (Ref: CONTRACTS.TEMPLATE_GENERATION.TEMPLATE_FILES)
+
+#### SCENARIO_DRIVER
+
+**Component**: Executes end-to-end scenarios
+
+- Input: `scenario_path: Path`
+- Output: `Pass | Fail`
+
+(Ref: CONTRACTS.CERTIFICATION.CONTEXTUAL_SCENARIO)

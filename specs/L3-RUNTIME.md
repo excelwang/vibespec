@@ -6,7 +6,7 @@ version: 3.0.0
 
 > **Purpose**: Capture complex/error-prone implementation details for testability
 > 
-> **Content Types**: `[interface]` | `[decision]` | `[algorithm]`
+> **Content Types**: `[interface]` | `[decision]` | `[algorithm]` | `[workflow]`
 
 ---
 
@@ -990,23 +990,26 @@ interface StatsCollector {
 
 ---
 
-## [decision] AUTOMATE_DECISION
+## [workflow] AUTOMATE_WORKFLOW
 
 > Implements: [Role: ROLES.AUTOMATION.AUTOMATE_CONTROLLER]
 
-**Decision Logic**:
-1. Receive `vibespec automate` command
-2. Scan pending ideas
-3. Process each idea sequentially (L1 → L2 → L3)
-4. Auto-fix all warnings
-5. Report final status
+**Steps**:
+1. Trigger: `vibespec automate`
+2. Scan: `specs/ideas/` -> `pending_ideas[]`
+3. Loop for each `idea` in `pending_ideas`:
+   a. **[Agent: INSIGHT_MINER]** Refinement: Breakdown idea to L1/L2/L3
+   b. **[Script: VALIDATOR]** Validation: Run `python validate.py`
+   c. **[Agent: PROCESS_ENFORCER]** Oversight: Check for cascade warnings
+   d. **[Agent: IMPLEMENTER]** Fix: Resolve warnings
+4. Final: **[Script: CLI]** Report success
 
 **Fixtures**:
-| Situation | Decision | Rationale |
-|-----------|----------|-----------|
-| 3 ideas, 5 warnings | Process all, fix all | Full automation |
-| 0 ideas, 2 warnings | Fix warnings only | Incremental |
-| Validation error | Stop and report | Fail-fast |
+| Initial State | Sequence of Events | Expected Final State |
+|---|---|---|
+| {ideas: 2, warnings: 0} | [automate_command] | {ideas: 0, warnings: 0} |
+| {ideas: 0, warnings: 2} | [automate_command] | {ideas: 0, warnings: 0} |
+| {ideas: 1, warnings: 1} | [automate_command, validation_fail] | {ideas: 1, warnings: 1, error: logged} |
 
 ---
 
@@ -1058,7 +1061,46 @@ interface CertificationEngine {
 
 **Fixtures**:
 | Situation | Decision | Rationale |
-|-----------|----------|-----------|
 | Edit L1 + L2 | Block | SEQUENTIAL_ONLY |
 | Write L1 w/o approval | Block | REFL.HUMAN_REVIEW |
 | Edit L1 only | Allow | Valid op |
+
+---
+
+## [algorithm] SCENARIO_GENERATION
+
+> Implements: [Role: ROLES.QUALITY.TEST_DESIGNER]
+
+**Logic**:
+1. Scan project `src/` to identify domain (e.g., Models, APIs).
+2. Scan `specs/` to identify recent changes or core features.
+3. Construct E2E workflow: `Idea -> Spec -> Impl -> Verify`.
+4. Output: `[workflow] PROJECT_E2E_SCENARIO`
+
+```typescript
+function generateScenario(project: ProjectContext): Workflow
+```
+
+**Fixtures**:
+| Context | Generated Scenario | Rationale | Case |
+|---|---|---|---|
+| User Model exists | Add field 'phone' to User | CRUD mutability check | Normal |
+| Empty Project | Add 'Hello World' feature | Bootstrap check | Edge |
+
+---
+
+## [interface] SCENARIO_DRIVER_INTERFACE
+
+> Implements: [Component: COMPONENTS.INFRASTRUCTURE.SCENARIO_DRIVER]
+
+```typescript
+interface ScenarioDriver {
+  run(workflow: Workflow): Result
+}
+```
+
+**Fixtures**:
+| Input | Expected | Case |
+|---|---|---|
+| Valid Workflow | PASS | Normal |
+| Broken Workflow | FAIL | Error |

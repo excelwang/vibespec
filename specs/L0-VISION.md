@@ -31,7 +31,7 @@ User wants vibe-spec to be a **specification management framework** (not a code 
 - **SCRIPT_FIRST**: User wants vibe-spec to script any formalizable task.
 - **COGNITIVE_LOAD**: User wants vibe-spec to minimize LLM/human cognitive load via deterministic scripts.
 - **EVOLUTION**: User wants vibe-spec to evolve by rigidifying patterns into code.
-- **ITEM_CLASSIFICATION**: User wants vibe-spec to tag L3 items with execution type (PROMPT_NATIVE | SCRIPT | PROMPT_FALLBACK).
+- **ITEM_CLASSIFICATION**: User wants vibe-spec to tag L3 items with execution type (PROMPT_NATIVE | SCRIPT | WORKFLOW | PROMPT_FALLBACK).
 
 ## [system] VISION.CERTIFICATION
 

@@ -581,6 +581,11 @@ standard_terms:
   > Responsibility: Actionability — identify missing tests.
   > Verification: Uncovered IDs listed in report.
 
+- **WORKFLOW_VERIFICATION**: Script MUST verify L3 `[workflow]` items using state transition fixtures.
+  > Responsibility: Integration Logic — prove sequences work end-to-end.
+  > Verification: Tests execute workflow steps and assert final state.
+  (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION)
+
 - **TEST_GENERATION**: Agent MUST generate tests for uncovered L3 fixtures.
   > Responsibility: Completeness — close coverage gaps.
   > Verification: Test file created for each uncovered L3 item.
@@ -622,6 +627,11 @@ standard_terms:
   > Responsibility: Relevance — test scenarios must reflect real user/script inputs, not placeholders.
   > Verification: answer_key files contain concrete, project-specific examples.
   (Ref: VISION.CERTIFICATION.COMPLIANCE)
+
+- **CONTEXTUAL_SCENARIO**: Vibe-spec MUST analyze project context to generate and execute a relevant End-to-End Scenario.
+  > Responsibility: Relevance — prove toolchain works on *this* project.
+  > Verification: Generated scenario matches project domain (e.g., User vs. Order).
+  (Ref: VISION.TRACEABILITY.CHAIN)
 
 ---
 
