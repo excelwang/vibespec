@@ -76,7 +76,7 @@ interface Assembler {
 | [] | EmptyDoc | Edge |
 | Circular deps | AssemblyError | Error |
 
-**Consumers**: [COMPILE_SCRIPT]
+
 
 _Implements: COMPONENTS.COMPILER_PIPELINE.ASSEMBLER_
 

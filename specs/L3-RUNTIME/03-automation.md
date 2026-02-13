@@ -384,3 +384,42 @@ _Implements: CONTRACTS.IDEAS_PIPELINE.BATCH_READ_
 
 _Implements: CONTRACTS.EVOLUTION.DISTILLATION_
 (Ref: VISION.VIBE_CODING.LATE_BINDING)
+
+---
+
+## [component] TEST_STUB_GENERATOR
+
+**Logic**:
+1. Scan `specs/` for L3 items (`[interface]`, `[algorithm]`, `[workflow]`)
+2. Extract fixtures tables
+3. Generate Python `unittest` code with `MockAdapter` and `RealAdapter` stub
+4. Write to `tests/specs/{type}/test_{id}.py`
+
+**Fixtures**:
+| Input | Expected | Case |
+|---|---|---|
+| L3 Interface with fixtures | Generate test_X.py with fixtures | Normal |
+| L3 without fixtures | Generate skeleton | Edge |
+| Modified Spec | Update existing test | Maintenance |
+
+_Implements: COMPONENTS.TEST_GENERATION_PIPELINE.TEST_STUB_GENERATOR_
+(Ref: CONTRACTS.TESTING_WORKFLOW.META_TEST_GENERATION)
+
+---
+
+## [component] EXAM_GENERATOR
+
+**Logic**:
+1. Scan `specs/` for L1 Contracts and L3 Decisions
+2. Extract Rules and Fixtures
+3. Generate Markdown Exam Papers (`tests/specs/{type}/test_paper.md`)
+4. Create Answer Key templates (`answer_key_{id}.md`)
+
+**Fixtures**:
+| Input | Expected | Case |
+|---|---|---|
+| L1 Contracts | L1 Agent Certification Exam | Normal |
+| L3 Decisions | L3 Decision Certification Exam | Normal |
+
+_Implements: COMPONENTS.TEST_GENERATION_PIPELINE.EXAM_GENERATOR_
+(Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER)

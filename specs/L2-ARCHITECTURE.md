@@ -40,45 +40,17 @@ version: 3.0.0
 
 (Ref: CONTRACTS.TRIGGERS.TRIGGER_REVIEW), (Ref: CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK), (Ref: CONTRACTS.REVIEW_PROTOCOL.LAYER_SPECIFIC)
  
- #### QUALITY_AUDITOR
+#### SPEC_OVERSIGHT
  
- **Role**: Deep quality inspection with role-first assessment
+**Role**: Audits spec quality and ensures process compliance
  
- - Observes: Spec content, alignment rules
- - Decides: Compliance with pillars, quality before validation
- - Acts: Flags non-compliance, assesses via role evaluation FIRST
-
- (Ref: CONTRACTS.REVIEW_PROTOCOL.QUALITY_ALIGNMENT), (Ref: CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT), (Ref: CONTRACTS.REVIEW_PROTOCOL.ROLE_FIRST_REVIEW)
+- **Observes**: Change proposals, parent/child layers, action sequence, coverage metrics
+- **Decides**: Internal consistency, traceability integrity, adherence to pillars, workflow compliance
+- **Acts**: Approves or rejects, flags violations, generates fix ideas, blocks non-compliant edits
  
- #### CONSISTENCY_CHECKER
+(Ref: CONTRACTS.REVIEW_PROTOCOL), (Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.REVIEW_PROTOCOL.ROLE_FIRST_REVIEW)
+
  
- **Role**: Logical consistency and cascade check
- 
- - Observes: Parent/Child Specs
- - Decides: Omissions, redundancies, downstream impact
- - Acts: Blocks invalid edits, evaluates cascade impact
-
- (Ref: CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY), (Ref: CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION), (Ref: CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW)
-
- #### PROCESS_ENFORCER
- 
- **Role**: Enforces workflow constraints
- 
- - Observes: Action sequence, approval states
- - Decides: Whether action violates process rules
- - Acts: Blocks multi-layer edits, enforces human review gates
-
- (Ref: CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY), (Ref: CONTRACTS.REFLECT.HUMAN_REVIEW), (Ref: CONTRACTS.MAINTENANCE.DELETION_JUSTIFICATION)
-
-#### TRACEABILITY_GUARDIAN
-
-**Role**: Ensures traceability chain integrity
-
-- **Observes**: All references, parent-child relationships, coverage metrics
-- **Decides**: Orphan detection, dangling refs, staleness detection
-- **Acts**: Flags violations, generates fix ideas
-
-(Ref: CONTRACTS.TRACEABILITY.COMPLETENESS), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL)
 
 ### ROLES.USER_INTERACTION
 
@@ -217,16 +189,9 @@ version: 3.0.0
 - Input: `specs: Spec[]`
 - Output: `TestFile[]`
 
+
 (Ref: CONTRACTS.TESTING_WORKFLOW.META_TEST_GENERATION)
 
-#### EXAM_GENERATOR
-
-**Component**: Creates Exam Papers
-
-- Input: `specs: Spec[]`
-- Output: `ExamPaper[]`
-
-(Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER)
 
 
 ### COMPONENTS.COMPILER_PIPELINE
@@ -379,6 +344,7 @@ version: 3.0.0
 - Input: `specs_path, tests_path`
 - Output: `TestFiles`
 
+
 (Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE), (Ref: CONTRACTS.TESTING_WORKFLOW.META_TEST_GENERATION)
 
  
@@ -440,16 +406,6 @@ version: 3.0.0
 
 (Ref: CONTRACTS.VALIDATION_MODE.REPORT)
 
-#### DECISION_ANSWER_KEY_GENERATOR
-
-**Component**: Generates answer keys for L3 Decisions.
-
-**Type**: Script
-
-**Implements**:
-- (Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_FORMAT)
-
-**Testing**: `tests/specs/decision/`
 
 #### DIFF_VIEWER
 

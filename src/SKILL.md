@@ -1,6 +1,6 @@
 ---
 name: vibespec
-description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates. Use when user says "vibespec", "vibe spec", "vibespec", "refine specs", wants to capture a new idea, or wants to validate existing specifications. Supports (1) idea capture with `vibespec content`, (2) idea refinement with `vibespec`, (3) project bootstrapping when specs/ is missing, and (4) validation mode for self-hosting projects.
+description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates. Use when user says "vibespec", "vibe spec", "vibe-spec", "refine specs", wants to capture a new idea, or wants to validate existing specifications. Supports (1) idea capture with `vibespec content`, (2) idea refinement with `vibespec`, (3) project bootstrapping when specs/ is missing, and (4) validation mode for self-hosting projects.
 license: Apache-2.0
 ---
 
@@ -10,170 +10,62 @@ Manage the refinement of raw thoughts into traceable specifications.
 
 ## Triggers
 
-### `vibespec` (no arguments)
-1. **Comprehension Check**:
-   - If you have not recently read the full specs:
-     - Read `specs/L0-VISION.md`, `specs/L1-CONTRACTS.md`, `specs/L2-ARCHITECTURE.md`, `specs/L3-RUNTIME.md`.
-     - **Summarize** your understanding of the project to the user.
-2. If `specs/` does not exist → Enter **Bootstrap Phase**.
-3. Else → Scan `ideas/` and begin refinement.
+### Passive / Context-Aware (Recommended)
+These triggers rely on the agent's ability to infer intent from the environment, reducing cognitive load.
 
-### `vibespec <content>` (with arguments)
-1. Save `<content>` as timestamped file in `ideas/`.
-2. ⛔ MANDATORY STOP ⛔
-   - Call `notify_user` with the Idea artifact.
-   - Wait for explicit human approval or edits.
-   - **Re-read** the idea file before proceeding.
-3. Begin refinement workflow.
+#### `vibespec` (no arguments)
+1. **Context Scan**:
+   - If `specs/` missing → **Bootstrap Phase**.
+   - If `ideas/` has files → **Refine Phase** (Process pending ideas).
+   - If `SKILL.md` changed → **Reload Phase**.
+   - If nothing pending → **Comprehension Check** (Summarize project status).
 
-### `vibespec reflect`
-1. Analyze current conversation context for key insights.
-2. If no new insights: Report "Up to date" and exit.
-3. Otherwise:
-   - Distill insights into formal idea proposals.
-   - Present summary for human approval.
-   - Upon approval, save as timestamped idea files in `ideas/`.
+#### `vibespec reflect`
+1. **Insight Mining**:
+   - Analyze recent conversation history.
+   - Extract new requirements or architectural changes.
+   - Propose them as formal ideas (saves user typing).
 
-### `vibespec build`
-1. Read `vibespec.yaml` to identify configured implementation skills.
-2. Synchronize project artifacts (e.g., source code, skill files) using `specs/` as source of truth.
-3. Report update status and any manual verification needed.
+#### `vibespec automate`
+1. **Auto-Pilot Mode**:
+   - **Goal**: Zero human interaction until clean.
+   - Loop:
+     1. Analyze & Refine all pending ideas.
+     2. Auto-fix validation warnings (Cascade L1->L3).
+   - Stop when: 0 ideas, 0 warnings.
 
+#### `vibespec reload`
+1. **Hot Reload**:
+   - Re-read `SKILL.md` from disk.
+   - Acknowledge update to user.
 
-
-
-### `vibespec review [SPEC_ID]`
-1. Locate the target spec based on `SPEC_ID`.
-2. Perform **Review Protocol** checks:
-   - **HIERARCHY_CHECK**: Verify full implementation of parent requirements.
-   - **REDUNDANCY**: Check for duplicate definitions.
-   - **CONTRADICTION**: Check for conflicts with existing axioms.
-   - **FOCUS_CHECK**: Verify content matches layer focus.
-3. Present findings as a structured report to the user.
-### `vibespec bug [description]`
-1. **RCA (Bottom-Up)**: Trace failure from L3/Code -> Spec to find Root Cause Item.
-   - 🛑 STOP at the first ambiguous/incorrect spec item.
-2. **Verify Fix (Upward)**: Propose a fix for the Root Cause Item.
-   - Check compliance with Parent Spec.
-   - If Parent is also wrong, recurse upward.
-3. **Approval**: Present the *Chain of Fixes* to user.
-4. **Execution (Top-Down)**:
-   - Apply fixes starting from highest level.
-   - Cascade changes down to L3.
-   - Finally, update Implementation/Code.
-
-### `vibespec reload`
-1. Re-read this SKILL.md file.
-2. Confirm to user: "SKILL.md reloaded."
-3. Apply any updated instructions immediately.
-
-### `vibespec automate`
-1. Enter **AUTOMATE MODE**: Skip all human approval gates.
-2. Process ALL pending ideas in `ideas/`.
-3. Auto-accept all agent suggestions.
-4. Auto-fix all validation warnings (cascade L1→L2→L3).
-5. Run until: 0 pending ideas AND 0 warnings.
-6. Report final status to user.
-
-### `vibespec distill`
-1. **Analyze Source**: Scan `src/` for new classes, functions, and workflows.
-2. **Reverse Engineer**: Generate L3 Interface/Algorithm specs from code signatures.
-3. **Map to L2**: Assign new components to L2 Architecture.
-4. **Update Specs**: Write/Update `specs/L3-RUNTIME/` files.
-5. **Verify**: Ensure distilled specs cover all L1 requirements.
-
-### `vibespec test [SPEC_ID]`
-
-**Test Directory Structure**:
-```
-tests/specs/
-├── agent/       # L1 Agent answer_key placeholders
-├── role/        # L3 Decision answer_key placeholders
-├── interface/   # L3 Interface tests (Python)
-├── algorithm/   # L3 Algorithm tests (Python)
-└── workflow/    # L3 Workflow integration tests (Python)
-```
-
-**Phase 1: Run Coverage Analyzer**
-```bash
-python3 src/scripts/test_coverage.py
-```
-This script outputs:
-- 📈 Overall coverage percentage
-- ❌ MISSING tests (need `vibespec compile`)
-- ⚠️ STUB tests (need `vibespec test --generate`) with YAML format for Agent
-- ✅ COMPLETE tests
-
-**Phase 2: Analyze Coverage Output**
-- Agent reads the YAML output under `tests_to_generate:`
-- Each item includes: `id`, `type`, `test_owner`, `path`, `fixtures` count
-
-
-**Phase 3: Execute Existing Tests**
-- Run `python -m pytest tests/specs/` or individual test files
-- Report PASS/FAIL counts
-
-**Phase 4: Report**
-```
-=== Vibespec Test Coverage ===
-L1 Contracts: X/Y (Z%)
-L3 Runtime:   A/B (C%)
 ---
-Tests: PASS/FAIL
-```
 
-### `vibespec test --generate`
+### Active / Power-User
+Explicit commands for specific, targeted actions.
 
-**Purpose**: Agent fills in stub tests generated by `vibespec compile`.
+#### `vibespec <content>`
+- **Capture**: Save `<content>` as a new idea file.
+- Use when you have a specific requirement to record.
 
-**Trigger**: Tests exist but contain `# TODO` or `pass` statements.
+#### `vibespec review [SPEC_ID]`
+- **Audit**: Perform deep inspection of a specific spec item.
+- Checks: Hierarchy, Redundancy, Contradiction, Focus.
 
-**TEST_DESIGNER Role Actions**:
+#### `vibespec bug [description]`
+- **Debug**: Start Root Cause Analysis (RCA).
+- Flow: Trace failure Bottom-Up -> Fix Top-Down.
 
-1. **Scan for Stubs**:
-   - Find tests with `# TODO: Implement test logic` or empty `pass` statements.
-   
-2. **For Each Stub Test**:
-   a. **Read Source Spec**: Extract the referenced `@verify_spec("ID")` to locate L3 spec.
-   b. **Analyze Real Implementation**: 
-      - Identify the corresponding implementation in `src/scripts/`.
-      - Determine import path and function signature.
-   c. **Generate RealAdapter**:
-      ```python
-      elif env == 'REAL':
-          from validate import validate_specs  # Example
-          class RealAdapter:
-              def execute(self, input_data):
-                  result = validate_specs(input_data)
-                  return result
-          return RealAdapter()
-      ```
-   d. **Generate Assertion Loop**:
-      ```python
-      def test_compliance(self):
-          for fixture in FIXTURES:
-              result = self.adapter.execute(fixture['Input'])
-              self.assertEqual(result, fixture['Expected'])
-      ```
-   
-3. **Request Approval**:
-   - Present generated code to user via `notify_user`.
-   - ⛔ **STOP** and wait for explicit approval.
-   
-4. **Write Updated Test**:
-   - Upon approval, save the filled-in test file.
+#### `vibespec distill`
+- **Reverse Engineer**: Scan `src/` to generate/update L3 specs.
+- Use when code has drifted ahead of specs.
 
-**Example Flow**:
-```
-Agent: I found 3 stub tests in tests/specs/interface/.
-       Generating RealAdapter for test_validator.py...
-       
-       [Shows generated code]
-       
-       Approve? (y/n)
-User: y
-Agent: ✅ Updated test_validator.py with RealAdapter logic.
-```
+#### `vibespec test [SPEC_ID]`
+- **Verify**: Run tests for a specific target.
+- Flags: `--generate` to fill in test stubs.
+
+#### `vibespec build`
+- **Sync**: Update artifacts based on `vibespec.yaml`.
 
 ---
 
@@ -363,3 +255,74 @@ The following behaviors are implemented by the you directly rather than scripts:
 ### Pattern Recognition (PROMPT_FALLBACK)
 - **REGISTRY_IMPL**: Maintain awareness of layer definitions and allowed content types.
 - **FOCUS_IMPL**: Enforce layer focus rules by recognizing out-of-scope content.
+
+### `vibespec test [SPEC_ID]`
+
+**Test Directory Structure**:
+```
+tests/specs/
+└── contracts/   # L1 Contract answer_key placeholders
+```
+
+**Phase 1: Run Coverage Analyzer**
+```bash
+python3 src/scripts/test_coverage.py
+```
+This script outputs:
+- 📈 Overall coverage percentage
+- ❌ MISSING tests (need `vibespec compile`)
+- ⚠️ STUB tests (need `vibespec test --generate`) with YAML format for Contracts
+- ✅ COMPLETE tests
+
+**Phase 2: Analyze Coverage Output**
+- Agent reads the YAML output under `tests_to_generate:`
+- Each item includes: `id`, `type`, `test_owner`, `path`, `fixtures` count
+
+
+**Phase 3: Execute Existing Tests**
+- Run `python -m pytest tests/specs/` or individual test files
+- Report PASS/FAIL counts
+
+**Phase 4: Report**
+```
+=== Vibespec Test Coverage ===
+L1 Contracts: X/Y (Z%)
+---
+Tests: PASS/FAIL
+```
+
+### `vibespec test --generate`
+
+**Purpose**: Agent fills in stub tests generated by `vibespec compile`.
+
+**Trigger**: Tests exist but contain `# TODO` or `pass` statements.
+
+**TEST_DESIGNER Role Actions**:
+
+1. **Scan for Stubs**:
+   - Find tests with `# TODO: Implement test logic` or empty `pass` statements.
+   
+2. **For Each Stub Test**:
+   a. **Read Source Spec**: Extract the referenced `@verify_spec("ID")` to locate the spec requirement.
+   b. **Generate Assertion Logic**:
+      - Create test logic that verifies the spec requirement is met.
+      - Ensure independent verification (no implementation leakage).
+   
+3. **Request Approval**:
+   - Present generated code to user via `notify_user`.
+   - ⛔ **STOP** and wait for explicit approval.
+   
+4. **Write Updated Test**:
+   - Upon approval, save the filled-in test file.
+
+**Example Flow**:
+```
+Agent: I found 3 stub tests in tests/specs/agent/.
+       Generating assertions for test_contract_validator.py...
+       
+       [Shows generated code]
+       
+       Approve? (y/n)
+User: y
+Agent: ✅ Updated test_contract_validator.py.
+```

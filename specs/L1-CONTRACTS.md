@@ -36,10 +36,10 @@ invariants:
   > Verification: No unbatched adjacent prompts.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
 
-- **SCRIPT_NO_LLM**: Script MUST NOT contain LLM API calls.
-  > Responsibility: Separation — scripts are tools, not thinkers.
-  > Verification: Zero LLM terms in SCRIPT items.
-  (Ref: VISION.AUTOMATION)
+- **SCRIPT_NO_LLM**: Script items MUST NOT rely on LLM inference.
+  > Responsibility: Cost/Determinism.
+  > Verification: Input/Output must be string/struct, not prompt/completion.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
 
 ---
 
@@ -83,10 +83,10 @@ invariants:
 
 ## CONTRACTS.IDEAS_PIPELINE
 
-- **BATCH_READ**: Script MUST read all idea files before analysis.
-  > Responsibility: Data integrity — complete picture for prioritization.
-  > Verification: `files_read == files_exist`.
-  (Ref: VISION.SCOPE)
+- **BATCH_READ**: Script MUST read multiple idea files in one pass.
+  > Responsibility: Efficiency — prevent N round-trips.
+  > Verification: `vibespec` reads all new ideas at start.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
 
 - **TIMESTAMP_ORDER**: Script MUST sort ideas by filename timestamp.
   > Responsibility: Preserve user intent sequence.
@@ -151,6 +151,21 @@ invariants:
   > Verification: Warning on redundant sections or items with overlapping scope.
   (Ref: VISION.PHILOSOPHY.SYSTEM_CENTRIC)
 
+- **MILLERS_LAW**: Rule: No list should exceed 7 items (L2/L3).
+  > Responsibility: Cognitive Load (7±2).
+  > Verification: Validator check list length.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+
+- **CONSERVATION**: Rule: Information Quantity L(N) <= Information Quantity L(N+1).
+  > Responsibility: Completeness — no info loss during refinement.
+  > Verification: Word count check? (Heuristic).
+  (Ref: VISION.AGENT_AS_DEVELOPER.INFORMATION_COMPLETENESS)
+
+- **EXPANSION_RATIO**: Rule: Ideal expansion L(N) -> L(N+1) is 1:3 by line count.
+  > Responsibility: Detail enrichment.
+  > Verification: Ratio warning < 1:2 or > 1:10.
+  (Ref: VISION.FORMAL_SYNTAX.MULTIPLIER)
+
 - **CONTRADICTION**: Agent MUST flag conflicts with existing content.
   > Responsibility: Consistency — detect axiom breakage.
   > Verification: Error on logical contradiction.
@@ -196,6 +211,26 @@ invariants:
   > Responsibility: Recovery — minimize human intervention for minor issues.
   > Verification: Max 3 retry attempts.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+
+- **RFC2119_ENFORCEMENT**: Testing MUST verify all MUST constraints.
+  > Responsibility: Compliance.
+  > Verification: Coverage map of Tests -> Contracts.
+  (Ref: VISION.CERTIFICATION.COMPLIANCE)
+
+- **ENVIRONMENT_TOGGLE**: Tests MUST support `mock` and `real` execution modes.
+  > Responsibility: Speed vs Realism.
+  > Verification: Test code has `if env == 'REAL'` blocks.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
+
+- **SKIP_UNIMPLEMENTED**: Tests for Pending/Unimplemented specs MUST be skipped or xfail.
+  > Responsibility: Green build.
+  > Verification: `@pytest.mark.skip`.
+  (Ref: VISION.VIBE_CODING.LATE_BINDING)
+
+- **RESULT_STATES**: Tests MUST output PASS / FAIL / MISSING / STUB.
+  > Responsibility: Clarity.
+  > Verification: Reporting format.
+  (Ref: VISION.CERTIFICATION.PROOF)
 
 - **AUTOMATED_GIVEUP**: Agent MUST revert and halt after 3 failed retries.
   > Responsibility: Safety — prevent infinite loops.
@@ -272,24 +307,28 @@ invariants:
   > Verification: `vibespec distill` run before final Verified status.
   (Ref: VISION.VIBE_CODING.TRUTH)
 
+  > Responsibility: Focus — hide noise from work-in-progress features.
+  > Verification: No "missing L3" warnings for Pending items.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+
 ---
 
 ## CONTRACTS.SCRIPT_USABILITY
 
 - **HELP_MESSAGE**: Script MUST implement `--help` with usage and arguments.
-  > Responsibility: Discoverability — reduce cognitive load.
-  > Verification: Help output on `--help` flag.
+  > Responsibility: Usability — agent/human discovery.
+  > Verification: `python script.py --help` works.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
+
+- **AGENT_FRIENDLY_OUTPUT**: Script MUST output parseable text (e.g., JSON or structured markdown).
+  > Responsibility: Integration — easy for agents to consume.
+  > Verification: Output includes structured data blocks.
+  (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
+
+- **GUIDANCE_OUTPUT**: Script SHOULD suggest next steps on success/failure.
+  > Responsibility: Workflow — guide the agent.
+  > Verification: Output contains "Next:" or commands.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
-
-- **AGENT_FRIENDLY_OUTPUT**: Script MUST produce output that is actionable, locatable, and structured.
-  > Responsibility: Clarity — enable agents to parse and act on results.
-  > Verification: Output includes file paths, line numbers, IDs, and action recommendations.
-  (Ref: VISION.CODE_QUALITY_GOALS)
-
-- **GUIDANCE_OUTPUT**: Script SHOULD include "Next Step:" or actionable directives in output to guide Agent.
-  > Responsibility: Orchestration — script acts as a workflow tool that prompts the next agent action.
-  > Verification: Output contains "Next Step:" or similar directive.
-  (Ref: VISION.AUTOMATION.EVOLUTION)
 
 ---
 
@@ -305,6 +344,11 @@ invariants:
   > Verification: Open-ended question asked.
   (Ref: VISION.VIBE_CODING.PARADIGM)
 
+- **FRONTMATTER**: Ideas and Specs MUST use YAML frontmatter for metadata.
+  > Responsibility: Parsing — structured metadata.
+  > Verification: Validator checks for frontmatter.
+  (Ref: VISION.FORMAL_SYNTAX)
+
 - **SCOPE_REFORM**: Agent MUST convert input to SHALL/SHALL NOT statements.
   > Responsibility: Formalization — transform vague to verifiable.
   > Verification: Output contains In-Scope and Out-of-Scope.
@@ -315,11 +359,9 @@ invariants:
   > Verification: Approval before any file creation.
   (Ref: VISION.VIBE_CODING.HUMAN_GATE)
 
-- **CERTIFICATION_OUTPUTS**: Script MUST generate:
-  - `tests/specs/agent/test_paper.md` (L1 Agent exams)
-  - `tests/specs/decision/test_paper.md` (L3 Decision exams)
-  > Responsibility: Artifact sync — maintain current exam papers.
-  > Verification: Required files exist after `vibespec compile`.
+- **CERTIFICATION_OUTPUTS**: Script MUST generate initial blank certification artifacts.
+  > Responsibility: Readiness — prepare for compliance.
+  > Verification: `tests/specs/` structure created.
   (Ref: VISION.SCOPE)
 
 - **INITIALIZATION**: Script MUST create L0-VISION.md and ideas/ on approval.
@@ -335,6 +377,26 @@ invariants:
 ---
 
 ## CONTRACTS.TRIGGERS
+
+- **DETECTION**: Script MUST detect if it is running in a fresh environment.
+  > Responsibility: Safety — protect existing work.
+  > Verification: Checks for `vibe-spec` markers.
+  (Ref: VISION.SCOPE)
+
+- **CERTIFICATION_OUTPUTS**: Script MUST generate initial blank certification artifacts.
+  > Responsibility: Readiness — prepare for compliance.
+  > Verification: `tests/specs/` structure created.
+  (Ref: VISION.CERTIFICATION.PROOF)
+
+- **INITIALIZATION**: Script MUST create standard directory structure (`specs/`, `ideas/`).
+  > Responsibility: Consistency — standard layout.
+  > Verification: Directories exist after run.
+  (Ref: VISION.SPEC_STRUCTURE.DIRECTORY_BASED)
+
+- **CONFIG_TEMPLATE**: Script MUST generate `vibespec.yaml` template.
+  > Responsibility: Configuration — standardized settings.
+  > Verification: File exists.
+  (Ref: VISION.EXTENSIBILITY.PROJECT_RULES)
 
 - **TRIGGER_SCAN**: Script MUST scan ideas/ on bare `vibespec` invocation.
   > Responsibility: Default action — process pending ideas.
@@ -371,16 +433,31 @@ invariants:
   > Verification: Invitation shown on empty state.
   (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
 
+- **NAVIGATION**: Script SHOULD provide "Go to Definition" support for Spec IDs.
+  > Responsibility: DX — reduce friction.
+  > Verification: IDE helpers or CLI lookup.
+  (Ref: VISION.TRACEABILITY.GRANULARITY)
+
+- **NOISE_REDUCTION**: Compiler SHOULD fold completed tasks/logs.
+  > Responsibility: Focus — user sees what matters.
+  > Verification: Concise output by default.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+
+- **LLM_OPTIMIZED**: Compiler MUST generate prompts optimized for machine reading.
+  > Responsibility: Performance — lower token usage.
+  > Verification: JSON/Markdown schemas in prompts.
+  (Ref: VISION.PHILOSOPHY.LLM_CENTRIC)
+
 ---
 
 ## CONTRACTS.VALIDATION_MODE
 
 
 
-- **FULL_SCAN**: Script MUST run validation across all layers.
-  > Responsibility: Completeness — scan L0-L3.
-  > Verification: All spec files validated.
-  (Ref: VISION.SCOPE)
+- **FULL_SCAN**: Script MUST optionally run full project scan.
+  > Responsibility: Assurance — thorough check.
+  > Verification: `vibespec --full` inspects everything.
+  (Ref: VISION.CERTIFICATION.COMPLIANCE)
 
 - **REPORT**: Agent MUST summarize orphans, ratio warnings, terminology issues.
   > Responsibility: Feedback — actionable maintenance report.
@@ -401,14 +478,14 @@ invariants:
 
 ## CONTRACTS.CUSTOM_RULES
 
-- **RULE_FILE**: Script MUST load rules from `specs/.vibe-rules.yaml`.
-  > Responsibility: Separation — project rules separate from framework.
-  > Verification: File loaded when present.
+- **RULE_FILE**: Script MUST look for rules in `specs/L1-CONTRACTS.md`.
+  > Responsibility: Centralization — one source of truth.
+  > Verification: Rules loaded from L1.
   (Ref: VISION.EXTENSIBILITY.RULE_LOCATION)
 
-- **RULE_SCHEMA**: Script MUST validate rule schema: id, layer, type, severity.
-  > Responsibility: Correctness — reject malformed rules.
-  > Verification: Error on missing required fields.
+- **RULE_SCHEMA**: Script MUST validate rules against YAML schema.
+  > Responsibility: Stability — prevent malformed rules.
+  > Verification: Error on invalid YAML.
   (Ref: VISION.EXTENSIBILITY.SCHEMA_DRIVEN)
 
 
@@ -436,24 +513,25 @@ invariants:
 
 ## CONTRACTS.SKILL_DISTRIBUTION
 
-- **SKILL_MD**: Script MUST treat SKILL.md as single source of truth for capabilities.
-  > Responsibility: Auditability — version-controlled capabilities.
-  > Verification: Capabilities match SKILL.md.
+- **SKILL_MD**: Script SHOULD maintain a `SKILL.md` file distributing itself.
+  > Responsibility: Distribution — self-contained agent skill.
+  > Verification: SKILL.md matches spec requirements.
   (Ref: VISION.SCOPE)
 
-- **COMPLIANCE**: Script MUST validate SKILL.md against skill-creator schema.
-  > Responsibility: Ecosystem compatibility.
-  > Verification: Schema validation passes.
+- **COMPLIANCE**: `SKILL.md` MUST implement the "Vibespec Skill" specification.
+  > Responsibility: Integrity — skill matches code.
+  > Verification: Audit against `specs/`.
+  (Ref: VISION.CERTIFICATION.COMPLIANCE)
+
+- **ENTRY_POINT**: `SKILL.md` MUST define `vibespec` as primary trigger.
+  > Responsibility: Discovery.
+  > Verification: Trigger present.
   (Ref: VISION.SCOPE)
 
-- **ENTRY_POINT**: Script MUST use `src/SKILL.md` as skill entry.
-  > Responsibility: Location — consistent skill path.
-  > Verification: Loader finds skill at path.
-
-- **TRIGGER_WORDS**: Script MUST recognize: vibespec, vibespec, vibe spec, refine specs.
-  > Responsibility: Activation — multiple aliases.
-  > Verification: All triggers activate skill.
-  (Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
+- **TRIGGER_WORDS**: `SKILL.md` SHOULD include conversational triggers.
+  > Responsibility: Natural interaction.
+  > Verification: "vibe spec", "refine specs" listed.
+  (Ref: VISION.SCOPE)
 
 ---
 
@@ -471,9 +549,9 @@ invariants:
 
 ## CONTRACTS.TRACEABILITY
 
-- **SEMANTIC_IDS**: Script MUST enforce `- **KEY**: ...` format (no sequential numbering).
+- **SEMANTIC_IDS**: Script MUST enforce `- **KEY**: ...` format.
   > Responsibility: Addressability — unique semantic keys.
-  > Verification: Error on numbered lists.
+  > Verification: Machine-parseable keys present.
 
 - **IN_PLACE_REFS**: Script MUST require `(Ref: PARENT_ID)` on downstream items.
   > Responsibility: Linkage — explicit parent references.
@@ -490,7 +568,7 @@ invariants:
 
 - **COMPLETENESS**: Script MUST ensure each upstream ID has downstream coverage.
   > Responsibility: Coverage — no orphan requirements.
-  > Verification: Error on 0% coverage.
+  > Verification: Coverage analyzer output.
 
 - **ANCHORING**: Script MUST require at least one parent ref per downstream item.
   > Responsibility: Grounding — all items anchored.
@@ -506,29 +584,6 @@ invariants:
 
 ---
 
-## CONTRACTS.QUANTIFIED_VALIDATION
-
-- **ATOMICITY**: Script MUST enforce <50 words per L0 statement.
-- **DEPTH**: Script MUST enforce <=2 nesting levels.
-- **TERMINOLOGY**: Script MUST validate controlled vocabulary usage.
-- **RFC2119**: Script MUST require >=50% RFC2119 keyword density in L1.
-
-(Ref: VISION.PHILOSOPHY.HUMAN_CENTRIC)
-
----
-
-## CONTRACTS.ALGEBRAIC_VALIDATION
-
-- **MILLERS_LAW**: Script MUST enforce Fan-Out <= 7.
-- **CONSERVATION**: Script MUST enforce coverage sum >= 100%.
-- **EXPANSION_RATIO**: Script SHOULD warn if L(N)/L(N-1) ratio outside 1.0-10.0.
-- **TEST_COVERAGE**: Script SHOULD warn if L3 leaf has no `@verify_spec` reference.
-
-(Ref: VISION.SCOPE)
-
----
-
-## CONTRACTS.L3_QUALITY
 
 - **FIXTURE_REQUIRED**: L3 interface/algorithm MUST include Fixtures table.
   > Responsibility: Testability — every interface needs concrete test cases.
@@ -664,23 +719,25 @@ standard_terms:
 
 ## CONTRACTS.TESTING_WORKFLOW
 
-- **COVERAGE_REPORT**: Script MUST report L1 and L3 coverage percentages.
-  > Responsibility: Visibility — show testability gaps.
-  > Verification: Report includes L1% and L3% values.
+- **COVERAGE_REPORT**: Testing Phase MUST output % of L1/L3 specs covered by tests.
+  > Responsibility: Visibility.
+  > Verification: Artifact production.
+  (Ref: VISION.CERTIFICATION.PROOF)
 
-- **UNCOVERED_LIST**: Script MUST list uncovered spec IDs.
-  > Responsibility: Actionability — identify missing tests.
-  > Verification: Uncovered IDs listed in report.
+- **UNCOVERED_LIST**: Report MUST list specs with 0 tests.
+  > Responsibility: Transparency.
+  > Verification: List exists.
+  (Ref: VISION.CERTIFICATION.PROOF)
 
-- **META_TEST_GENERATION**: Compiler Script MUST extract testable fixtures to `tests/specs/` mirroring the L1-L3 hierarchy.
-  > Responsibility: Synchronization — tests are derived directly from specs.
-  > Verification: `tests/specs/{layer}/{item}.py` matches spec structure.
-  (Ref: VISION.CERTIFICATION.COMPLIANCE)
+- **META_TEST_GENERATION**: Testing Phase MUST allow generating missing tests from specs (`--generate`).
+  > Responsibility: Acceleration.
+  > Verification: Command works.
+  (Ref: VISION.AUTOMATION.SCRIPT_FIRST)
 
-- **WORKFLOW_VERIFICATION**: Script MUST verify L3 `[workflow]` items using state transition fixtures.
-  > Responsibility: Integration Logic — prove sequences work end-to-end.
-  > Verification: Tests execute workflow steps and assert final state.
-  (Ref: VISION.AUTOMATION.ITEM_CLASSIFICATION)
+- **WORKFLOW_VERIFICATION**: Tests MUST verify L3 Workflows end-to-end.
+  > Responsibility: Integration verification.
+  > Verification: Workflow tests exist.
+  (Ref: VISION.TRACEABILITY.WORKFLOW)
 
 - **TEST_GENERATION**: Agent MUST generate tests for uncovered L3 fixtures.
   > Responsibility: Completeness — close coverage gaps.
@@ -730,10 +787,6 @@ standard_terms:
   > Verification: Tests include edge cases and common misuse patterns.
   (Ref: VISION.CERTIFICATION.COMPLIANCE)
 
-- **COMBINE_QUESTION_PAPER**: Script MUST combine all answer_key files and strip answers to generate `question_paper.md`.
-  > Responsibility: Assessment — produce unified exam from individual answer keys.
-  > Verification: `tests/specs/agent/question_paper.md` contains all items with blank answers.
-  (Ref: VISION.CERTIFICATION.PROOF)
 
 - **REALISTIC_CONTEXT**: Agent MUST use realistic Context/Expectation content matching actual project inputs.
   > Responsibility: Relevance — test scenarios must reflect real user/script inputs, not placeholders.

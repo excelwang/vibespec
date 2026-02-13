@@ -318,22 +318,24 @@ _Implements: COMPONENTS.SCRIPTS.SKILL_LOADER_
 
 ---
 
-## [interface] INIT_SCRIPT
+## [script] INIT_SCRIPT
 
-```code
-interface InitScript {
-  init(projectDir: Path): InitResult
-  generateConfig(): Path
-}
-```
+**Purpose**: Initialize new Vibespec projects with standard directory structure and templates.
 
-**Fixtures**:
-| Input | Expected | Case |
-|-------|----------|------|
-| empty dir | L0 + Config | Normal |
-| existing project | SKIP | Edge |
-| minimal init | Config Only | Config Gen |
-| no permissions | InitError | Error |
+**Inputs**:
+- `project_name` (optional): Name of the new project
+
+**Outputs**:
+- `vibespec.yaml`: Configuration file
+- `specs/L0-L3.md`: Spec templates
+- `ideas/`: Ideas directory
+
+**Logic**:
+1. Generate `vibespec.yaml` from template
+2. Create `specs/` directory
+3. Copy `L[0-3]*.md` templates, replacing `{{PROJECT_NAME}}`
+4. Create `ideas/` directory
+5. Print next steps
 
 **Standards**:
 - **USE_CONFIG_TEMPLATE**: `generateConfig()` MUST read from `assets/templates/vibespec.yaml`.
@@ -342,6 +344,7 @@ interface InitScript {
   (Ref: CONTRACTS.BOOTSTRAP.CONFIG_TEMPLATE)
 
 _Implements: COMPONENTS.SCRIPTS.INIT_SCRIPT_
+(Ref: CONTRACTS.BOOTSTRAP.INITIALIZATION)
 
 ---
 
