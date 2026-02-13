@@ -76,55 +76,46 @@ def parse_yaml(file_path: Path) -> dict:
             
     return config
 
-def verify_compiled_spec(compiled_path: Path) -> bool:
-    """Ensure specs/.compiled-full-spec.md exists and is fresh."""
-    if not compiled_path.exists():
-        print(f"❌ Error: Compiled spec not found: {compiled_path}")
-        print(f"   → Run 'vibespec compile' first")
+def verify_specs_dir(specs_dir: Path) -> bool:
+    """Ensure specs/ directory exists."""
+    if not specs_dir.exists():
+        print(f"❌ Error: Specs directory not found: {specs_dir}")
         return False
-    
-    specs_dir = compiled_path.parent
-    if specs_dir.exists():
-        compiled_mtime = compiled_path.stat().st_mtime
-        for spec_file in specs_dir.glob('L*.md'):
-            if spec_file.stat().st_mtime > compiled_mtime:
-                print(f"⚠️  Warning: {spec_file.name} is newer than compiled spec")
-                print(f"   → Run 'vibespec compile' to update")
-                # Continue allowing apply, but warn
-    
     return True
 
 # --- Parsing Logic ---
 
-def parse_spec_items(compiled_spec: Path):
-    """Parses [interface], [algorithm], [workflow] items from spec."""
-    content = compiled_spec.read_text()
+def parse_spec_items(specs_dir: Path):
+    """Parses [interface], [algorithm], [workflow] items from all L*.md spec files."""
     items = []
     
     # Regex to find items: ## [type] ID ... block
-    # We need to capture the code block too for stub generation
     pattern = re.compile(r'^## \[(?P<type>interface|algorithm|workflow)\]\s+(?P<id>.+?)\n(?P<body>.*?)(?=\n##|\n---|\Z)', re.DOTALL | re.MULTILINE)
     
-    for match in pattern.finditer(content):
-        item_type = match.group('type')
-        item_id = match.group('id').strip()
-        body = match.group('body')
+    for spec_file in sorted(specs_dir.glob("L*.md")):
+        content = spec_file.read_text()
         
-        # Extract code block if key
-        code_match = re.search(r'```(?:python|code|TEXT)(.*?)```', body, re.DOTALL)
-        code_block = code_match.group(1).strip() if code_match else ""
-        
-        # Extract Component/Contract ref
-        ref_match = re.search(r'> Implements: \[(.+?)\]', body)
-        implements = ref_match.group(1) if ref_match else "Unknown"
+        for match in pattern.finditer(content):
+            item_type = match.group('type')
+            item_id = match.group('id').strip()
+            body = match.group('body')
+            
+            # Extract code block if key
+            code_match = re.search(r'```(?:python|code|TEXT)(.*?)```', body, re.DOTALL)
+            code_block = code_match.group(1).strip() if code_match else ""
+            
+            # Extract Component/Contract ref
+            ref_match = re.search(r'> Implements: \[(.+?)\]', body)
+            implements = ref_match.group(1) if ref_match else "Unknown"
 
-        items.append({
-            'type': item_type,
-            'id': item_id,
-            'body': body,
-            'code': code_block,
-            'implements': implements
-        })
+            items.append({
+                'type': item_type,
+                'id': item_id,
+                'body': body,
+                'code': code_block,
+                'implements': implements,
+                'source': spec_file.name
+            })
         
     return items
 
@@ -144,7 +135,7 @@ def generate_manifest(items: list, config: dict) -> str:
     if skills:
         manifest += f"🛠️  **REQUIRED SKILLS**: {', '.join(skills)}\n\n"
         
-    manifest += "⚠️  **CRITICAL INSTRUCTION: THE FILE specs/.compiled-full-spec.md IS NOT A SUGGESTION—IT IS THE LAW.** ⚠️\n\n"
+    manifest += "⚠️  **CRITICAL INSTRUCTION: THE SPECS IN specs/ ARE THE LAW.** ⚠️\n\n"
     manifest += "As the IMPLEMENTER Agent, you MUST perform GAP ANALYSIS on the codebase using this manifest.\n"
     manifest += "You MUST classify every item below into one of these categories:\n"
     manifest += "1. **[MISSING]**: Item defined in spec but no corresponding code exists.\n"
@@ -153,37 +144,11 @@ def generate_manifest(items: list, config: dict) -> str:
     manifest += "4. **[MATCH]**: Code exists and matches spec.\n\n"
     
     for item in items:
-        manifest += f"- **[{item['type'].upper()}]** {item['id']}\n"
+        manifest += f"- **[{item['type'].upper()}]** {item['id']} (from {item['source']})\n"
         manifest += f"  - Implements: {item['implements']}\n"
         # manifest += f"  - Signature: \n{item['code']}\n" 
     
     return manifest
-
-# --- Main ---
-
-def main():
-    import argparse
-    parser = argparse.ArgumentParser(description='Vibespec Build - Tool for IMPLEMENTER Role')
-    parser.add_argument('--manifest', action='store_true', help='Output L3 Spec Manifest for Agent')
-    args = parser.parse_args()
-    
-    project_root = Path.cwd()
-    
-    # print("\n🏗️  Vibespec Build\n")
-    
-    config = load_config(project_root)
-    compiled_spec = project_root / config.get('build', {}).get('compiled_spec', 'specs/.compiled-full-spec.md')
-    
-    if not verify_compiled_spec(compiled_spec):
-        sys.exit(1)
-        
-    items = parse_spec_items(compiled_spec)
-    
-    if args.manifest:
-        print(generate_manifest(items))
-    else:
-        print(f"✅ Verified {len(items)} L3 items in Spec.")
-        print("💡 Run with --manifest to see the implementation list for the Agent.")
 
 # --- Main ---
 
@@ -200,19 +165,18 @@ def main():
     
     # Resolve Paths from Config
     build_config = config.get('build', {})
-    compiled_spec_path = build_config.get('compiled_spec', 'specs/.compiled-full-spec.md')
-    compiled_spec = project_root / compiled_spec_path
+    specs_dir = project_root / build_config.get('specs_dir', 'specs/')
     
-    if not verify_compiled_spec(compiled_spec):
+    if not verify_specs_dir(specs_dir):
         sys.exit(1)
         
-    items = parse_spec_items(compiled_spec)
+    items = parse_spec_items(specs_dir)
     
     if args.manifest:
         print(generate_manifest(items, config))
     else:
         # Standard Output: Summary for Human/Agent
-        print(f"✅ Verified {len(items)} L3 items in compiled spec.")
+        print(f"✅ Verified {len(items)} L3 items in specs/ directory.")
         print("💡 Run 'vibespec build --manifest' to see the implementation tasks.")
 
 if __name__ == "__main__":

@@ -14,5 +14,4 @@ Describe how the Agent should behave in the following scenarios:
 |----------|--------------|------------------|
 | Standard Compliance | Adhere to contract VERIFY_SPEC_ANNOTATION | Contract satisfied |
 | Edge Case | Handle gracefully | no violation |
-
 <!-- ANSWER_END -->

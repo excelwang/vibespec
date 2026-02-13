@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-Spec Compiler - Assembles specification layers into a unified document.
-Also generates Meta-Tests in tests/specs/ during compilation.
+Test Generator - Generates Test Stubs and Exam Papers from Specs.
 
-Zero third-party dependencies - uses Python stdlib only.
-Version: 3.2.0
+Extracts:
+- Agent Exams (L1) -> tests/specs/agent/
+- Role Exams (L3) -> tests/specs/decision/
+- Test Stubs (L3) -> tests/specs/{interface|algorithm|workflow}/
 
-Configuration: Reads from vibespec.yaml if present.
+Zero third-party dependencies.
 """
 import sys
 import re
@@ -15,11 +16,7 @@ from pathlib import Path
 
 
 def get_modified_specs(specs_dir: Path) -> set:
-    """Get set of spec files modified in git working tree.
-    
-    Uses 'git diff --name-only' to detect uncommitted changes.
-    Returns empty set if not in a git repo or on error.
-    """
+    """Get set of spec files modified in git working tree."""
     try:
         result = subprocess.run(
             ['git', 'diff', '--name-only', 'HEAD'],
@@ -36,37 +33,7 @@ def get_modified_specs(specs_dir: Path) -> set:
                 modified.add(Path(line).name)
         return modified
     except FileNotFoundError:
-        # git not available
         return set()
-
-
-def load_config(project_root: Path) -> dict:
-    """Load configuration from vibespec.yaml if present."""
-    config_file = project_root / 'vibespec.yaml'
-    if not config_file.exists():
-        return {}
-    
-    # Simple YAML parsing for basic key-value structure (no external deps)
-    config = {}
-    current_section = None
-    content = config_file.read_text()
-    
-    for line in content.split('\n'):
-        stripped = line.strip()
-        if not stripped or stripped.startswith('#'):
-            continue
-        
-        # Section header
-        if not line.startswith(' ') and stripped.endswith(':') and ':' not in stripped[:-1]:
-            current_section = stripped[:-1]
-            config[current_section] = {}
-        # Key-value in section
-        elif current_section and ':' in stripped:
-            key, value = stripped.split(':', 1)
-            value = value.strip().strip('"\'')
-            config[current_section][key.strip()] = value
-    
-    return config
 
 
 def parse_markdown_table(text):
@@ -75,9 +42,7 @@ def parse_markdown_table(text):
     lines = text.strip().split('\n')
     if len(lines) < 3: return cases
     
-    # Identify header and data lines
     header_line = lines[0]
-    # Check for separator line (---)
     if not re.match(r'^[|\s\-:]+$', lines[1]):
         return cases
     
@@ -85,7 +50,6 @@ def parse_markdown_table(text):
     
     for line in lines[2:]:
         cols = [c.strip() for c in line.split('|') if c.strip() or (line.startswith('|') and line.endswith('|'))]
-        # Clean up empty columns if | was used as border
         if line.startswith('|') and line.endswith('|'):
             cols = [c.strip() for c in line.split('|')][1:-1]
         else:
@@ -96,25 +60,35 @@ def parse_markdown_table(text):
             cases.append(case)
     return cases
 
-def extract_l1_rule_details(text):
-    """Extract Responsibility and Verification from L1 rule body."""
-    res = re.search(r'> Responsibility: (.*)', text)
-    ver = re.search(r'> Verification: (.*)', text)
-    return {
-        'responsibility': res.group(1).strip() if res else "",
-        'verification': ver.group(1).strip() if ver else ""
-    }
 
-def generate_meta_tests(specs_dir: Path, tests_dir: Path):
-    """Generate Meta-Tests in structured directories by type.
+def load_config(project_root: Path) -> dict:
+    """Load configuration from vibespec.yaml if present."""
+    config_file = project_root / 'vibespec.yaml'
+    if not config_file.exists():
+        return {}
     
-    New structure:
-    - tests/specs/agent/       # L1 Agent contracts (answer_key by Agent)
-    - tests/specs/decision/    # L3 Decisions (answer_key)
-    - tests/specs/interface/   # L3 Interface tests
-    - tests/specs/algorithm/   # L3 Algorithm tests
-    - tests/specs/workflow/    # L3 Workflow integration tests
-    """
+    config = {}
+    current_section = None
+    content = config_file.read_text()
+    
+    for line in content.split('\n'):
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#'):
+            continue
+        
+        if not line.startswith(' ') and stripped.endswith(':') and ':' not in stripped[:-1]:
+            current_section = stripped[:-1]
+            config[current_section] = {}
+        elif current_section and ':' in stripped:
+            key, value = stripped.split(':', 1)
+            value = value.strip().strip('"\'')
+            config[current_section][key.strip()] = value
+    
+    return config
+
+
+def generate_tests(specs_dir: Path, tests_dir: Path):
+    """Generate Meta-Tests in structured directories by type."""
     base_dir = tests_dir / "specs"
     
     # Create type-based directories
@@ -147,7 +121,7 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
     l3_decisions = []
 
     # Process L1 Contracts
-    for f in specs_dir.glob("L1*.md"):
+    for f in sorted(specs_dir.glob("L1*.md")):
         content = f.read_text()
         lines = content.split('\n')
         current_section = None
@@ -165,7 +139,7 @@ def generate_meta_tests(specs_dir: Path, tests_dir: Path):
             if match and current_section:
                 rule_id = match.group(1)
                 rule_text = match.group(2)
-                full_id = f"L1.{current_section}.{rule_id}"  # L1 prefix to avoid ID conflicts
+                full_id = f"L1.{current_section}.{rule_id}"
                 safe_id = re.sub(r'[^a-zA-Z0-9_]', '_', full_id).lower()
                 
                 l1_contracts.append({
@@ -203,9 +177,8 @@ Describe how the Agent should behave in the following scenarios:
                     generated_count += 1
 
     # Process L3 Runtime
-    for f in specs_dir.glob("L3*.md"):
+    for f in sorted(specs_dir.glob("L3*.md")):
         content = f.read_text()
-        spec_prefix = f.name.split('-')[0].lower()
         
         # Advanced L3 regex to capture body for Fixtures
         fixtures = re.finditer(r'^## \[(?P<type>interface|decision|algorithm|workflow)\]\s+(?P<id>.+?)\n(?P<body>.*?)(?=\n##|\n---|\Z)', content, re.DOTALL | re.MULTILINE)
@@ -230,7 +203,7 @@ Describe how the Agent should behave in the following scenarios:
                     'id': l3_id,
                     'role': f_id,
                     'answer_key': f"answer_key_{safe_id}.md",
-                    'fixtures': table_cases  # Include fixtures for test paper
+                    'fixtures': table_cases
                 })
                 
                 answer_key_file = decision_dir / f"answer_key_{safe_id}.md"
@@ -249,7 +222,7 @@ Describe how the Agent should behave in the following scenarios:
                         rationale = case.get('Rationale', case.get('Case', 'N/A'))
                         fixture_table += f"| {situation} | {decision} | {rationale} |\n"
                     
-                    l3_id = f"L3.{f_id}"  # L3 prefix to avoid ID conflicts
+                    l3_id = f"L3.{f_id}"
                     answer_key_content = f"""# Answer Key: {l3_id}
 <!-- @verify_spec("{l3_id}") -->
 
@@ -265,45 +238,36 @@ Given the following situations, what decision should the {f_id} role make?
 """
                     answer_key_file.write_text(answer_key_content)
                     generated_count += 1
-            elif f_type == 'interface':
-                # L3 Interface: generate test in interface/ directory
-                test_file = interface_dir / f"test_{safe_id}.py"
-                test_dir = interface_dir
-            elif f_type == 'algorithm':
-                # L3 Algorithm: generate test in algorithm/ directory
-                test_file = algorithm_dir / f"test_{safe_id}.py"
-                test_dir = algorithm_dir
-            elif f_type == 'workflow':
-                # L3 Workflow: generate integration test in workflow/ directory
-                test_file = workflow_dir / f"test_{safe_id}.py"
-                test_dir = workflow_dir
-            else:
-                continue
             
-            if f_type != 'decision':
-                 generated_files.add(test_file)
-                 # Force update if spec was modified in this session
-                 force_update = f.name in modified_specs
-                 
-                 # Build fixture data
-                 fixture_comments = ""
-                 fixture_data = ""
-                 if table_cases:
-                     fixture_comments = "\n    # Fixtures from Spec:\n"
-                     fixture_data = "FIXTURES = [\n"
-                     for c in table_cases:
-                         case_str = ", ".join([f"{k}: {v}" for k, v in c.items()])
-                         fixture_comments += f"    # - {case_str}\n"
-                         fixture_data += f"    {{{', '.join([f'\"{k}\": \"{v}\"' for k, v in c.items()])}}},\n"
-                     fixture_data += "]\n"
-                 else:
-                     fixture_data = "FIXTURES = []\n"
-                 
-                 if not test_file.exists():
-                     # New file: generate full template
-                     test_content = f"""# Meta-Test for {f_id} ({f_type})
+            elif f_type in ['interface', 'algorithm', 'workflow']:
+                if f_type == 'interface':
+                    test_file = interface_dir / f"test_{safe_id}.py"
+                elif f_type == 'algorithm':
+                    test_file = algorithm_dir / f"test_{safe_id}.py"
+                elif f_type == 'workflow':
+                    test_file = workflow_dir / f"test_{safe_id}.py"
+                
+                generated_files.add(test_file)
+                force_update = f.name in modified_specs
+                
+                # Build fixture data
+                fixture_comments = ""
+                fixture_data = ""
+                if table_cases:
+                    fixture_comments = "\n    # Fixtures from Spec:\n"
+                    fixture_data = "FIXTURES = [\n"
+                    for c in table_cases:
+                        case_str = ", ".join([f"{k}: {v}" for k, v in c.items()])
+                        fixture_comments += f"    # - {case_str}\n"
+                        fixture_data += f"    {{{', '.join([f'\"{k}\": \"{v}\"' for k, v in c.items()])}}},\n"
+                    fixture_data += "]\n"
+                else:
+                    fixture_data = "FIXTURES = []\n"
+                
+                if not test_file.exists():
+                    test_content = f"""# Meta-Test for {f_id} ({f_type})
 # @verify_spec("{f_id}")
-# Generated by Vibespec Compiler
+# Generated by Vibespec Generator
 
 import os
 import unittest
@@ -361,32 +325,29 @@ class Test{safe_id.upper()}(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
 """
-                     test_file.write_text(test_content)
-                     generated_count += 1
-                 
-                 elif force_update:
-                     # Existing file with modified spec: only update FIXTURES block
-                     print(f"   🔄 Updating FIXTURES in {test_file.name} (spec modified)")
-                     original_content = test_file.read_text()
-                     
-                     # Regex replace FIXTURES = [...]
-                     new_content = re.sub(
-                         r'FIXTURES = \[.*?\]', 
-                         fixture_data.strip(), 
-                         original_content, 
-                         flags=re.DOTALL
-                     )
-                     
-                     # Also update comment block
-                     if fixture_comments:
-                         new_content = re.sub(
-                             r'    # Fixtures from Spec:\n(    # - .+\n)+',
-                             fixture_comments,
-                             new_content
-                         )
-                     
-                     test_file.write_text(new_content)
-                     generated_count += 1
+                    test_file.write_text(test_content)
+                    generated_count += 1
+                
+                elif force_update:
+                    print(f"   🔄 Updating FIXTURES in {test_file.name} (spec modified)")
+                    original_content = test_file.read_text()
+                    
+                    new_content = re.sub(
+                        r'FIXTURES = \[.*?\]', 
+                        fixture_data.strip(), 
+                        original_content, 
+                        flags=re.DOTALL
+                    )
+                    
+                    if fixture_comments:
+                        new_content = re.sub(
+                            r'    # Fixtures from Spec:\n(    # - .+\n)+',
+                            fixture_comments,
+                            new_content
+                        )
+                    
+                    test_file.write_text(new_content)
+                    generated_count += 1
 
     # Generate Test Papers
     
@@ -396,7 +357,7 @@ if __name__ == '__main__':
     paper_content = """# L1 Agent Certification Exam
 
 **Instructions**: For each contract below, provide your decision and rationale.
-Reference `specs/.compiled-full-spec.md` for all policy decisions.
+Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
@@ -417,7 +378,7 @@ Reference `specs/.compiled-full-spec.md` for all policy decisions.
     paper_content = """# L3 Decision Certification Exam
 
 **Instructions**: For each scenario, provide your decision and rationale.
-Reference `specs/.compiled-full-spec.md` entirely for all policy decisions.
+Reference `specs/` files for policy decisions.
 
 ---
 
@@ -425,12 +386,10 @@ Reference `specs/.compiled-full-spec.md` entirely for all policy decisions.
     for i, item in enumerate(l3_decisions, 1):
         paper_content += f"## {i}. {item['id']}\n\n"
         paper_content += f"**Role**: {item['role']}\n\n"
-        # Embed fixture table from answer key if available
         if 'fixtures' in item and item['fixtures']:
             paper_content += "| Scenario | Your Decision | Rationale |\n"
             paper_content += "|----------|---------------|----------|\n"
             for fix in item['fixtures']:
-                # Use first column value from fixture (could be Input, Situation, Condition, etc.)
                 first_val = list(fix.values())[0] if fix else 'N/A'
                 paper_content += f"| {first_val} | | |\n"
         else:
@@ -439,7 +398,6 @@ Reference `specs/.compiled-full-spec.md` entirely for all policy decisions.
             paper_content += "| [See spec for scenarios] | | |\n"
         paper_content += f"\n> [Answer Key](./{item['answer_key']})\n\n---\n\n"
     decision_paper.write_text(paper_content)
-
                 
     # Report Orphans
     all_existing = existing_tests | existing_agent | existing_decision
@@ -453,133 +411,21 @@ Reference `specs/.compiled-full-spec.md` entirely for all policy decisions.
     if generated_count > 0 or skipped_count > 0:
         print(f"✅ Generated {generated_count} meta-tests (Skipped {skipped_count} existing)")
 
-    # Structural & Naming Validation
-    specs_root = tests_dir / "specs"
-    if specs_root.exists():
-        naming_rules = {
-            "agent": re.compile(r"^(answer_key_[a-z0-9_]+|test_paper)\.md$"),
-            "decision": re.compile(r"^(answer_key_[a-z0-9_]+|test_paper)\.md$"),
-            "interface": re.compile(r"^test_[a-z0-9_]+\.py$"),
-            "algorithm": re.compile(r"^test_[a-z0-9_]+\.py$"),
-            "workflow": re.compile(r"^test_[a-z0-9_]+\.py$"),
-            "real_adaptor": re.compile(r"^.*$") # Allow any file in real_adaptor
-        }
-        
-        misplaced = []
-        bad_names = []
-        
-        for f in specs_root.rglob("*"):
-            if f.is_file() and f.suffix in ['.py', '.md', '.yaml'] and "__pycache__" not in f.parts:
-                # Identify category
-                category = None
-                for cat in ["agent", "decision", "interface", "algorithm", "workflow", "real_adaptor"]:
-                    if str(f).startswith(str(specs_root / cat)):
-                        category = cat
-
-                        break
-                
-                if category:
-                    if not naming_rules[category].match(f.name):
-                        bad_names.append(f)
-                else:
-                    misplaced.append(f)
-        
-        if misplaced:
-            print(f"⚠️  Structural Violations (Misplaced files in {specs_root}):")
-            for m in misplaced:
-                print(f"   - {m.relative_to(specs_root)}")
-                
-        if bad_names:
-            print(f"⚠️  Naming Violations (Invalid pattern):")
-            for b in bad_names:
-                print(f"   - {b.relative_to(specs_root)}")
-
-
-def compile_specs(specs_dir: Path, output_file: Path, tests_dir: Path = None):
-    """Concatenate all L*.md files into a single compiled spec with LLM-friendly structure."""
-    if not specs_dir.exists():
-        print(f"Error: {specs_dir} does not exist.")
-        sys.exit(1)
-
-    content = []
-    files = sorted(specs_dir.glob("L*.md"))
-
-    # 1. Preamble & System Context
-    content.append("# VIBESPEC PROJECT SPECS (v3.2.0)\n")
-    content.append("> 🚨 INSTRUCTION: You are an Agent reading the Project Bible.\n")
-    content.append("> 1. Always check `L1: Contracts` before writing code.\n")
-    content.append("> 2. `L0: Vision` defines the scope. Do not hallucinate features.\n")
-    content.append("> 3. `L1` overrides `L3` if there is a conflict.\n\n")
-
-    # 2. Table of Contents
-    content.append("## 🗺️ INDEX\n")
-    for f in files:
-        anchor = f"source-{f.stem.lower()}"
-        content.append(f"- [{f.stem}: {f.stem.split('-')[1] if '-' in f.stem else f.stem}](#{anchor})\n")
-    content.append("\n---\n\n")
-
-
-    # 3. Concatenate Files
-    for f in files:
-        file_text = f.read_text()
-        
-        # Strip YAML Frontmatter (between first two '---')
-        parts = file_text.split('---', 2)
-        if len(parts) >= 3 and parts[0].strip() == "":
-            body = parts[2].strip()
-        else:
-            body = file_text.strip() # Handle files without frontmatter or with different structure
-            
-        # NOISE REDUCTION: Remove (Ref: ...) and **Fixtures**
-        # 1. Remove (Ref: ...) tags and surrounding punctuation
-        body = re.sub(r'\(Ref: .*?\)', '', body)
-        # 2. Remove Implements: [...] tags (Contract, Component, Role)
-        body = re.sub(r'>?\s*Implements: \[.*?\]', '', body)
-        # 3. Remove **Fixtures** sections (up to next section or EOF)
-        body = re.sub(r'\*\*Fixtures\*\*:(.|\n)*?(?=\n---|##|\Z)', '', body)
-        # 4. Remove **Coverage** sections (up to next section or EOF)
-        body = re.sub(r'\*\*Coverage\*\*:(.|\n)*?(?=\n---|##|\Z)', '', body)
-        
-        # 5. Clean up artifacts
-        # Remove lines that are just commas/spaces (leftover from Ref lists)
-        body = re.sub(r'^\s*,[\s,]*$', '', body, flags=re.MULTILINE)
-        # Clean up multiple empty lines
-        body = re.sub(r'\n{3,}', '\n\n', body)
-
-        # Add Context Anchor
-        content.append(f"<a id='source-{f.stem.lower()}'></a>\n")
-        content.append(f"# Source: {f.name}\n")
-        content.append(f"RELIABILITY: {'Use for Context' if 'L0' in f.name else 'AUTHORITATIVE'}\n")
-        content.append("---\n\n")
-        content.append(body.strip())
-        content.append("\n\n")
-
-    # 4. Write Output
-    output_file.write_text("".join(content))
-    print(f"✅ Compiled {len(files)} specs to {output_file}")
-    
-    # 5. Generate Meta-Tests
-    if tests_dir:
-        generate_meta_tests(specs_dir, tests_dir)
-
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
-        description='Compile Vibespec files into a unified document.',
-        epilog='Example: python compile.py specs/ specs/.compiled-full-spec.md'
+        description='Generate Test Stubs from Vibespec files.',
+        epilog='Example: python generate_tests.py specs/ --tests-dir tests/'
     )
     parser.add_argument('specs_dir', nargs='?', help='Directory containing L*.md spec files')
-    parser.add_argument('output_file', nargs='?', help='Output file path for compiled spec')
     parser.add_argument('--tests-dir', help='Directory to generate meta-tests in')
     args = parser.parse_args()
     
-    # Load config from vibespec.yaml if arguments not provided
     project_root = Path.cwd()
     config = load_config(project_root)
     
     specs_dir = Path(args.specs_dir) if args.specs_dir else Path(config.get('build', {}).get('specs_dir', 'specs/'))
-    output_file = Path(args.output_file) if args.output_file else Path(config.get('build', {}).get('compiled_spec', 'specs/.compiled-full-spec.md'))
     tests_dir = Path(args.tests_dir) if args.tests_dir else Path('tests')
     
-    compile_specs(specs_dir, output_file, tests_dir)
+    generate_tests(specs_dir, tests_dir)

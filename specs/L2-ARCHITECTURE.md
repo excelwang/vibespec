@@ -206,54 +206,28 @@ version: 3.0.0
 
 > Passive entities: receive input, produce output
 
-### COMPONENTS.COMPILER_PIPELINE
+### COMPONENTS.TEST_GENERATION_PIPELINE
 
-> Multi-stage compilation pipeline
+> Pipeline to generate tests from specs
 
-#### SCANNER
+#### TEST_STUB_GENERATOR
 
-**Component**: Finds spec files
+**Component**: Creates Code Stubs
 
-- Input: `path: string`
-- Output: `File[]`
+- Input: `specs: Spec[]`
+- Output: `TestFile[]`
 
-(Ref: CONTRACTS.METADATA.FRONTMATTER)
+(Ref: CONTRACTS.TESTING_WORKFLOW.META_TEST_GENERATION)
 
-#### PARSER
+#### EXAM_GENERATOR
 
-**Component**: Extracts frontmatter and body
+**Component**: Creates Exam Papers
 
-- Input: `file: File`
-- Output: `{metadata, body}`
+- Input: `specs: Spec[]`
+- Output: `ExamPaper[]`
 
-(Ref: CONTRACTS.METADATA.FRONTMATTER), (Ref: CONTRACTS.TRACEABILITY.SEMANTIC_IDS), (Ref: CONTRACTS.L3_TYPE_ANNOTATION.TYPE_REQUIRED)
- 
- #### SECTION_PARSER
- 
- **Component**: Identifying sections
- 
- - Input: `lines: string[]`
- - Output: `Section[]`
- 
+(Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER)
 
-
-#### VALIDATOR
-
-**Component**: Executes all validation rules
-
-- Input: `specs: ParsedSpec[]`
-- Output: `ValidationResult`
-
-(Ref: CONTRACTS.VALIDATION_MODE.FULL_SCAN), (Ref: CONTRACTS.TRACEABILITY.IN_PLACE_REFS), (Ref: CONTRACTS.TRACEABILITY.ANCHORING)
-
-#### ASSEMBLER
-
-**Component**: Merges specs into document
-
-- Input: `specs: ParsedSpec[]`
-- Output: `Document`
-
-(Ref: CONTRACTS.COMPILATION.LLM_OPTIMIZED), (Ref: CONTRACTS.COMPILATION.NOISE_REDUCTION), (Ref: CONTRACTS.COMPILATION.NAVIGATION)
 
 ### COMPONENTS.VALIDATOR_CORE
 
@@ -340,14 +314,15 @@ version: 3.0.0
 
 (Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS), (Ref: CONTRACTS.SCRIPT_USABILITY.AGENT_FRIENDLY_OUTPUT)
 
-#### COMPILE_SCRIPT
+#### GENERATE_TESTS_SCRIPT
 
-**Script**: `scripts/compile.py`
+**Script**: `scripts/generate_tests.py`
 
-- Input: `specs_path, output_path`
-- Output: `Document`
+- Input: `specs_path, tests_path`
+- Output: `TestFiles`
 
 (Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_USABILITY.HELP_MESSAGE), (Ref: CONTRACTS.TESTING_WORKFLOW.META_TEST_GENERATION)
+
  
  #### INIT_SCRIPT
  
@@ -573,10 +548,11 @@ version: 3.0.0
 
 **Component**: Orchestrates spec-to-implementation transformation
 
-- Input: `compiled_spec: Path, skills: string[]`
+- Input: `specs_dir: Path, skills: string[]`
 - Output: `UpdateStatus`
 
 (Ref: VISION.VIBE_CODING.TRUTH), (Ref: VISION.AGENT_AS_DEVELOPER.PRIMARY_CONSUMER), (Ref: CONTRACTS.BUILD_STRATEGY.GAP_CATEGORIES)
+
 
 #### CERTIFICATION_ENGINE
 

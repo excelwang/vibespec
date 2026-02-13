@@ -36,14 +36,11 @@ Manage the refinement of raw thoughts into traceable specifications.
 
 ### `vibespec build`
 1. Read `vibespec.yaml` to identify configured implementation skills.
-2. Synchronize project artifacts (e.g., source code, skill files) with `vibespec-full.md`.
+2. Synchronize project artifacts (e.g., source code, skill files) using `specs/` as source of truth.
 3. Report update status and any manual verification needed.
 
-### `vibespec compile`
-1. Run `scripts/compile.py` (CONTRACTS.COMPILATION).
-2. Assemble all L0-L3 specs into `specs/.compiled-full-spec.md`.
-3. Generate Meta-Tests for all L3 items.
-4. Report status to user.
+
+
 
 ### `vibespec review [SPEC_ID]`
 1. Locate the target spec based on `SPEC_ID`.
@@ -273,7 +270,8 @@ Process the specific layer L(N) identified in Phase 2:
 3. **Compile Prompt**: 
    - IF (No pending ideas): Explicitly ask user: "Run compilation now?"
    - ELSE: Loop back to Phase 2.
-4. If yes: Run `python3 scripts/compile.py specs/ vibespec-full.md`.
+4. If yes: Run `python3 scripts/generate_tests.py`.
+
 
 ---
 
@@ -290,6 +288,7 @@ Process the specific layer L(N) identified in Phase 2:
 **Trigger**: No pending ideas AND `SKILL.md` exists (self-hosting mode).
 
 1. Run `python3 scripts/validate.py specs/`.
+
 2. **Report**: Summarize findings:
    - Orphan IDs (L0/L1 items with no downstream refs)
    - INFO_GAIN violations
@@ -304,9 +303,9 @@ Process the specific layer L(N) identified in Phase 2:
 
 Use standalone scripts (zero dependencies) for mechanical operations:
 - `python3 scripts/validate.py specs/` - Structural validation.
-- `python3 scripts/compile.py specs/ vibespec-full.md` - Compile to single doc.
-- `python3 scripts/verify_compiled.py vibespec-full.md specs/` - Verify compiled doc matches sources.
+- `python3 scripts/generate_tests.py specs/ --tests-dir tests/` - Generate test stubs.
 - `bash scripts/archive_ideas.sh` - Archive processed ideas.
+
 
 **IMPORTANT**: Run `python3 scripts/validate.py specs/` IMMEDIATELY after each layer modification, BEFORE presenting to human for review.
 

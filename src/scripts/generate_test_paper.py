@@ -49,7 +49,7 @@ def generate_test_paper(answer_key_dir: Path, output_file: Path, paper_type: str
     # Build test paper
     header = f"""# Test Paper: {paper_type.upper()} Compliance Test
 
-> ⚠️ **IMPORTANT**: Answer based ONLY on `.compiled-full-spec.md` content.
+> ⚠️ **IMPORTANT**: Answer based ONLY on `specs/` content.
 > Do NOT use external knowledge or infer beyond what is explicitly stated in the spec.
 > Your answers will be graded against the exact spec definitions.
 

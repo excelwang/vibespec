@@ -559,16 +559,7 @@ invariants:
 
 ---
 
-## CONTRACTS.COMPILATION
 
-- **LLM_OPTIMIZED**: Script MUST produce single continuous markdown.
-
-- **NAVIGATION**: Script MUST include TOC and preamble.
-- **NOISE_REDUCTION**: Script MUST strip frontmatter, `(Ref: ...)` tags, and `**Fixtures**` sections.
-
-(Ref: VISION.COMPILATION_STRUCTURE)
-
----
 
 ## CONTRACTS.BUILD_STRATEGY
 

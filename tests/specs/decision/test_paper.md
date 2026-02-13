@@ -1,7 +1,7 @@
 # L3 Decision Certification Exam
 
 **Instructions**: For each scenario, provide your decision and rationale.
-Reference `specs/.compiled-full-spec.md` entirely for all policy decisions.
+Reference `specs/` files for policy decisions.
 
 ---
 

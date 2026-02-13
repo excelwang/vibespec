@@ -1,7 +1,7 @@
 # L1 Agent Certification Exam
 
 **Instructions**: For each contract below, provide your decision and rationale.
-Reference `specs/.compiled-full-spec.md` for all policy decisions.
+Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 

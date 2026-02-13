@@ -1120,7 +1120,7 @@ interface StatsCollector {
    b. **[Script: VALIDATOR]** Validation: Run `python validate.py`
    c. **[Agent: PROCESS_ENFORCER]** Oversight: Check for cascade warnings
    d. **[Agent: IMPLEMENTER]** Fix: Resolve warnings
-4. **[Script: COMPILER]** Compile: Run `python compile.py`
+4. **[Script: TEST_GENERATOR]** Generate Tests: Run `python3 scripts/generate_tests.py`
 5. **[Script: BUILDER]** Build: Sync artifacts via `vibespec build`
 6. **[Script: TEST_RUNNER]** Test: Run `python test.py`
 7. Final: **[Script: CLI]** Report success

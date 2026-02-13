@@ -14,5 +14,4 @@ Describe how the Agent should behave in the following scenarios:
 |----------|--------------|------------------|
 | Standard Compliance | Adhere to contract ANSWER_KEY_FORMAT | Contract satisfied |
 | Edge Case | Handle gracefully | no violation |
-
 <!-- ANSWER_END -->
