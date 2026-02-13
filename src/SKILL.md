@@ -75,6 +75,13 @@ Manage the refinement of raw thoughts into traceable specifications.
 5. Run until: 0 pending ideas AND 0 warnings.
 6. Report final status to user.
 
+### `vibespec distill`
+1. **Analyze Source**: Scan `src/` for new classes, functions, and workflows.
+2. **Reverse Engineer**: Generate L3 Interface/Algorithm specs from code signatures.
+3. **Map to L2**: Assign new components to L2 Architecture.
+4. **Update Specs**: Write/Update `specs/L3-RUNTIME/` files.
+5. **Verify**: Ensure distilled specs cover all L1 requirements.
+
 ### `vibespec test [SPEC_ID]`
 
 **Test Directory Structure**:
@@ -255,7 +262,8 @@ Process the specific layer L(N) identified in Phase 2:
 │    - Call notify_user with findings             │
 │    - WAIT for explicit human approval           │
 │    - **REJECT**? → **REVERT** changes & Re-plan │
-│    - **APPROVE**? → Proceed to L(N+1)           │
+│    - **APPROVE**? → Proceed to L(N+1) OR        │
+│      **STOP** (if Code-First preferred)         │
 └─────────────────────────────────────────────────┘
 ```
 

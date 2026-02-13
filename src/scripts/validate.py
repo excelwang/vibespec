@@ -412,6 +412,13 @@ def validate_specs(specs_dir: Path) -> tuple:
                         matched = True
                         break
             
+            # 3. New Rule: If any sibling is covered by a Parent Ref, assume this leaf is covered by that same Parent Ref
+            # Actually, logic #2 covering 'Parent Match' already handles 'Implicit Parent Coverage'.
+            # If L3 says "Implements: A", then A.B and A.C are covered.
+            # The issue is if L3 says "Implements: A.B", is A.C covered? No.
+            # The Ref Compaction idea says: "L3 items MAY reference an L1 Parent to implicitly cover all its Child items."
+            # So if L3 refs 'A', then 'A.B' is covered. Logic #2 does exactly this.
+            
             if not matched:
                 warnings.append(f"L2→L3 Coverage Warning: `{leaf}` has no L3 implementation.")
 

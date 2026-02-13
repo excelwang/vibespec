@@ -368,3 +368,19 @@ _Implements: ROLES.AUTOMATION.TEST_DESIGNER_
 _Implements: CONTRACTS.IDEAS_PIPELINE.BATCH_READ_
 (Ref: CONTRACTS.IDEAS_PIPELINE.TIMESTAMP_ORDER)
 (Ref: CONTRACTS.METADATA)
+
+---
+
+## [workflow] DISTILL_WORKFLOW
+
+**Purpose**: Reverse-engineer L3 specifications from existing source code to ensure 100% accuracy.
+
+**Steps**:
+1. `SCANNER.scan("src/")` → SourceFiles
+2. `PARSER.parse(SourceFiles)` → AST / Signatures
+3. [Agent: DOC_GENERATOR] Map AST to L2 Components → DraftSpecs
+4. `VALIDATOR.validate(DraftSpecs)` → Findings
+5. `ARCHITECT.merge(DraftSpecs, "specs/L3-RUNTIME/")` → UpdatedSpecs
+
+_Implements: CONTRACTS.EVOLUTION.DISTILLATION_
+(Ref: VISION.VIBE_CODING.LATE_BINDING)

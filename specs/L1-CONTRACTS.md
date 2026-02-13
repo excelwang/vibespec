@@ -240,6 +240,9 @@ invariants:
   > Verification: Measurable token savings.
   (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
 
+  > Verification: Script proposal after 3+ repetitions.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
+
 - **PROACTIVE**: Agent MUST propose scripts for repetitive workflows.
   > Responsibility: Evolution — drive increasing autonomy.
   > Verification: Script proposal after 3+ repetitions.
@@ -254,6 +257,20 @@ invariants:
   > Responsibility: Portability — no supply chain risk.
   > Verification: No pip dependencies.
   (Ref: VISION.SCOPE)
+
+---
+
+## CONTRACTS.EVOLUTION
+
+- **CODE_FIRST**: Agent MAY defer L2/L3 spec generation until implementation is stable.
+  > Responsibility: Agility — reduce upfront friction for experimental features.
+  > Verification: L1 items allowed to have no L3 children during `Pending` status.
+  (Ref: VISION.VIBE_CODING.LATE_BINDING)
+
+- **DISTILLATION**: Agent MUST distill L2/L3 specs from source code before verifying feature completion.
+  > Responsibility: Accuracy — specs reflect actual code reality.
+  > Verification: `vibespec distill` run before final Verified status.
+  (Ref: VISION.VIBE_CODING.TRUTH)
 
 ---
 
@@ -461,6 +478,11 @@ invariants:
 - **IN_PLACE_REFS**: Script MUST require `(Ref: PARENT_ID)` on downstream items.
   > Responsibility: Linkage — explicit parent references.
   > Verification: Error on missing refs.
+
+- **PARENT_COVERAGE**: L3 items MAY reference an L1 Parent to implicitly cover all its Child items.
+  > Responsibility: Conciseness — reduce visual clutter.
+  > Verification: Parent ref present, children missing but valid.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
 
 - **DRIFT_DETECTION**: Script MUST reject references to non-existent IDs.
   > Responsibility: Integrity — no dangling refs.
