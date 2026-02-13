@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "("FULL_WORKFLOW", MOCK)", "Expected": "{passed: true, steps: [...]}", "Case": "Normal"},
     {"Input": "("FULL_WORKFLOW", REAL)", "Expected": "{passed: true, steps: [...]}", "Case": "Normal (roles still mock)"},
     {"Input": "("UNKNOWN_WORKFLOW", MOCK)", "Expected": "WorkflowNotFoundError", "Case": "Error"},
+]}", "Case": "Normal"},
+    {"Input": "("FULL_WORKFLOW", REAL)", "Expected": "{passed: true, steps: [...]}", "Case": "Normal (roles still mock)"},
+    {"Input": "("UNKNOWN_WORKFLOW", MOCK)", "Expected": "WorkflowNotFoundError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestWORKFLOW_TEST_EXECUTOR(unittest.TestCase):
     @verify_spec("WORKFLOW_TEST_EXECUTOR")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: ("FULL_WORKFLOW", MOCK), Expected: {passed: true, steps: [...]}, Case: Normal
     # - Input: ("FULL_WORKFLOW", REAL), Expected: {passed: true, steps: [...]}, Case: Normal (roles still mock)

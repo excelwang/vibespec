@@ -44,6 +44,7 @@ class TestATOMIC_WRITER(unittest.TestCase):
     @verify_spec("ATOMIC_WRITER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: valid path, Expected: void (file written), Case: Normal
     # - Input: readonly path, Expected: WriteError, Case: Error

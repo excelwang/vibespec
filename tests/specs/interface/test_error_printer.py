@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "[error1]", "Expected": ""❌ error1"", "Case": "Normal"},
     {"Input": "[]", "Expected": """", "Case": "Edge"},
     {"Input": "null", "Expected": "PrintError", "Case": "Error"},
+]", "Expected": ""❌ error1"", "Case": "Normal"},
+    {"Input": "[]", "Expected": """", "Case": "Edge"},
+    {"Input": "null", "Expected": "PrintError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestERROR_PRINTER(unittest.TestCase):
     @verify_spec("ERROR_PRINTER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: [error1], Expected: "❌ error1", Case: Normal
     # - Input: [], Expected: "", Case: Edge

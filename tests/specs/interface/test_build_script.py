@@ -44,6 +44,7 @@ class TestBUILD_SCRIPT(unittest.TestCase):
     @verify_spec("BUILD_SCRIPT")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: valid config, Expected: Report, Case: Normal
     # - Input: no config, Expected: Error, Case: Missing Config

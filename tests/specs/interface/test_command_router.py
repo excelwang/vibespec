@@ -44,6 +44,7 @@ class TestCOMMAND_ROUTER(unittest.TestCase):
     @verify_spec("COMMAND_ROUTER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: "validate", Expected: ValidateHandler, Case: Normal
     # - Input: "unknown", Expected: HelpHandler, Case: Edge

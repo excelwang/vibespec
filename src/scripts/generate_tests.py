@@ -121,7 +121,7 @@ def generate_tests(specs_dir: Path, tests_dir: Path):
     l3_decisions = []
 
     # Process L1 Contracts
-    for f in sorted(specs_dir.glob("L1*.md")):
+    for f in sorted(specs_dir.glob("**/L1*.md")):
         content = f.read_text()
         lines = content.split('\n')
         current_section = None
@@ -177,7 +177,7 @@ Describe how the Agent should behave in the following scenarios:
                     generated_count += 1
 
     # Process L3 Runtime
-    for f in sorted(specs_dir.glob("L3*.md")):
+    for f in sorted(specs_dir.glob("**/*.md")):
         content = f.read_text()
         
         # Advanced L3 regex to capture body for Fixtures

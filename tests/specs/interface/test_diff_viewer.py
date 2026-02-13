@@ -44,6 +44,7 @@ class TestDIFF_VIEWER(unittest.TestCase):
     @verify_spec("DIFF_VIEWER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: changed spec, Expected: {added: N, removed: M}, Case: Normal
     # - Input: identical, Expected: {added: 0, removed: 0}, Case: Edge

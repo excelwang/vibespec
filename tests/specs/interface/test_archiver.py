@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "[idea1, idea2]", "Expected": "void (files moved)", "Case": "Normal"},
     {"Input": "[]", "Expected": "void (no-op)", "Case": "Edge"},
     {"Input": "read-only dir", "Expected": "ArchiveError", "Case": "Error"},
+]", "Expected": "void (files moved)", "Case": "Normal"},
+    {"Input": "[]", "Expected": "void (no-op)", "Case": "Edge"},
+    {"Input": "read-only dir", "Expected": "ArchiveError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestARCHIVER(unittest.TestCase):
     @verify_spec("ARCHIVER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: [idea1, idea2], Expected: void (files moved), Case: Normal
     # - Input: [], Expected: void (no-op), Case: Edge

@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "[10:05, 10:00, 10:10]", "Expected": "[10:00, 10:05, 10:10]", "Case": "Normal"},
     {"Input": "[]", "Expected": "[]", "Case": "Edge"},
     {"Input": "Same timestamp", "Expected": "Stable by name", "Case": "Edge"},
+]", "Expected": "[10:00, 10:05, 10:10]", "Case": "Normal"},
+    {"Input": "[]", "Expected": "[]", "Case": "Edge"},
+    {"Input": "Same timestamp", "Expected": "Stable by name", "Case": "Edge"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestSORTER(unittest.TestCase):
     @verify_spec("SORTER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: [10:05, 10:00, 10:10], Expected: [10:00, 10:05, 10:10], Case: Normal
     # - Input: [], Expected: [], Case: Edge

@@ -43,6 +43,27 @@ invariants:
 
 ---
 
+
+---
+
+## CONTRACTS.COMPILATION
+
+- **LLM_OPTIMIZED**: Script MUST produce single continuous markdown.
+  > Responsibility: Consumption — optimized for LLM context window.
+  > Verification: Output is single file > 10KB.
+  (Ref: VISION.VIBE_CODING.TRUTH)
+
+- **NAVIGATION**: Script MUST include TOC and preamble.
+  > Responsibility: Usability — enable quick jumps.
+  > Verification: TOC present in output.
+
+- **NOISE_REDUCTION**: Script MUST strip frontmatter, `(Ref: ...)` tags, and `**Fixtures**` sections.
+  > Responsibility: Density — reduce token cost.
+  > Verification: No YAML frontmatter in output.
+  (Ref: VISION.AUTOMATION.COGNITIVE_LOAD)
+
+---
+
 ## CONTRACTS.LEAF_TYPE_PURITY
 
 - **PURE_LEAF**: Script MUST enforce L2 leaf items are pure Agent OR pure Script type.

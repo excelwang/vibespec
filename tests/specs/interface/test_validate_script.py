@@ -44,6 +44,7 @@ class TestVALIDATE_SCRIPT(unittest.TestCase):
     @verify_spec("VALIDATE_SCRIPT")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: valid specs, Expected: {errors: 0}, Case: Normal
     # - Input: invalid specs, Expected: {errors: N}, Case: Normal

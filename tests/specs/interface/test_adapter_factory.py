@@ -45,6 +45,7 @@ class TestADAPTER_FACTORY(unittest.TestCase):
     @verify_spec("ADAPTER_FACTORY")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: ("VALIDATOR", MOCK), Expected: MockAdapter, Case: Normal
     # - Input: ("VALIDATOR", REAL), Expected: RealAdapter, Case: Normal

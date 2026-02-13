@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "Valid rules + specs", "Expected": "[]", "Case": "Normal"},
     {"Input": "Invalid rule", "Expected": "RuleError", "Case": "Error"},
     {"Input": "Partial match", "Expected": "[Violation]", "Case": "Edge"},
+]", "Case": "Normal"},
+    {"Input": "Invalid rule", "Expected": "RuleError", "Case": "Error"},
+    {"Input": "Partial match", "Expected": "[Violation]", "Case": "Edge"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestRULE_ENGINE(unittest.TestCase):
     @verify_spec("RULE_ENGINE")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: Valid rules + specs, Expected: [], Case: Normal
     # - Input: Invalid rule, Expected: RuleError, Case: Error

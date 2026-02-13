@@ -92,7 +92,9 @@ def parse_spec_items(specs_dir: Path):
     # Regex to find items: ## [type] ID ... block
     pattern = re.compile(r'^## \[(?P<type>interface|algorithm|workflow)\]\s+(?P<id>.+?)\n(?P<body>.*?)(?=\n##|\n---|\Z)', re.DOTALL | re.MULTILINE)
     
-    for spec_file in sorted(specs_dir.glob("L*.md")):
+    for spec_file in sorted(specs_dir.glob("**/*.md")):
+        # Skip hidden files
+        if spec_file.name.startswith('.'): continue
         content = spec_file.read_text()
         
         for match in pattern.finditer(content):

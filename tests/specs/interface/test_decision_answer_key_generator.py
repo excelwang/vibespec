@@ -44,6 +44,7 @@ class TestDECISION_ANSWER_KEY_GENERATOR(unittest.TestCase):
     @verify_spec("DECISION_ANSWER_KEY_GENERATOR")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: Decision item, Expected: answer_key_l3_{id}.md, Case: Normal
     # - Input: Agent item, Expected: throw Error, Case: Error

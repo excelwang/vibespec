@@ -44,6 +44,7 @@ class TestSKILL_LOADER(unittest.TestCase):
     @verify_spec("SKILL_LOADER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: valid SKILL.md, Expected: SkillDef, Case: Normal
     # - Input: no SKILL.md, Expected: null, Case: Edge

@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "valid spec", "Expected": "{issues: []}", "Case": "Normal"},
     {"Input": "missing tag", "Expected": "{issues: [TagWarning]}", "Case": "Edge"},
     {"Input": "malformed", "Expected": "LintError", "Case": "Error"},
+]}", "Case": "Normal"},
+    {"Input": "missing tag", "Expected": "{issues: [TagWarning]}", "Case": "Edge"},
+    {"Input": "malformed", "Expected": "LintError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestLINT_CHECKER(unittest.TestCase):
     @verify_spec("LINT_CHECKER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: valid spec, Expected: {issues: []}, Case: Normal
     # - Input: missing tag, Expected: {issues: [TagWarning]}, Case: Edge

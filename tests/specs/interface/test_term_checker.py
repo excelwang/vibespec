@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "controlled terms", "Expected": "{violations: []}", "Case": "Normal"},
     {"Input": "banned term", "Expected": "{violations: [TermViolation]}", "Case": "Error"},
     {"Input": "unknown term", "Expected": "{warnings: [UnknownTerm]}", "Case": "Edge"},
+]}", "Case": "Normal"},
+    {"Input": "banned term", "Expected": "{violations: [TermViolation]}", "Case": "Error"},
+    {"Input": "unknown term", "Expected": "{warnings: [UnknownTerm]}", "Case": "Edge"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestTERM_CHECKER(unittest.TestCase):
     @verify_spec("TERM_CHECKER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: controlled terms, Expected: {violations: []}, Case: Normal
     # - Input: banned term, Expected: {violations: [TermViolation]}, Case: Error

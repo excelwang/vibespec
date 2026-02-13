@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "spec + [skill]", "Expected": "SUCCESS, [src/SKILL.md updated]", "Case": "Normal"},
     {"Input": "spec + [no_skill]", "Expected": "PARTIAL, "Manual implementation required"", "Case": "Edge"},
     {"Input": "invalid spec", "Expected": "ERROR, "Traceability broken"", "Case": "Error"},
+]", "Expected": "SUCCESS, [src/SKILL.md updated]", "Case": "Normal"},
+    {"Input": "spec + [no_skill]", "Expected": "PARTIAL, "Manual implementation required"", "Case": "Edge"},
+    {"Input": "invalid spec", "Expected": "ERROR, "Traceability broken"", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestBUILDER(unittest.TestCase):
     @verify_spec("BUILDER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: spec + [skill], Expected: SUCCESS, [src/SKILL.md updated], Case: Normal
     # - Input: spec + [no_skill], Expected: PARTIAL, "Manual implementation required", Case: Edge

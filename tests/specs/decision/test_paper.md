@@ -175,21 +175,32 @@ Reference `specs/` files for policy decisions.
 
 ---
 
-## 13. L3.USER_LIAISON
+## 13. L3.RELOAD_DECISION
 
-**Role**: USER_LIAISON
+**Role**: RELOAD_DECISION
 
 | Scenario | Your Decision | Rationale |
 |----------|---------------|----------|
-| "validate" | | |
-| "help" | | |
-| Ambiguous | | |
+| SKILL.md exists | | |
+| SKILL.md missing | | |
 
-> [Answer Key](./answer_key_l3_user_liaison.md)
+> [Answer Key](./answer_key_l3_reload_decision.md)
 
 ---
 
-## 14. L3.BOOTSTRAP_AGENT
+## 14. L3.PROCESS_ENFORCER_DECISION
+
+**Role**: PROCESS_ENFORCER_DECISION
+
+| Scenario | Your Decision | Rationale |
+|----------|---------------|----------|
+| [See spec for scenarios] | | |
+
+> [Answer Key](./answer_key_l3_process_enforcer_decision.md)
+
+---
+
+## 15. L3.BOOTSTRAP_AGENT
 
 **Role**: BOOTSTRAP_AGENT
 
@@ -203,7 +214,21 @@ Reference `specs/` files for policy decisions.
 
 ---
 
-## 15. L3.ONBOARDING_ASSISTANT
+## 16. L3.USER_LIAISON
+
+**Role**: USER_LIAISON
+
+| Scenario | Your Decision | Rationale |
+|----------|---------------|----------|
+| "validate" | | |
+| "help" | | |
+| Ambiguous | | |
+
+> [Answer Key](./answer_key_l3_user_liaison.md)
+
+---
+
+## 17. L3.ONBOARDING_ASSISTANT
 
 **Role**: ONBOARDING_ASSISTANT
 
@@ -214,31 +239,6 @@ Reference `specs/` files for policy decisions.
 | Stuck user | | |
 
 > [Answer Key](./answer_key_l3_onboarding_assistant.md)
-
----
-
-## 16. L3.RELOAD_DECISION
-
-**Role**: RELOAD_DECISION
-
-| Scenario | Your Decision | Rationale |
-|----------|---------------|----------|
-| SKILL.md exists | | |
-| SKILL.md missing | | |
-
-> [Answer Key](./answer_key_l3_reload_decision.md)
-
----
-
-## 17. L3.PROCESS_ENFORCER_DECISION
-
-**Role**: PROCESS_ENFORCER_DECISION
-
-| Scenario | Your Decision | Rationale |
-|----------|---------------|----------|
-| [See spec for scenarios] | | |
-
-> [Answer Key](./answer_key_l3_process_enforcer_decision.md)
 
 ---
 

@@ -15,6 +15,7 @@ def verify_spec(spec_id):
 FIXTURES = [
     {"Input": "L1 spec item", "Expected": "answer_key_{id}.md", "Case": "Normal"},
     {"Input": "Empty specs", "Expected": "[]", "Case": "Edge"},
+]", "Case": "Edge"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -43,6 +44,7 @@ class TestCERTIFICATION_ENGINE_INTERFACE(unittest.TestCase):
     @verify_spec("CERTIFICATION_ENGINE_INTERFACE")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: L1 spec item, Expected: answer_key_{id}.md, Case: Normal
     # - Input: Empty specs, Expected: [], Case: Edge

@@ -229,6 +229,54 @@ version: 3.0.0
 (Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER)
 
 
+### COMPONENTS.COMPILER_PIPELINE
+
+> Compiler pipeline components
+
+#### SCANNER
+
+**Component**: Discovers spec files
+
+- Input: `path: string`
+- Output: `File[]`
+
+(Ref: CONTRACTS.L3_QUALITY.FIXTURE_REQUIRED)
+
+#### PARSER
+
+**Component**: Parses spec files
+
+- Input: `file: File`
+- Output: `ParsedSpec`
+
+(Ref: CONTRACTS.METADATA.FRONTMATTER)
+
+#### SECTION_PARSER
+
+**Component**: Parses internal sections
+
+- Input: `content: string`
+- Output: `Section[]`
+
+#### VALIDATOR
+
+**Component**: Validates specs
+
+- Input: `specs: ParsedSpec[]`
+- Output: `ValidationResult`
+
+(Ref: CONTRACTS.QUANTIFIED_VALIDATION.ATOMICITY)
+
+#### ASSEMBLER
+
+**Component**: Assembles document
+
+- Input: `specs: ParsedSpec[]`
+- Output: `Document`
+
+(Ref: CONTRACTS.COMPILATION.LLM_OPTIMIZED)
+
+
 ### COMPONENTS.VALIDATOR_CORE
 
 > Rule-based validation engine
@@ -313,6 +361,16 @@ version: 3.0.0
 - Output: `ValidationResult`
 
 (Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS), (Ref: CONTRACTS.SCRIPT_USABILITY.AGENT_FRIENDLY_OUTPUT)
+
+
+#### COMPILE_SCRIPT
+
+**Script**: `scripts/compile.py`
+
+- Input: `specs_path, output_path`
+- Output: `vibespec-full.md`
+
+(Ref: CONTRACTS.COMPILATION.LLM_OPTIMIZED), (Ref: CONTRACTS.TESTING_WORKFLOW.META_TEST_GENERATION)
 
 #### GENERATE_TESTS_SCRIPT
 

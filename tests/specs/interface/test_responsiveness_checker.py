@@ -16,6 +16,8 @@ FIXTURES = [
     {"Input": "Full coverage", "Expected": "{coverage: 100%}", "Case": "Normal"},
     {"Input": "Orphan items", "Expected": "{orphans: [...]}", "Case": "Edge"},
     {"Input": "Fanout > 7", "Expected": "{violations: [Miller]}", "Case": "Error"},
+]}", "Case": "Edge"},
+    {"Input": "Fanout > 7", "Expected": "{violations: [Miller]}", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +46,7 @@ class TestRESPONSIVENESS_CHECKER(unittest.TestCase):
     @verify_spec("RESPONSIVENESS_CHECKER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: Full coverage, Expected: {coverage: 100%}, Case: Normal
     # - Input: Orphan items, Expected: {orphans: [...]}, Case: Edge

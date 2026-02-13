@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "valid notation", "Expected": "{issues: []}", "Case": "Normal"},
     {"Input": "informal language", "Expected": "{issues: [Warn]}", "Case": "Edge"},
     {"Input": "mixed case IDs", "Expected": "{issues: [Error]}", "Case": "Error"},
+]}", "Case": "Normal"},
+    {"Input": "informal language", "Expected": "{issues: [Warn]}", "Case": "Edge"},
+    {"Input": "mixed case IDs", "Expected": "{issues: [Error]}", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestNOTATION_CHECKER(unittest.TestCase):
     @verify_spec("NOTATION_CHECKER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: valid notation, Expected: {issues: []}, Case: Normal
     # - Input: informal language, Expected: {issues: [Warn]}, Case: Edge

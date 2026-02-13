@@ -44,6 +44,7 @@ class TestASSERTION_CHECKER(unittest.TestCase):
     @verify_spec("ASSERTION_CHECKER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: RFC2119 compliant, Expected: {pass: true}, Case: Normal
     # - Input: low keyword density, Expected: {pass: false}, Case: Edge

@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "specs/ with rules", "Expected": "Rule[]", "Case": "Normal"},
     {"Input": "empty specs/", "Expected": "[]", "Case": "Edge"},
     {"Input": "invalid YAML", "Expected": "LoadError", "Case": "Error"},
+]", "Case": "Normal"},
+    {"Input": "empty specs/", "Expected": "[]", "Case": "Edge"},
+    {"Input": "invalid YAML", "Expected": "LoadError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestCUSTOM_RULES_LOADER(unittest.TestCase):
     @verify_spec("CUSTOM_RULES_LOADER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: specs/ with rules, Expected: Rule[], Case: Normal
     # - Input: empty specs/, Expected: [], Case: Edge

@@ -44,6 +44,7 @@ class TestTEST_REPORTER(unittest.TestCase):
     @verify_spec("TEST_REPORTER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: {80%, 60%} + {5, 0}, Expected: Formatted string, Case: Normal
     # - Input: {0%, 0%} + {0, 0}, Expected: "No tests" warning, Case: Edge

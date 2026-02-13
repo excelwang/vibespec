@@ -16,6 +16,7 @@ FIXTURES = [
     {"Input": "pure spec", "Expected": "{pure: true}", "Case": "Normal"},
     {"Input": "impl details in L0", "Expected": "{pure: false}", "Case": "Error"},
     {"Input": "mixed concerns", "Expected": "{warnings: [Impure]}", "Case": "Edge"},
+]}", "Case": "Edge"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +45,7 @@ class TestPURITY_CHECKER(unittest.TestCase):
     @verify_spec("PURITY_CHECKER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: pure spec, Expected: {pure: true}, Case: Normal
     # - Input: impl details in L0, Expected: {pure: false}, Case: Error

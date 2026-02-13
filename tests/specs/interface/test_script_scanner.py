@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "L3 with scripts", "Expected": "[ScriptRef]", "Case": "Normal"},
     {"Input": "no scripts", "Expected": "[]", "Case": "Edge"},
     {"Input": "broken ref", "Expected": "ScanError", "Case": "Error"},
+]", "Case": "Normal"},
+    {"Input": "no scripts", "Expected": "[]", "Case": "Edge"},
+    {"Input": "broken ref", "Expected": "ScanError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestSCRIPT_SCANNER(unittest.TestCase):
     @verify_spec("SCRIPT_SCANNER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: L3 with scripts, Expected: [ScriptRef], Case: Normal
     # - Input: no scripts, Expected: [], Case: Edge

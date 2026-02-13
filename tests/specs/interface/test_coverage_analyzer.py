@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "specs/ + tests/", "Expected": "{l1: 0.8, l3: 0.6, []}", "Case": "Normal"},
     {"Input": "specs/ + empty tests/", "Expected": "{l1: 0.0, l3: 0.0, [...]}", "Case": "Edge"},
     {"Input": "empty specs/", "Expected": "EmptySpecError", "Case": "Error"},
+]}", "Case": "Normal"},
+    {"Input": "specs/ + empty tests/", "Expected": "{l1: 0.0, l3: 0.0, [...]}", "Case": "Edge"},
+    {"Input": "empty specs/", "Expected": "EmptySpecError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestCOVERAGE_ANALYZER(unittest.TestCase):
     @verify_spec("COVERAGE_ANALYZER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: specs/ + tests/, Expected: {l1: 0.8, l3: 0.6, []}, Case: Normal
     # - Input: specs/ + empty tests/, Expected: {l1: 0.0, l3: 0.0, [...]}, Case: Edge

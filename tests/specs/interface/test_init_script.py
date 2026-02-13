@@ -45,6 +45,7 @@ class TestINIT_SCRIPT(unittest.TestCase):
     @verify_spec("INIT_SCRIPT")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: empty dir, Expected: L0 + Config, Case: Normal
     # - Input: existing project, Expected: SKIP, Case: Edge

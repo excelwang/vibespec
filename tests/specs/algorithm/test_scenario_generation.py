@@ -43,6 +43,7 @@ class TestSCENARIO_GENERATION(unittest.TestCase):
     @verify_spec("SCENARIO_GENERATION")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Context: User Model exists, Generated Scenario: Add field 'phone' to User, Rationale: CRUD mutability check, Case: Normal
     # - Context: Empty Project, Generated Scenario: Add 'Hello World' feature, Rationale: Bootstrap check, Case: Edge

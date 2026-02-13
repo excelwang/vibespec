@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": ""ideas/" with files", "Expected": "Idea[]", "Case": "Normal"},
     {"Input": "Empty dir", "Expected": "[]", "Case": "Edge"},
     {"Input": "No permission", "Expected": "ReadError", "Case": "Error"},
+]", "Case": "Normal"},
+    {"Input": "Empty dir", "Expected": "[]", "Case": "Edge"},
+    {"Input": "No permission", "Expected": "ReadError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestBATCH_READER(unittest.TestCase):
     @verify_spec("BATCH_READER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: "ideas/" with files, Expected: Idea[], Case: Normal
     # - Input: Empty dir, Expected: [], Case: Edge

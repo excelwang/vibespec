@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "L0.A → L1.B", "Expected": "[]", "Case": "Normal"},
     {"Input": "L0.A (orphan)", "Expected": "[OrphanViolation]", "Case": "Edge"},
     {"Input": "L0.A → 8 items", "Expected": "[FanoutViolation]", "Case": "Error"},
+]", "Case": "Normal"},
+    {"Input": "L0.A (orphan)", "Expected": "[OrphanViolation]", "Case": "Edge"},
+    {"Input": "L0.A → 8 items", "Expected": "[FanoutViolation]", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestCOVERAGE_VALIDATION(unittest.TestCase):
     @verify_spec("COVERAGE_VALIDATION")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: L0.A → L1.B, Expected: [], Case: Normal
     # - Input: L0.A (orphan), Expected: [OrphanViolation], Case: Edge

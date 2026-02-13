@@ -16,6 +16,9 @@ FIXTURES = [
     {"Input": "[spec1, spec2]", "Expected": "{count: 2, ...}", "Case": "Normal"},
     {"Input": "[]", "Expected": "{count: 0}", "Case": "Edge"},
     {"Input": "null", "Expected": "StatsError", "Case": "Error"},
+]", "Expected": "{count: 2, ...}", "Case": "Normal"},
+    {"Input": "[]", "Expected": "{count: 0}", "Case": "Edge"},
+    {"Input": "null", "Expected": "StatsError", "Case": "Error"},
 ]
 
 def get_adapter(env='MOCK'):
@@ -44,6 +47,7 @@ class TestSTATS_COLLECTOR(unittest.TestCase):
     @verify_spec("STATS_COLLECTOR")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: [spec1, spec2], Expected: {count: 2, ...}, Case: Normal
     # - Input: [], Expected: {count: 0}, Case: Edge

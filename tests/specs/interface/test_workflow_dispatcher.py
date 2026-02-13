@@ -44,6 +44,7 @@ class TestWORKFLOW_DISPATCHER(unittest.TestCase):
     @verify_spec("WORKFLOW_DISPATCHER")
     def test_compliance(self):
         
+
     # Fixtures from Spec:
     # - Input: FileSave trigger, Expected: RunValidation, Case: Normal
     # - Input: Unknown trigger, Expected: NoOp, Case: Edge
