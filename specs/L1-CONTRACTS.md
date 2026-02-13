@@ -269,6 +269,11 @@ invariants:
   > Verification: Output includes file paths, line numbers, IDs, and action recommendations.
   (Ref: VISION.CODE_QUALITY_GOALS)
 
+- **GUIDANCE_OUTPUT**: Script SHOULD include "Next Step:" or actionable directives in output to guide Agent.
+  > Responsibility: Orchestration — script acts as a workflow tool that prompts the next agent action.
+  > Verification: Output contains "Next Step:" or similar directive.
+  (Ref: VISION.AUTOMATION.EVOLUTION)
+
 ---
 
 ## CONTRACTS.BOOTSTRAP

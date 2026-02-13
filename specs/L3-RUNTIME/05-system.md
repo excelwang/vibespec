@@ -1,8 +1,6 @@
 
 ## [interface] COMMAND_ROUTER
 
-> Implements: [Component: COMPONENTS.TRIGGER_ROUTER.COMMAND_ROUTER]
-
 ```code
 interface CommandRouter {
   route(command: string): Handler
@@ -16,11 +14,11 @@ interface CommandRouter {
 | "unknown" | HelpHandler | Edge |
 | "" | HelpHandler | Edge |
 
+_Implements: COMPONENTS.TRIGGER_ROUTER.COMMAND_ROUTER_
+
 ---
 
 ## [interface] WORKFLOW_DISPATCHER
-
-> Implements: [Component: COMPONENTS.TRIGGER_ROUTER.WORKFLOW_DISPATCHER]
 
 ```code
 interface WorkflowDispatcher {
@@ -35,11 +33,11 @@ interface WorkflowDispatcher {
 | Unknown trigger | NoOp | Edge |
 | null | DispatchError | Error |
 
+_Implements: COMPONENTS.TRIGGER_ROUTER.WORKFLOW_DISPATCHER_
+
 ---
 
 ## [decision] USER_LIAISON
-
-> Implements: [Role: ROLES.USER_INTERACTION.USER_LIAISON]
 
 **Decision Logic**:
 1. Receive user requests
@@ -53,11 +51,11 @@ interface WorkflowDispatcher {
 | "help" | Show help | Guidance needed |
 | Ambiguous | Ask clarification | Unclear intent |
 
+_Implements: ROLES.USER_INTERACTION.USER_LIAISON_
+
 ---
 
 ## [decision] ONBOARDING_ASSISTANT
-
-> Implements: [Role: ROLES.USER_INTERACTION.ONBOARDING_ASSISTANT]
 
 **Decision Logic**:
 1. Assess user familiarity
@@ -71,11 +69,11 @@ interface WorkflowDispatcher {
 | Experienced | Quick tips | Efficiency |
 | Stuck user | Contextual help | Unblock |
 
+_Implements: ROLES.USER_INTERACTION.ONBOARDING_ASSISTANT_
+
 ---
 
 ## [workflow] FULL_WORKFLOW
-
-> Implements: [Contract: CONTRACTS.STRICT_TESTABILITY.FULL_WORKFLOW_REQUIRED]
 
 **Purpose**: End-to-end test covering all Roles and Components in a realistic project scenario.
 
@@ -156,11 +154,11 @@ interface WorkflowDispatcher {
 | Full compile + test flow | All steps pass | Normal |
 | Validation fails at step 8 | Workflow halts, reports error | Error |
 
+_Implements: CONTRACTS.STRICT_TESTABILITY.FULL_WORKFLOW_REQUIRED_
+
 ---
 
 ## [workflow] AUTOMATE_WORKFLOW
-
-> Implements: [Role: ROLES.AUTOMATION.AUTOMATE_CONTROLLER]
 
 **Steps**:
 1. Trigger: `vibespec automate`
@@ -182,11 +180,11 @@ interface WorkflowDispatcher {
 | {ideas: 0, warnings: 2} | [automate_command] | {ideas: 0, warnings: 0} |
 | {ideas: 1, warnings: 1} | [automate_command, validation_fail] | {ideas: 1, warnings: 1, error: logged} |
 
+_Implements: ROLES.AUTOMATION.AUTOMATE_CONTROLLER_
+
 ---
 
 ## [workflow] AUTOMATION_WORKFLOW
-
-> Implements: [Contract: CONTRACTS.TRIGGERS.TRIGGER_SCAN]
 
 **Purpose**: Event-driven automation handling and error recovery.
 
@@ -196,14 +194,13 @@ interface WorkflowDispatcher {
 3. `ERROR_PRINTER.print(errors)` → FormattedErrors
 4. [Role] `RECOVERY_AGENT.recover(error)` → RecoveryResult
 
+_Implements: CONTRACTS.TRIGGERS.TRIGGER_SCAN_
 (Ref: CONTRACTS.TRIGGERS.TRIGGER_ALIASES), (Ref: CONTRACTS.TRIGGERS.TRIGGER_BUG), (Ref: CONTRACTS.TRIGGERS.TRIGGER_CAPTURE), (Ref: CONTRACTS.TRIGGERS.TRIGGER_REVIEW)
 (Ref: CONTRACTS.REJECTION_HANDLING.NO_PARTIAL_COMMITS)
 
 ---
 
 ## [workflow] TRACEABILITY_WORKFLOW
-
-> Implements: [Contract: CONTRACTS.TRACEABILITY.COMPLETENESS]
 
 **Purpose**: Verify linkage between all layers and components.
 
@@ -212,7 +209,12 @@ interface WorkflowDispatcher {
 2. [Role] `TRACEABILITY_GUARDIAN.verify(refs)` → TraceResult
 3. `STATS_COLLECTOR.collect(specs)` → Stats
 
+_Implements: CONTRACTS.TRACEABILITY.COMPLETENESS_
 (Ref: CONTRACTS.TRACEABILITY.ANCHORING), (Ref: CONTRACTS.TRACEABILITY.DRIFT_DETECTION), (Ref: CONTRACTS.TRACEABILITY.IN_PLACE_REFS), (Ref: CONTRACTS.TRACEABILITY.L2_L3_IMPLEMENTATION), (Ref: CONTRACTS.TRACEABILITY.SEMANTIC_IDS)
+
+---
+
+(Ref: CONTRACTS.STRICT_TESTABILITY.FULL_WORKFLOW_REQUIRED), (Ref: CONTRACTS.STRICT_TESTABILITY.WORKFLOW_INTEROP_COVERAGE), (Ref: CONTRACTS.STRICT_TESTABILITY.ROLE_ALWAYS_MOCK)
 
 ---
 

@@ -1,8 +1,6 @@
 
 ## [interface] COVERAGE_ANALYZER
 
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.COVERAGE_ANALYZER]
-
 ```code
 interface CoverageAnalyzer {
   analyze(specs_dir: Path, tests_dir: Path): CoverageReport
@@ -22,13 +20,12 @@ interface CoverageReport {
 | specs/ + empty tests/ | {l1: 0.0, l3: 0.0, [...]} | Edge |
 | empty specs/ | EmptySpecError | Error |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.COVERAGE_ANALYZER_
 (Ref: CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT)
 
 ---
 
 ## [interface] TEST_EXECUTOR
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEST_EXECUTOR]
 
 ```code
 interface TestExecutor {
@@ -53,13 +50,12 @@ type TestResultState = 'PASS' | 'FAIL' | 'SKIP' | 'ERROR'
 | tests/ + REAL (no impl) | {passed: 0, failed: 0, skipped: 5} | Edge (SKIP) |
 | empty tests/ | {passed: 0, failed: 0, skipped: 0} | Edge |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.TEST_EXECUTOR_
 (Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.STRICT_TESTABILITY.SKIP_UNIMPLEMENTED), (Ref: CONTRACTS.STRICT_TESTABILITY.RESULT_STATES)
 
 ---
 
 ## [interface] TEST_REPORTER
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEST_REPORTER]
 
 ```code
 interface TestReporter {
@@ -74,13 +70,12 @@ interface TestReporter {
 | {0%, 0%} + {0, 0} | "No tests" warning | Edge |
 | null coverage | ReportError | Error |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.TEST_REPORTER_
 (Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT)
 
 ---
 
 ## [interface] ADAPTER_FACTORY
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.ADAPTER_FACTORY]
 
 ```code
 interface AdapterFactory {
@@ -118,13 +113,12 @@ interface SkipAdapter {
 - RealAdapter MUST attempt dynamic import from user project
 - SkipAdapter MUST be returned when REAL impl not found (not throw)
 
+_Implements: COMPONENTS.INFRASTRUCTURE.ADAPTER_FACTORY_
 (Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE), (Ref: CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION), (Ref: CONTRACTS.STRICT_TESTABILITY.SKIP_UNIMPLEMENTED)
 
 ---
 
 ## [interface] ERROR_PRINTER
-
-> Implements: [Component: COMPONENTS.REPORTING.ERROR_PRINTER]
 
 ```code
 interface ErrorPrinter {
@@ -139,11 +133,11 @@ interface ErrorPrinter {
 | [] | "" | Edge |
 | null | PrintError | Error |
 
+_Implements: COMPONENTS.REPORTING.ERROR_PRINTER_
+
 ---
 
 ## [interface] DIFF_VIEWER
-
-> Implements: [Component: COMPONENTS.REPORTING.DIFF_VIEWER]
 
 ```code
 interface DiffViewer {
@@ -158,11 +152,11 @@ interface DiffViewer {
 | identical | {added: 0, removed: 0} | Edge |
 | null input | DiffError | Error |
 
+_Implements: COMPONENTS.REPORTING.DIFF_VIEWER_
+
 ---
 
 ## [interface] DECISION_ANSWER_KEY_GENERATOR
-
-> Implements: [Component: COMPONENTS.REPORTING.DECISION_ANSWER_KEY_GENERATOR]
 
 ```code
 interface DecisionAnswerKeyGenerator {
@@ -177,12 +171,11 @@ interface DecisionAnswerKeyGenerator {
 | Agent item | throw Error | Error |
 | null | GeneratorError | Error |
 
+_Implements: COMPONENTS.REPORTING.DECISION_ANSWER_KEY_GENERATOR_
 
 ---
 
 ## [interface] ATOMIC_WRITER
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.ATOMIC_WRITER]
 
 ```code
 interface AtomicWriter {
@@ -197,11 +190,11 @@ interface AtomicWriter {
 | readonly path | WriteError | Error |
 | concurrent write | AtomicGuard | Edge |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.ATOMIC_WRITER_
+
 ---
 
 ## [interface] STATS_COLLECTOR
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.STATS_COLLECTOR]
 
 ```code
 interface StatsCollector {
@@ -216,11 +209,11 @@ interface StatsCollector {
 | [] | {count: 0} | Edge |
 | null | StatsError | Error |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.STATS_COLLECTOR_
+
 ---
 
 ## [interface] TEMPLATE_LOADER_INTERFACE
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.TEMPLATE_LOADER]
 
 ```code
 interface TemplateLoader {
@@ -234,11 +227,11 @@ interface TemplateLoader {
 | "src/assets/specs/" | Map{L0, L1, L2, L3} | Normal |
 | "nonexistent/" | PathError | Error |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.TEMPLATE_LOADER_
+
 ---
 
 ## [interface] CERTIFICATION_ENGINE_INTERFACE
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.CERTIFICATION_ENGINE]
 
 ```code
 interface CertificationEngine {
@@ -253,13 +246,12 @@ interface CertificationEngine {
 | L1 spec item | answer_key_{id}.md | Normal |
 | Empty specs | [] | Edge |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.CERTIFICATION_ENGINE_
 (Ref: CONTRACTS.CERTIFICATION.ANSWER_KEY_LOCATION), (Ref: CONTRACTS.CERTIFICATION.VERIFY_SPEC_ANNOTATION), (Ref: CONTRACTS.CERTIFICATION.ERROR_PRONE_FOCUS)
 
 ---
 
 ## [interface] SCENARIO_DRIVER_INTERFACE
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.SCENARIO_DRIVER]
 
 ```code
 interface ScenarioDriver {
@@ -273,11 +265,11 @@ interface ScenarioDriver {
 | Valid Workflow | PASS | Normal |
 | Broken Workflow | FAIL | Error |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.SCENARIO_DRIVER_
+
 ---
 
 ## [interface] WORKFLOW_TEST_EXECUTOR
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.WORKFLOW_TEST_EXECUTOR]
 
 ```code
 interface WorkflowTestExecutor {
@@ -302,13 +294,12 @@ interface WorkflowTestExecutor {
 - Role steps MUST use mocked output regardless of env
 - Component steps follow env-based adapter selection
 
+_Implements: COMPONENTS.INFRASTRUCTURE.WORKFLOW_TEST_EXECUTOR_
 (Ref: CONTRACTS.STRICT_TESTABILITY.ROLE_ALWAYS_MOCK), (Ref: CONTRACTS.STRICT_TESTABILITY.WORKFLOW_INTEROP_COVERAGE)
 
 ---
 
 ## [interface] SKILL_LOADER
-
-> Implements: [Component: COMPONENTS.SCRIPTS.SKILL_LOADER]
 
 ```code
 interface SkillLoader {
@@ -323,11 +314,11 @@ interface SkillLoader {
 | no SKILL.md | null | Edge |
 | malformed | ParseError | Error |
 
+_Implements: COMPONENTS.SCRIPTS.SKILL_LOADER_
+
 ---
 
 ## [interface] INIT_SCRIPT
-
-> Implements: [Component: COMPONENTS.SCRIPTS.INIT_SCRIPT]
 
 ```code
 interface InitScript {
@@ -350,11 +341,11 @@ interface InitScript {
   - User customization applied on top of template.
   (Ref: CONTRACTS.BOOTSTRAP.CONFIG_TEMPLATE)
 
+_Implements: COMPONENTS.SCRIPTS.INIT_SCRIPT_
+
 ---
 
 ## [decision] BOOTSTRAP_AGENT
-
-> Implements: [Role: ROLES.USER_INTERACTION.BOOTSTRAP_AGENT]
 
 **Decision Logic**:
 1. Check project state
@@ -368,11 +359,11 @@ interface InitScript {
 | Existing project | Skip init | Already setup |
 | Partial setup | Resume init | Incomplete |
 
+_Implements: ROLES.USER_INTERACTION.BOOTSTRAP_AGENT_
+
 ---
 
 ## [workflow] TESTING_CERTIFICATION_WORKFLOW
-
-> Implements: [Contract: CONTRACTS.TESTING_WORKFLOW.WORKFLOW_VERIFICATION]
 
 **Purpose**: Verify system correctness and certify compliance.
 
@@ -384,6 +375,7 @@ interface InitScript {
 5. `TEST_REPORTER.format(result)` → Report
 6. `SCENARIO_DRIVER.run(workflow)` → ScenarioResult
 
+_Implements: CONTRACTS.TESTING_WORKFLOW.WORKFLOW_VERIFICATION_
 (Ref: CONTRACTS.STRICT_TESTABILITY.ENVIRONMENT_TOGGLE), (Ref: CONTRACTS.STRICT_TESTABILITY.RESULT_STATES), (Ref: CONTRACTS.STRICT_TESTABILITY.RFC2119_ENFORCEMENT), (Ref: CONTRACTS.STRICT_TESTABILITY.SKIP_UNIMPLEMENTED)
 (Ref: CONTRACTS.TESTING_WORKFLOW.COVERAGE_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.EXECUTION_REPORT), (Ref: CONTRACTS.TESTING_WORKFLOW.META_TEST_GENERATION), (Ref: CONTRACTS.TESTING_WORKFLOW.UNCOVERED_LIST)
 (Ref: CONTRACTS.CERTIFICATION.COMBINE_QUESTION_PAPER)
@@ -393,8 +385,6 @@ interface InitScript {
 
 ## [workflow] BOOTSTRAP_WORKFLOW
 
-> Implements: [Contract: CONTRACTS.BOOTSTRAP.INITIALIZATION]
-
 **Purpose**: Initialize project structure and configuration from templates.
 
 **Steps**:
@@ -403,5 +393,6 @@ interface InitScript {
 3. `BOOTSTRAP_AGENT.initialize()` → ProjectStructure
 4. `SKILL_LOADER.load()` → Skills
 
+_Implements: CONTRACTS.BOOTSTRAP.INITIALIZATION_
 (Ref: CONTRACTS.BOOTSTRAP.CONFIG_TEMPLATE), (Ref: CONTRACTS.BOOTSTRAP.DETECTION)
-(Ref: CONTRACTS.SKILL_DISTRIBUTION.SKILL_MD), (Ref: CONTRACTS.SKILL_DISTRIBUTION.ENTRY_POINT), (Ref: CONTRACTS.SKILL_DISTRIBUTION.COMPLIANCE), (Ref: CONTRACTS.SKILL_DISTRIBUTION.TRIGGER_WORDS)
+, (Ref: CONTRACTS.SKILL_DISTRIBUTION)

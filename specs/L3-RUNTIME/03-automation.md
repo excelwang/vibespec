@@ -1,8 +1,6 @@
 
 ## [decision] LAYER_CLASSIFICATION
 
-> Implements: [Role: ROLES.SPEC_MANAGEMENT.ARCHITECT]
-
 **Rules**:
 | Priority | Signal | Layer |
 |----------|--------|-------|
@@ -21,13 +19,12 @@
 | "User wants fast response" | L0 | Vision |
 | "Make it better" | L0 + clarify | Ambiguous |
 
+_Implements: ROLES.SPEC_MANAGEMENT.ARCHITECT_
 (Ref: CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING)
 
 ---
 
 ## [decision] CONFLICT_RESOLUTION
-
-> Implements: [Role: ROLES.SPEC_MANAGEMENT.ARCHITECT]
 
 **Rules**:
 | Conflict Type | Action |
@@ -43,13 +40,12 @@
 | Same timestamp | User decides | Edge |
 | Mergeable content | Merge proposal | Edge |
 
+_Implements: ROLES.SPEC_MANAGEMENT.ARCHITECT_
 (Ref: CONTRACTS.IDEAS_PIPELINE.CONFLICT_RES)
 
 ---
 
 ## [decision] RETRY_LOGIC
-
-> Implements: [Role: ROLES.AUTOMATION.RECOVERY_AGENT]
 
 **Rules**:
 | Condition | Action |
@@ -66,13 +62,12 @@
 | Human rejects | Revert | Human-in-the-loop gate |
  No | GiveUp |
 
+_Implements: ROLES.AUTOMATION.RECOVERY_AGENT_
 (Ref: CONTRACTS.REJECTION_HANDLING.AUTOMATED_RETRY)
 
 ---
 
 ## [decision] TYPE_PURITY_CHECK
-
-> Implements: [Role: ROLES.SPEC_MANAGEMENT.REVIEWER]
 
 **Rules**:
 | Signal | Type |
@@ -93,13 +88,12 @@
 | "Sort and filter" | Pass (Script) |
 | "Judge then sort" | Violation |
 
+_Implements: ROLES.SPEC_MANAGEMENT.REVIEWER_
 (Ref: CONTRACTS.LEAF_TYPE_PURITY)
 
 ---
 
 ## [decision] LAYER_REVIEW_CRITERIA
-
-> Implements: [Role: ROLES.SPEC_MANAGEMENT.REVIEWER]
 
 **Checklists by Layer**:
 | Layer | Focus | Key Questions |
@@ -117,11 +111,11 @@
 | L2 | Role definition | Agent/Script purity | Normal |
 | L3 | Interface | Fixture coverage | Normal |
 
+_Implements: ROLES.SPEC_MANAGEMENT.REVIEWER_
+
 ---
 
 ## [decision] TEST_DESIGNER
-
-> Implements: [Role: ROLES.AUTOMATION.TEST_DESIGNER]
 
 **Decision Logic**:
 1. Analyze L3 fixtures for testable scenarios
@@ -135,11 +129,11 @@
 | L3 no fixtures | Request fixtures | Missing test data |
 | Complex algorithm | Integration test | Needs end-to-end |
 
+_Implements: ROLES.AUTOMATION.TEST_DESIGNER_
+
 ---
 
 ## [decision] TEST_VERIFIER
-
-> Implements: [Role: ROLES.AUTOMATION.TEST_VERIFIER]
 
 **Decision Logic**:
 1. Run generated tests
@@ -153,11 +147,11 @@
 | Failures | Report with diff | Show evidence |
 | Flaky test | Rerun and flag | Detect instability |
 
+_Implements: ROLES.AUTOMATION.TEST_VERIFIER_
+
 ---
 
 ## [decision] IMPLEMENTER
-
-> Implements: [Role: ROLES.AUTOMATION.IMPLEMENTER]
 
 **Decision Logic**:
 1. Perform gap analysis
@@ -171,11 +165,11 @@
 | Gap > 70% | Request approval | High risk |
 | Orphan code | Flag for removal | Spec drift |
 
+_Implements: ROLES.AUTOMATION.IMPLEMENTER_
+
 ---
 
 ## [decision] PATTERN_SCOUT
-
-> Implements: [Role: ROLES.AUTOMATION.PATTERN_SCOUT]
 
 **Decision Logic**:
 1. Analyze code for repeated patterns
@@ -189,11 +183,11 @@
 | Unique code | No action | No pattern |
 | Anti-pattern | Flag warning | Code smell |
 
+_Implements: ROLES.AUTOMATION.PATTERN_SCOUT_
+
 ---
 
 ## [decision] INSIGHT_MINER
-
-> Implements: [Role: ROLES.AUTOMATION.INSIGHT_MINER]
 
 **Decision Logic**:
 1. Analyze spec evolution
@@ -207,11 +201,11 @@
 | Stable specs | Report health | Good sign |
 | Frequent changes | Flag volatility | Instability |
 
+_Implements: ROLES.AUTOMATION.INSIGHT_MINER_
+
 ---
 
 ## [decision] QUALITY_AUDITOR
-
-> Implements: [Role: ROLES.SPEC_MANAGEMENT.QUALITY_AUDITOR]
 
 **Decision Logic**:
 1. Check spec quality metrics
@@ -225,11 +219,11 @@
 | RFC2119 < 50% | Warn | Weak assertions |
 | Missing fixtures | Error | Untestable |
 
+_Implements: ROLES.SPEC_MANAGEMENT.QUALITY_AUDITOR_
+
 ---
 
 ## [decision] CONSISTENCY_CHECKER
-
-> Implements: [Role: ROLES.SPEC_MANAGEMENT.CONSISTENCY_CHECKER]
 
 **Decision Logic**:
 1. Compare related specs
@@ -243,11 +237,11 @@
 | Contradiction | Error | Conflict |
 | Ambiguity | Warn | Clarification needed |
 
+_Implements: ROLES.SPEC_MANAGEMENT.CONSISTENCY_CHECKER_
+
 ---
 
 ## [decision] RELOAD_DECISION
-
-> Implements: [Role: ROLES.AUTOMATION.RELOAD_HANDLER]
 
 **Decision Logic**:
 1. Receive `vibespec reload` command
@@ -260,11 +254,11 @@
 | SKILL.md exists | Reload and confirm | Hot-reload |
 | SKILL.md missing | Error message | Fail gracefully |
 
+_Implements: ROLES.AUTOMATION.RELOAD_HANDLER_
+
 ---
 
 ## [decision] PROCESS_ENFORCER_DECISION
-
-> Implements: [Role: ROLES.SPEC_MANAGEMENT.PROCESS_ENFORCER]
 
 **Decision Logic**:
 1. Check if edit spans multiple layers (L1 + L2)
@@ -277,11 +271,11 @@
 | Write L1 w/o approval | Block | REFL.HUMAN_REVIEW |
 | Edit L1 only | Allow | Valid op |
 
+_Implements: ROLES.SPEC_MANAGEMENT.PROCESS_ENFORCER_
+
 ---
 
 ## [interface] BATCH_READER
-
-> Implements: [Component: COMPONENTS.IDEAS_PROCESSOR.BATCH_READER]
 
 ```code
 interface BatchReader {
@@ -296,11 +290,11 @@ interface BatchReader {
 | Empty dir | [] | Edge |
 | No permission | ReadError | Error |
 
+_Implements: COMPONENTS.IDEAS_PROCESSOR.BATCH_READER_
+
 ---
 
 ## [interface] SORTER
-
-> Implements: [Component: COMPONENTS.IDEAS_PROCESSOR.SORTER]
 
 ```code
 interface Sorter {
@@ -315,11 +309,11 @@ interface Sorter {
 | [] | [] | Edge |
 | Same timestamp | Stable by name | Edge |
 
+_Implements: COMPONENTS.IDEAS_PROCESSOR.SORTER_
+
 ---
 
 ## [interface] ARCHIVER
-
-> Implements: [Component: COMPONENTS.IDEAS_PROCESSOR.ARCHIVER]
 
 ```code
 interface Archiver {
@@ -334,11 +328,11 @@ interface Archiver {
 | [] | void (no-op) | Edge |
 | read-only dir | ArchiveError | Error |
 
+_Implements: COMPONENTS.IDEAS_PROCESSOR.ARCHIVER_
+
 ---
 
 ## [algorithm] SCENARIO_GENERATION
-
-> Implements: [Role: ROLES.AUTOMATION.TEST_DESIGNER]
 
 **Logic**:
 1. Scan project `src/` to identify domain (e.g., Models, APIs).
@@ -356,11 +350,11 @@ function generateScenario(project: ProjectContext): Workflow
 | User Model exists | Add field 'phone' to User | CRUD mutability check | Normal |
 | Empty Project | Add 'Hello World' feature | Bootstrap check | Edge |
 
+_Implements: ROLES.AUTOMATION.TEST_DESIGNER_
+
 ---
 
 ## [workflow] IDEA_TO_SPEC_WORKFLOW
-
-> Implements: [Contract: CONTRACTS.IDEAS_PIPELINE.BATCH_READ]
 
 **Purpose**: Ingest raw ideas and refine them into formal specifications.
 
@@ -371,5 +365,6 @@ function generateScenario(project: ProjectContext): Workflow
 4. [Role] `ARCHITECT.design(insights)` → DraftSpecs
 5. `ARCHIVER.archive(ideas)` → ArchiveResult
 
+_Implements: CONTRACTS.IDEAS_PIPELINE.BATCH_READ_
 (Ref: CONTRACTS.IDEAS_PIPELINE.TIMESTAMP_ORDER)
-(Ref: CONTRACTS.METADATA.FRONTMATTER)
+(Ref: CONTRACTS.METADATA)

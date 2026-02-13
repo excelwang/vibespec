@@ -1,8 +1,6 @@
 
 ## [interface] SCANNER
 
-> Implements: [Component: COMPONENTS.COMPILER_PIPELINE.SCANNER]
-
 ```code
 interface Scanner {
   scan(path: string): File[]
@@ -18,13 +16,12 @@ interface Scanner {
 
 **Consumers**: [ARCHITECT]
 
+_Implements: COMPONENTS.COMPILER_PIPELINE.SCANNER_
 (Ref: CONTRACTS.L3_QUALITY.FIXTURE_REQUIRED), (Ref: CONTRACTS.L3_QUALITY.CASE_COVERAGE), (Ref: CONTRACTS.L3_QUALITY.TYPE_SIGNATURE), (Ref: CONTRACTS.L3_QUALITY.INTERFACE_COMPATIBILITY)
 
 ---
 
 ## [interface] PARSER
-
-> Implements: [Component: COMPONENTS.COMPILER_PIPELINE.PARSER]
 
 ```code
 interface Parser {
@@ -41,11 +38,11 @@ interface Parser {
 
 **Consumers**: [ARCHITECT, VALIDATOR]
 
+_Implements: COMPONENTS.COMPILER_PIPELINE.PARSER_
+
 ---
 
 ## [interface] SECTION_PARSER
-
-> Implements: [Component: COMPONENTS.COMPILER_PIPELINE.SECTION_PARSER]
 
 ```code
 interface SectionParser {
@@ -60,11 +57,11 @@ interface SectionParser {
 | "## ID" | [{tag: null, id: "ID"}] | Edge |
 | "" | [] | Edge |
 
+_Implements: COMPONENTS.COMPILER_PIPELINE.SECTION_PARSER_
+
 ---
 
 ## [interface] ASSEMBLER
-
-> Implements: [Component: COMPONENTS.COMPILER_PIPELINE.ASSEMBLER]
 
 ```code
 interface Assembler {
@@ -81,11 +78,11 @@ interface Assembler {
 
 **Consumers**: [COMPILE_SCRIPT]
 
+_Implements: COMPONENTS.COMPILER_PIPELINE.ASSEMBLER_
+
 ---
 
 ## [interface] COMPILE_SCRIPT
-
-> Implements: [Component: COMPONENTS.SCRIPTS.COMPILE_SCRIPT]
 
 ```code
 interface CompileScript {
@@ -106,11 +103,11 @@ interface CompileScript {
   - `tests/specs/script/unit/` : `test_{snake_case_id}.py`
   - `tests/specs/script/e2e/` : `test_{snake_case_id}.py`
 
+_Implements: COMPONENTS.SCRIPTS.COMPILE_SCRIPT_
+
 ---
 
 ## [interface] BUILDER
-
-> Implements: [Component: COMPONENTS.INFRASTRUCTURE.BUILDER]
 
 ```code
 interface Builder {
@@ -131,13 +128,12 @@ interface BuildResult {
 | spec + [no_skill] | PARTIAL, "Manual implementation required" | Edge |
 | invalid spec | ERROR, "Traceability broken" | Error |
 
+_Implements: COMPONENTS.INFRASTRUCTURE.BUILDER_
 (Ref: VISION.VIBE_CODING.TRUTH)
 
 ---
 
 ## [interface] BUILD_SCRIPT
-
-> Implements: [Component: COMPONENTS.SCRIPTS.BUILD_SCRIPT]
 
 ```code
 interface BuildScript {
@@ -157,11 +153,11 @@ interface BuildScript {
   - Ensures agents operate with explicit skill set.
   (Ref: CONTRACTS.BUILD_STRATEGY.SKILL_SYNC)
 
+_Implements: COMPONENTS.SCRIPTS.BUILD_SCRIPT_
+
 ---
 
 ## [workflow] COMPILATION_WORKFLOW
-
-> Implements: [Contract: CONTRACTS.COMPILATION.LLM_OPTIMIZED]
 
 **Purpose**: Compile specs into authoritative documentation and build deliverables.
 
@@ -173,6 +169,7 @@ interface BuildScript {
 5. `COMPILE_SCRIPT.compile(specs)` → CompiledDoc
 6. `BUILD_SCRIPT.build(spec)` → BuildOutput
 
+_Implements: CONTRACTS.COMPILATION.LLM_OPTIMIZED_
 (Ref: CONTRACTS.COMPILATION.NAVIGATION), (Ref: CONTRACTS.COMPILATION.NOISE_REDUCTION)
 (Ref: CONTRACTS.BUILD_STRATEGY.AUTHORITATIVE_PROMPT), (Ref: CONTRACTS.BUILD_STRATEGY.GAP_CATEGORIES), (Ref: CONTRACTS.BUILD_STRATEGY.SKILL_SYNC)
 (Ref: CONTRACTS.SCRIPT_FIRST.DETERMINISM), (Ref: CONTRACTS.SCRIPT_FIRST.GOAL), (Ref: CONTRACTS.SCRIPT_FIRST.TARGET), (Ref: CONTRACTS.SCRIPT_FIRST.ZERO_DEPS)

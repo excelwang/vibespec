@@ -1,8 +1,6 @@
 
 ## [interface] VALIDATOR
 
-> Implements: [Component: COMPONENTS.COMPILER_PIPELINE.VALIDATOR]
-
 ```code
 interface Validator {
   validate(specs: ParsedSpec[]): ValidationResult
@@ -26,11 +24,11 @@ interface ValidationResult {
 
 **Consumers**: [REVIEWER, TRACEABILITY_GUARDIAN]
 
+_Implements: COMPONENTS.COMPILER_PIPELINE.VALIDATOR_
+
 ---
 
 ## [interface] RULE_ENGINE
-
-> Implements: [Component: COMPONENTS.VALIDATOR_CORE.RULE_ENGINE]
 
 ```code
 interface RuleEngine {
@@ -45,11 +43,11 @@ interface RuleEngine {
 | Invalid rule | RuleError | Error |
 | Partial match | [Violation] | Edge |
 
+_Implements: COMPONENTS.VALIDATOR_CORE.RULE_ENGINE_
+
 ---
 
 ## [interface] CUSTOM_RULES_LOADER
-
-> Implements: [Component: COMPONENTS.VALIDATOR_CORE.CUSTOM_RULES_LOADER]
 
 ```code
 interface CustomRulesLoader {
@@ -64,11 +62,11 @@ interface CustomRulesLoader {
 | empty specs/ | [] | Edge |
 | invalid YAML | LoadError | Error |
 
+_Implements: COMPONENTS.VALIDATOR_CORE.CUSTOM_RULES_LOADER_
+
 ---
 
 ## [interface] RESPONSIVENESS_CHECKER
-
-> Implements: [Component: COMPONENTS.VALIDATOR_CORE.RESPONSIVENESS_CHECKER]
 
 ```code
 interface ResponsivenessChecker {
@@ -83,11 +81,11 @@ interface ResponsivenessChecker {
 | Orphan items | {orphans: [...]} | Edge |
 | Fanout > 7 | {violations: [Miller]} | Error |
 
+_Implements: COMPONENTS.VALIDATOR_CORE.RESPONSIVENESS_CHECKER_
+
 ---
 
 ## [interface] LINT_CHECKER
-
-> Implements: [Component: COMPONENTS.QUALITY.LINT_CHECKER]
 
 ```code
 interface LintChecker {
@@ -102,11 +100,11 @@ interface LintChecker {
 | missing tag | {issues: [TagWarning]} | Edge |
 | malformed | LintError | Error |
 
+_Implements: COMPONENTS.QUALITY.LINT_CHECKER_
+
 ---
 
 ## [interface] ASSERTION_CHECKER
-
-> Implements: [Component: COMPONENTS.QUALITY.ASSERTION_CHECKER]
 
 ```code
 interface AssertionChecker {
@@ -121,11 +119,11 @@ interface AssertionChecker {
 | low keyword density | {pass: false} | Edge |
 | empty spec | AssertionError | Error |
 
+_Implements: COMPONENTS.QUALITY.ASSERTION_CHECKER_
+
 ---
 
 ## [interface] NOTATION_CHECKER
-
-> Implements: [Component: COMPONENTS.QUALITY.NOTATION_CHECKER]
 
 ```code
 interface NotationChecker {
@@ -140,11 +138,11 @@ interface NotationChecker {
 | informal language | {issues: [Warn]} | Edge |
 | mixed case IDs | {issues: [Error]} | Error |
 
+_Implements: COMPONENTS.QUALITY.NOTATION_CHECKER_
+
 ---
 
 ## [interface] TERM_CHECKER
-
-> Implements: [Component: COMPONENTS.QUALITY.TERM_CHECKER]
 
 ```code
 interface TermChecker {
@@ -159,11 +157,11 @@ interface TermChecker {
 | banned term | {violations: [TermViolation]} | Error |
 | unknown term | {warnings: [UnknownTerm]} | Edge |
 
+_Implements: COMPONENTS.QUALITY.TERM_CHECKER_
+
 ---
 
 ## [interface] PURITY_CHECKER
-
-> Implements: [Component: COMPONENTS.QUALITY.PURITY_CHECKER]
 
 ```code
 interface PurityChecker {
@@ -178,11 +176,11 @@ interface PurityChecker {
 | impl details in L0 | {pure: false} | Error |
 | mixed concerns | {warnings: [Impure]} | Edge |
 
+_Implements: COMPONENTS.QUALITY.PURITY_CHECKER_
+
 ---
 
 ## [interface] SCRIPT_SCANNER
-
-> Implements: [Component: COMPONENTS.QUALITY.SCRIPT_SCANNER]
 
 ```code
 interface ScriptScanner {
@@ -197,11 +195,11 @@ interface ScriptScanner {
 | no scripts | [] | Edge |
 | broken ref | ScanError | Error |
 
+_Implements: COMPONENTS.QUALITY.SCRIPT_SCANNER_
+
 ---
 
 ## [interface] VALIDATE_SCRIPT
-
-> Implements: [Component: COMPONENTS.SCRIPTS.VALIDATE_SCRIPT]
 
 ```code
 interface ValidateScript {
@@ -216,14 +214,13 @@ interface ValidateScript {
 | invalid specs | {errors: N} | Normal |
 | no specs | EmptyError | Edge |
 
+_Implements: COMPONENTS.SCRIPTS.VALIDATE_SCRIPT_
 (Ref: CONTRACTS.STRICT_TESTABILITY.L1_WORKFLOW_COVERAGE)
 (Ref: CONTRACTS.L3_QUALITY.DECISION_FORMAT), (Ref: CONTRACTS.L3_QUALITY.WORKFLOW_FORMAT), (Ref: CONTRACTS.L3_QUALITY.TRACEABILITY_TAG)
 
 ---
 
 ## [algorithm] COVERAGE_VALIDATION
-
-> Implements: [Component: COMPONENTS.VALIDATOR_CORE.RESPONSIVENESS_CHECKER]
 
 ```pseudocode
 function validate_coverage(specs: Spec[]) -> Violation[]:
@@ -249,13 +246,12 @@ function validate_coverage(specs: Spec[]) -> Violation[]:
 | L0.A (orphan) | [OrphanViolation] | Edge |
 | L0.A → 8 items | [FanoutViolation] | Error |
 
+_Implements: COMPONENTS.VALIDATOR_CORE.RESPONSIVENESS_CHECKER_
 (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION), (Ref: CONTRACTS.TRACEABILITY.L2_L3_IMPLEMENTATION)
 
 ---
 
 ## [workflow] SPEC_VALIDATION_WORKFLOW
-
-> Implements: [Contract: CONTRACTS.VALIDATION_MODE.FULL_SCAN]
 
 **Purpose**: Rigorous validation of specification integrity, quality, and compliance.
 
@@ -268,7 +264,8 @@ function validate_coverage(specs: Spec[]) -> Violation[]:
 6. `TERM_CHECKER.check(specs)` → TermResult
 7. `ASSERTION_CHECKER.check(specs)` → AssertResult
 
-(Ref: CONTRACTS.QUANTIFIED_VALIDATION.ATOMICITY), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.DEPTH), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.RFC2119), (Ref: CONTRACTS.QUANTIFIED_VALIDATION.TERMINOLOGY)
+_Implements: CONTRACTS.VALIDATION_MODE.FULL_SCAN_
+, (Ref: CONTRACTS.QUANTIFIED_VALIDATION)
 (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.CONSERVATION), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.EXPANSION_RATIO), (Ref: CONTRACTS.ALGEBRAIC_VALIDATION.MILLERS_LAW)
 (Ref: CONTRACTS.L3_QUALITY.INTERFACE_COMPATIBILITY)
 (Ref: CONTRACTS.L3_TYPE_ANNOTATION.SCRIPT_NO_LLM), (Ref: CONTRACTS.L3_TYPE_ANNOTATION.TYPE_REQUIRED)

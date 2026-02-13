@@ -263,6 +263,9 @@ def parse_spec_file(spec_file: Path) -> dict:
             
             # Extract Implements: [Type: ID] - must start with uppercase
             impl_matches = re.findall(r'Implements:\s*\[(?:Role|Component):\s*([A-Z][\w.]+)\]', line)
+            # Support Footer Format: _Implements: ID_
+            impl_matches.extend(re.findall(r'_Implements:\s*([A-Z][\w.]+)_', line))
+            
             for impl_id in impl_matches:
                 references.append({'id': impl_id, 'weight': 100, 'line': i+1, 'source_id': current_export})
                 
@@ -395,9 +398,20 @@ def validate_specs(specs_dir: Path) -> tuple:
     # Check for unimplemented L2 leaves
     for leaf in l2_leaves:
         if leaf not in l3_implements:
-            # Try partial match (check if any L3 ref ends with leaf's last segment)
+            # 1. Try partial match (check if any L3 ref ends with leaf's last segment)
             leaf_name = leaf.split('.')[-1]
             matched = any(leaf_name in impl for impl in l3_implements)
+            
+            # 2. Try Parent Match (Compaction Support)
+            # If leaf is A.B.C, check if A.B or A is in l3_implements
+            if not matched:
+                parts = leaf.split('.')
+                for i in range(len(parts)-1, 0, -1):
+                    parent = '.'.join(parts[:i])
+                    if parent in l3_implements:
+                        matched = True
+                        break
+            
             if not matched:
                 warnings.append(f"L2→L3 Coverage Warning: `{leaf}` has no L3 implementation.")
 
@@ -414,7 +428,7 @@ def validate_specs(specs_dir: Path) -> tuple:
             
             # 7a. Common Checks
             # TRACEABILITY_TAG: All L3 items MUST have Implements: tag
-            if 'Implements: [' not in body:
+            if 'Implements: [' not in body and '_Implements:' not in body:
                 warnings.append(f"L3 Quality: `{item_id}` missing `Implements: [Role|Component: ID]` tag.")
 
             # 7b. Type-Specific Checks
