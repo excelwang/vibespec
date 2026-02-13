@@ -91,7 +91,7 @@ def main():
     copy_spec_templates(specs_dir, specs_templates, project_name or "Project")
     
     # 4. Create ideas/ directory
-    ideas_dir = specs_dir / "ideas"
+    ideas_dir = project_dir / "ideas"
     if not ideas_dir.exists():
         ideas_dir.mkdir(exist_ok=True)
         print(f"✅ Created ideas directory")
@@ -100,7 +100,7 @@ def main():
     print(f"\nNext steps:")
     print(f"  1. Edit specs/L0-VISION.md to define your project vision")
     print(f"  2. Run `vibespec validate` to check spec structure")
-    print(f"  3. Drop ideas into specs/ideas/ as timestamped files")
+    print(f"  3. Drop ideas into ideas/ as timestamped files")
 
 if __name__ == "__main__":
     main()

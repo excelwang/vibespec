@@ -16,10 +16,10 @@ Manage the refinement of raw thoughts into traceable specifications.
      - Read `specs/L0-VISION.md`, `specs/L1-CONTRACTS.md`, `specs/L2-ARCHITECTURE.md`, `specs/L3-RUNTIME.md`.
      - **Summarize** your understanding of the project to the user.
 2. If `specs/` does not exist → Enter **Bootstrap Phase**.
-3. Else → Scan `specs/ideas/` and begin refinement.
+3. Else → Scan `ideas/` and begin refinement.
 
 ### `vibespec <content>` (with arguments)
-1. Save `<content>` as timestamped file in `specs/ideas/`.
+1. Save `<content>` as timestamped file in `ideas/`.
 2. ⛔ MANDATORY STOP ⛔
    - Call `notify_user` with the Idea artifact.
    - Wait for explicit human approval or edits.
@@ -32,7 +32,7 @@ Manage the refinement of raw thoughts into traceable specifications.
 3. Otherwise:
    - Distill insights into formal idea proposals.
    - Present summary for human approval.
-   - Upon approval, save as timestamped idea files in `specs/ideas/`.
+   - Upon approval, save as timestamped idea files in `ideas/`.
 
 ### `vibespec build`
 1. Read `vibespec.yaml` to identify configured implementation skills.
@@ -69,7 +69,7 @@ Manage the refinement of raw thoughts into traceable specifications.
 
 ### `vibespec automate`
 1. Enter **AUTOMATE MODE**: Skip all human approval gates.
-2. Process ALL pending ideas in `specs/ideas/`.
+2. Process ALL pending ideas in `ideas/`.
 3. Auto-accept all agent suggestions.
 4. Auto-fix all validation warnings (cascade L1→L2→L3).
 5. Run until: 0 pending ideas AND 0 warnings.
@@ -189,7 +189,7 @@ Agent: ✅ Updated test_validator.py with RealAdapter logic.
    exports:
      - VISION.SCOPE
    ```
-5. **Initialize Ideas Folder**: Create `specs/ideas/` directory.
+5. **Initialize Ideas Folder**: Create `ideas/` directory.
 
 ### Example Dialogue
 ```
@@ -216,7 +216,7 @@ Agent: I've reformulated your scope:
 
 ## Phase 1: Ingest
 
-1. List all `.md` files in `specs/ideas/`.
+1. List all `.md` files in `ideas/`.
 2. If NOT empty → Proceed to Phase 2.
 3. If empty:
    - IF `SKILL.md` exists (self-hosting mode) → Enter **Phase 6: Validation Mode**.
@@ -265,8 +265,8 @@ Process the specific layer L(N) identified in Phase 2:
 
 ## Phase 4: Archive & Complete
 
-1. Move processed ideas to `specs/ideas/archived/`.
-2. **Scan**: Check if `specs/ideas/*.md` exists.
+1. Move processed ideas to `ideas/archived/`.
+2. **Scan**: Check if `ideas/*.md` exists.
 3. **Compile Prompt**: 
    - IF (No pending ideas): Explicitly ask user: "Run compilation now?"
    - ELSE: Loop back to Phase 2.

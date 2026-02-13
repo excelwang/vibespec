@@ -67,13 +67,13 @@ This artifacts serves as the **Context Context** for the AI Coding Agent. Instea
 
 To bridge the gap between "Raw Thoughts" and "Formal Specs", we use a dedicated pipeline:
 
-1.  **Capture**: Raw ideas saved to `specs/ideas/YYYY-MM-DDTHHMM-desc.md`.
+1.  **Capture**: Raw ideas saved to `ideas/YYYY-MM-DDTHHMM-desc.md`.
 2.  **Batch Processing**: `vibespec` reads pending ideas in timestamp order.
 3.  **Refinement Cycle**:
     - L0 Scope Check (Stop if out-of-scope).
     - Layer-by-Layer Refinement (L0 -> L1 -> L2 -> L3).
     - **Strict Gating**: Mandatory human approval after *each* layer's validation.
-4.  **Archival**: Processed ideas move to `specs/ideas/archived/`.
+4.  **Archival**: Processed ideas move to `ideas/archived/`.
 
 ## 6. Self-Hosting (Bootstrap) Philosophy
 
