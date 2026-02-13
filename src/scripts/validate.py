@@ -344,14 +344,20 @@ def validate_specs(specs_dir: Path) -> tuple:
                 errors.append(f"Dangling Reference: `{ref['source_id']}` (in {Path(file_path).name}) refers to `{target}` which does not exist.")
 
     # 4. Check Completeness (L1 items must have downstream refs)
-    for exp, count in coverage.items():
-        owner_file = exports_map[exp]
-        layer = specs[owner_file]['layer']
-        
-        # Only strict check L1
-        if layer == 1:
-            if count == 0:
-                warnings.append(f"Completeness Warning: `{exp}` (L1) has 0 downstream refs.")
+    # DISABLED per user request: "移除掉L3与L1\2之间覆盖率校验"
+    # for exp, count in coverage.items():
+    #     owner_file = exports_map[exp]
+    #     layer = specs[owner_file]['layer']
+    #     
+    #     # Only strict check L1
+    #     if layer == 1:
+    #         if count == 0:
+    #             # Check for [Status: Pending] tag
+    #             item_data = specs[owner_file]['items'][exp]
+    #             if '[Status: Pending]' in item_data['body']:
+    #                 continue
+    #                 
+    #             warnings.append(f"Completeness Warning: `{exp}` (L1) has 0 downstream refs.")
 
     # 5. Check Leaf Constraints (L2 Only)
     MAX_L1_REFS_PER_LEAF = 3
@@ -380,47 +386,44 @@ def validate_specs(specs_dir: Path) -> tuple:
                      errors.append(f"Complexity Violation: `{item_id}` has {len(l1_refs)} L1 refs (Max {MAX_L1_REFS_PER_LEAF}). Split responsibilities.")
 
     # 6. Check L2 Leaf -> L3 Implementation Coverage
-    l2_leaves = set()
-    l3_implements = set()
-    
-    for file_path, data in specs.items():
-        if data['layer'] == 2:
-            for exp in data['exports']:
-                # Only track leaf items (#### level)
-                item = data['items'].get(exp)
-                if item and item['header'].startswith('#### '):
-                    l2_leaves.add(exp)
-        elif data['layer'] == 3:
-            for ref in data['references']:
-                # Track all L3 -> L2 references
-                l3_implements.add(ref['id'])
-    
-    # Check for unimplemented L2 leaves
-    for leaf in l2_leaves:
-        if leaf not in l3_implements:
-            # 1. Try partial match (check if any L3 ref ends with leaf's last segment)
-            leaf_name = leaf.split('.')[-1]
-            matched = any(leaf_name in impl for impl in l3_implements)
-            
-            # 2. Try Parent Match (Compaction Support)
-            # If leaf is A.B.C, check if A.B or A is in l3_implements
-            if not matched:
-                parts = leaf.split('.')
-                for i in range(len(parts)-1, 0, -1):
-                    parent = '.'.join(parts[:i])
-                    if parent in l3_implements:
-                        matched = True
-                        break
-            
-            # 3. New Rule: If any sibling is covered by a Parent Ref, assume this leaf is covered by that same Parent Ref
-            # Actually, logic #2 covering 'Parent Match' already handles 'Implicit Parent Coverage'.
-            # If L3 says "Implements: A", then A.B and A.C are covered.
-            # The issue is if L3 says "Implements: A.B", is A.C covered? No.
-            # The Ref Compaction idea says: "L3 items MAY reference an L1 Parent to implicitly cover all its Child items."
-            # So if L3 refs 'A', then 'A.B' is covered. Logic #2 does exactly this.
-            
-            if not matched:
-                warnings.append(f"L2→L3 Coverage Warning: `{leaf}` has no L3 implementation.")
+    # DISABLED per user request
+    # l2_leaves = set()
+    # l3_implements = set()
+    # 
+    # for file_path, data in specs.items():
+    #     if data['layer'] == 2:
+    #         for exp in data['exports']:
+    #             # Only track leaf items (#### level)
+    #             item = data['items'].get(exp)
+    #             if item and item['header'].startswith('#### '):
+    #                 # Check for [Status: Pending]
+    #                 if '[Status: Pending]' in item['body']:
+    #                     continue
+    #                 l2_leaves.add(exp)
+    #     elif data['layer'] == 3:
+    #         for ref in data['references']:
+    #             # Track all L3 -> L2 references
+    #             l3_implements.add(ref['id'])
+    # 
+    # # Check for unimplemented L2 leaves
+    # for leaf in l2_leaves:
+    #     if leaf not in l3_implements:
+    #         # 1. Try partial match (check if any L3 ref ends with leaf's last segment)
+    #         leaf_name = leaf.split('.')[-1]
+    #         matched = any(leaf_name in impl for impl in l3_implements)
+    #         
+    #         # 2. Try Parent Match (Compaction Support)
+    #         # If leaf is A.B.C, check if A.B or A is in l3_implements
+    #         if not matched:
+    #             parts = leaf.split('.')
+    #             for i in range(len(parts)-1, 0, -1):
+    #                 parent = '.'.join(parts[:i])
+    #                 if parent in l3_implements:
+    #                     matched = True
+    #                     break
+    #         
+    #         if not matched:
+    #             warnings.append(f"L2→L3 Coverage Warning: `{leaf}` has no L3 implementation.")
 
     # 7. L3 Quality Checks
     l3_interfaces = {}  # id -> {input_types, output_type, consumers}
@@ -501,33 +504,39 @@ def validate_specs(specs_dir: Path) -> tuple:
                         warnings.append(f"L3 Compatibility: `{iface_id}` output `{output_type}` may not match `{consumer_id}` inputs.")
 
     # 9. L1_WORKFLOW_COVERAGE: L1 Script items must have L3 workflow refs
-    l1_script_items = set()
-    l3_workflow_refs = set()
-    
-    for file_path, data in specs.items():
-        if data['layer'] == 1:
-            for item_id, item_data in data['items'].items():
-                header = item_data['header']
-                if re.search(r'Script (MUST|SHOULD|MAY)', header):
-                    l1_script_items.add(item_id)
-        elif data['layer'] == 3:
-            for item_id, item_data in data['items'].items():
-                header = item_data['header']
-                body = item_data['body']
-                if '[workflow]' in header:
-                    ref_matches = re.findall(r'\(Ref: ([^\)]+)\)', body)
-                    for refs in ref_matches:
-                        for ref in refs.split(','):
-                            l3_workflow_refs.add(ref.strip())
-                    impl_matches = re.findall(r'Implements:\s*\[Contract:\s*([\w.]+)\]', body)
-                    for impl in impl_matches:
-                         l3_workflow_refs.add(impl)
-    
-    # Check coverage
-    for l1_item in l1_script_items:
-        covered = any(l1_item in ref or ref.endswith('.' + l1_item.split('.')[-1]) for ref in l3_workflow_refs)
-        if not covered:
-            warnings.append(f"L1_WORKFLOW_COVERAGE: `{l1_item}` (Script) has no L3 workflow ref.")
+    # DISABLED per user request
+    # l1_script_items = {}
+    # l3_workflow_refs = set()
+    # 
+    # for file_path, data in specs.items():
+    #     if data['layer'] == 1:
+    #         for item_id, item_data in data['items'].items():
+    #             header = item_data['header']
+    #             if re.search(r'Script (MUST|SHOULD|MAY)', header):
+    #                 l1_script_items[item_id] = item_data
+    #     elif data['layer'] == 3:
+    #         for item_id, item_data in data['items'].items():
+    #             header = item_data['header']
+    #             body = item_data['body']
+    #             if '[workflow]' in header:
+    #                 ref_matches = re.findall(r'\(Ref: ([^\)]+)\)', body)
+    #                 for refs in ref_matches:
+    #                     for ref in refs.split(','):
+    #                         l3_workflow_refs.add(ref.strip())
+    #                 impl_matches = re.findall(r'Implements:\s*\[Contract:\s*([\w.]+)\]', body)
+    #                 for impl in impl_matches:
+    #                      l3_workflow_refs.add(impl)
+    # 
+    # # Check coverage
+    # for l1_item_id, l1_item_data in l1_script_items.items():
+    #     covered = any(l1_item_id in ref or ref.endswith('.' + l1_item_id.split('.')[-1]) for ref in l3_workflow_refs)
+    #     
+    #     if not covered:
+    #         # Check for [Status: Pending] tag in the L1 item definition
+    #         if '[Status: Pending]' in l1_item_data['body']:
+    #             continue
+    #         
+    #         warnings.append(f"L1_WORKFLOW_COVERAGE: `{l1_item_id}` (Script) has no L3 workflow ref.")
 
     # 10. FULL_WORKFLOW_REQUIRED: L3 must have FULL_WORKFLOW covering all Roles and Components
     l2_roles = set()
