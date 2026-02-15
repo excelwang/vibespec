@@ -107,6 +107,5 @@ interface Validator {
 
 1. **Progressive Formalization**: Specs refine L0 (natural language) → L1 (RFC2119) → L2 (interfaces) → L3 (code).
 2. **Strict Testability**: Every L1/L2/L3 item is an assertion that can be covered by tests.
-3. **Traceability**: All lists in specs MUST be numbered (`1. `) for addressability.
-4. **Numbered Lists Only**: Bullet points (`- `) are forbidden in spec bodies.
+3. **Traceability**: All items in specs SHOULD use consistent formatting for addressability.
 5. **RFC2119 Keywords**: L1 items MUST use MUST/SHOULD/MAY for enforceability.
