@@ -121,8 +121,6 @@ Process the specific layer L(N) identified in Phase 2:
 
 ### Phase 4: Archive & Complete
 
-### Phase 4: Archive & Complete
-
 1. **Move processed ideas**: Agent moves processed files to `ideas/archived/` (e.g., using `mv`).
 2. **Gap Analysis**: Agent MUST detect missing links (MISSING, OUTDATED, ORPHAN) across L1→L2→L3→Code.
 3. **Post-Refinement (Manual Gate)**: If `ideas/` is empty, Agent SHALL explicitly ask: "Refinement complete. Should I proceed to **Certification** (verification audit)?"
@@ -145,7 +143,7 @@ Process the specific layer L(N) identified in Phase 2:
 2. **STOP**: Request human approval before saving.
 
 ### Phase 2: Test Body Fill (smart detection)
-1. Run `python3 src/skills/vibespec/scripts/validate.py` → Certification Dashboard.
+1. Run `python3 scripts/validate.py` → Certification Dashboard.
 2. Detect fillable tests (`skipTest` markers where `src/` module exists).
 3. Fill with real assertions (follow INTENT_LOCK and QUALITY_GUARD rules in testing_protocol.md).
 4. **Review**: Present L1 text + Intent + Code side-by-side. **STOP** for approval.
@@ -166,7 +164,7 @@ Process the specific layer L(N) identified in Phase 2:
 
 **Trigger**: No pending ideas AND `SKILL.md` exists (self-hosting mode).
 
-1. Run `python3 src/skills/vibespec/scripts/validate.py specs/` (Structural Validation).
+1. Run `python3 scripts/validate.py specs/` (Structural Validation).
 2. **Quality Audit (Agent Decision)**:
    - Review `references/review_and_quality.md` → `[decision] QualityAudit`.
    - Manually evaluate: **Information Gain**, **Terminology**, **Expansion Ratio**.
@@ -179,9 +177,9 @@ Process the specific layer L(N) identified in Phase 2:
 ## Tools
 
 Use standalone scripts for mechanical operations:
-- `python3 src/skills/vibespec/scripts/validate.py specs/` - Structural validation & Coverage auditing.
+- `python3 scripts/validate.py specs/` — Structural validation & Coverage auditing.
 
-**IMPORTANT**: Run `validate.py` IMMEDIATELY after each refinement cycle.
+**IMPORTANT**: Run `python3 scripts/validate.py` IMMEDIATELY after each refinement cycle.
 
 ---
 
