@@ -1,7 +1,7 @@
 import unittest
 import subprocess
 import sys
-from vibespec.scripts.validate import verify_spec
+from tests.specs.conftest import verify_spec
 
 class TestContractsScriptFirst(unittest.TestCase):
 

@@ -1,9 +1,9 @@
 import unittest
-import sys
 import shutil
 import tempfile
 from pathlib import Path
-from vibespec.scripts.validate import validate_references, verify_spec
+from tests.specs.conftest import verify_spec
+from src.skills.vibespec.scripts.validate import validate_references
 
 class TestContractsValidation(unittest.TestCase):
     """Verifies CONTRACTS.VALIDATION logic"""
@@ -34,9 +34,6 @@ class TestContractsValidation(unittest.TestCase):
         (self.specs_dir / "L1-CONTRACTS.md").write_text("---\nversion: 1.0.0\n---\n# L1\n## CONTRACTS.TIMEOUT\n")
         
         errors, warnings, coverage = validate_references(self.specs_dir, self.tests_dir)
-        # Should detect orphan traceability break
+        # Should detect orphan traceability break (missing L0)
         orphan_warnings = [w for w in warnings if "Traceability break" in w]
         self.assertTrue(len(orphan_warnings) > 0, "Should report traceability warning for orphan L1 item")
-
-if __name__ == "__main__":
-    unittest.main()

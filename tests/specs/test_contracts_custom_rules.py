@@ -2,7 +2,8 @@ import unittest
 import shutil
 import tempfile
 from pathlib import Path
-from vibespec.scripts.validate import validate_references, verify_spec
+from src.skills.vibespec.scripts.validate import validate_references
+from tests.specs.conftest import verify_spec
 
 class TestContractsCustomRules(unittest.TestCase):
 
