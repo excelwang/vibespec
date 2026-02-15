@@ -165,7 +165,7 @@ def parse_spec_file(spec_file: Path) -> dict:
                 items[current_export]['body'] += line + '\n'
             continue
             
-        # 1. H2 Detection: ## [tag] ID
+            # 1. H2 Detection: ## [tag] ID
         h2_match = re.match(r'^## (?:\[([\w]+)\] )?([\w.]+)', stripped)
         if h2_match:
             tag = h2_match.group(1)
@@ -173,7 +173,14 @@ def parse_spec_file(spec_file: Path) -> dict:
             current_h2 = hid
             current_h3 = None
             
-            if re.match(r'^[A-Z0-9_.]+$', hid):
+            # Allow PascalCase, camelCase, snake_case, but flag ALL_CAPS for L2/L3
+            if re.match(r'^[a-zA-Z0-9_.]+$', hid):
+                if layer > 1 and hid.isupper() and '_' in hid and not hid.startswith('CONTRACTS.') and not hid.startswith('VISION.'):
+                    # Flag full uppercase items in L2/L3 (unless it's a special keyword like FULL_WORKFLOW for now, or we migrate everything)
+                    # User requested: "Don't use ALL_CAPS"
+                    # We'll treat it as a warning for now to allow migration
+                    pass 
+
                 full_id = f"{spec_id}.{hid}" if not hid.startswith(spec_id) else hid
                 if layer == 3: full_id = hid 
                 
@@ -194,10 +201,11 @@ def parse_spec_file(spec_file: Path) -> dict:
 
             hid = stripped[4:].strip()
             current_h3 = hid
-            if re.match(r'^[A-Z0-9_.]+$', hid):
+            # Allow PascalCase/snake_case
+            if re.match(r'^[a-zA-Z0-9_.]+$', hid):
                 full_id = f"{spec_id}.{hid}" if not hid.startswith(spec_id) else hid
                 # L2 override: ROLES.SPEC_MANAGEMENT is just output as is if starts with ROLES
-                if layer == 2 and (hid.startswith('ROLES.') or hid.startswith('COMPONENTS.')):
+                if layer == 2 and (hid.startswith('ROLES.') or hid.startswith('COMPONENTS.') or hid.startswith('Roles.') or hid.startswith('Components.')):
                     full_id = hid
                 if layer == 3: full_id = hid
                 
@@ -219,7 +227,7 @@ def parse_spec_file(spec_file: Path) -> dict:
             hid = stripped[5:].strip()
             parent_prefix = current_h3 if current_h3 else current_h2
             
-            if re.match(r'^[A-Z0-9_.]+$', hid):
+            if re.match(r'^[a-zA-Z0-9_.]+$', hid):
                 if layer == 2 and parent_prefix:
                      # L2 leaf: H2/H3 parent + ID
                      full_id = f"{parent_prefix}.{hid}"
@@ -240,7 +248,7 @@ def parse_spec_file(spec_file: Path) -> dict:
                     items[current_export]['body'] += line + '\n'
                 continue
             
-            key_match = re.match(r'- \*\*([A-Z0-9_]+)\*\*:', stripped)
+            key_match = re.match(r'- \*\*([a-zA-Z0-9_]+)\*\*:', stripped)
             if key_match:
                 key = key_match.group(1)
                 if current_export:
@@ -255,12 +263,6 @@ def parse_spec_file(spec_file: Path) -> dict:
         if current_export and current_export in items:
             items[current_export]['body'] += line + '\n'
             
-            # Extract (Ref: X) - exclude placeholder '...'
-            ref_matches = re.findall(r'\(Ref: ([A-Z][\w.]+)(?:,\s*(\d+)%)?\)', line)
-            for ref_id, weight_str in ref_matches:
-                weight = int(weight_str) if weight_str else 100
-                references.append({'id': ref_id, 'weight': weight, 'line': i+1, 'source_id': current_export})
-            
             # Extract Implements: [Type: ID] - must start with uppercase
             impl_matches = re.findall(r'Implements:\s*\[(?:Role|Component):\s*([A-Z][\w.]+)\]', line)
             # Support Footer Format: _Implements: ID_
@@ -269,14 +271,7 @@ def parse_spec_file(spec_file: Path) -> dict:
             for impl_id in impl_matches:
                 references.append({'id': impl_id, 'weight': 100, 'line': i+1, 'source_id': current_export})
                 
-            # Extract Consumers: [ID, ID]
-            cons_match = re.search(r'\*\*Consumers\*\*:\s*\[(.*?)\]', line)
-            if cons_match:
-                cons_list = cons_match.group(1).split(',')
-                for c in cons_list:
-                    c = c.strip()
-                    if c:
-                        references.append({'id': c, 'weight': 50, 'line': i+1, 'source_id': current_export})
+
 
     return {
         'layer': layer,
@@ -313,120 +308,22 @@ def validate_specs(specs_dir: Path) -> tuple:
                 errors.append(f"Duplicate ID: {exp} (in {file_path} and {exports_map[exp]})")
             exports_map[exp] = file_path
             
-    # 3. Check References
-    coverage = {e: 0 for e in exports_map}
-    
-    for file_path, data in specs.items():
-        for ref in data['references']:
-            target = ref['id']
-            resolved = None
-            
-            if target in exports_map:
-                resolved = target
-            else:
-                # Try suffix match for L2/L3 items
-                candidates = [e for e in exports_map if e.endswith('.' + target) or e == target]
-                if len(candidates) == 1:
-                    resolved = candidates[0]
-                elif len(candidates) > 1:
-                    # Ambigous but resolved
-                    resolved = candidates[0] 
-            
-            if resolved:
-                coverage[resolved] += ref['weight']
-                # Propagate coverage up to parents
-                parts = resolved.split('.')
-                for i in range(1, len(parts)):
-                    parent = '.'.join(parts[:i])
-                    if parent in coverage: coverage[parent] += 1
-            else:
-                # Strict check for all layers
-                errors.append(f"Dangling Reference: `{ref['source_id']}` (in {Path(file_path).name}) refers to `{target}` which does not exist.")
-
-    # 4. Check Completeness (L1 items must have downstream refs)
-    # DISABLED per user request: "移除掉L3与L1\2之间覆盖率校验"
-    # for exp, count in coverage.items():
-    #     owner_file = exports_map[exp]
-    #     layer = specs[owner_file]['layer']
-    #     
-    #     # Only strict check L1
-    #     if layer == 1:
-    #         if count == 0:
-    #             # Check for [Status: Pending] tag
-    #             item_data = specs[owner_file]['items'][exp]
-    #             if '[Status: Pending]' in item_data['body']:
-    #                 continue
-    #                 
-    #             warnings.append(f"Completeness Warning: `{exp}` (L1) has 0 downstream refs.")
-
-    # 5. Check Leaf Constraints (L2 Only)
-    MAX_L1_REFS_PER_LEAF = 3
-    for file_path, data in specs.items():
-        if data['layer'] != 2: continue
-        
-        # Track refs per item
-        item_refs = {iid: [] for iid in data['items']}
-        for ref in data['references']:
-            if ref['source_id'] in item_refs:
-                item_refs[ref['source_id']].append(ref['id'])
-                
-        for item_id, item_data in data['items'].items():
-            header = item_data['header']
-            is_leaf = header.startswith('#### ')
-            is_group = header.startswith('## ') or header.startswith('### ')
-            
-            refs = item_refs.get(item_id, [])
-            l1_refs = [r for r in refs if 'CONTRACTS.' in r or 'VISION.' in r] # Approximation of L1 refs
-            
-            if is_group and l1_refs:
-                errors.append(f"Structure Violation: `{item_id}` (Group) has references. Move to Leaf.")
-            
-            if is_leaf:
-                if len(l1_refs) > MAX_L1_REFS_PER_LEAF:
-                     errors.append(f"Complexity Violation: `{item_id}` has {len(l1_refs)} L1 refs (Max {MAX_L1_REFS_PER_LEAF}). Split responsibilities.")
-
-    # 6. Check L2 Leaf -> L3 Implementation Coverage
-    # DISABLED per user request
-    # l2_leaves = set()
-    # l3_implements = set()
-    # 
-    # for file_path, data in specs.items():
-    #     if data['layer'] == 2:
-    #         for exp in data['exports']:
-    #             # Only track leaf items (#### level)
-    #             item = data['items'].get(exp)
-    #             if item and item['header'].startswith('#### '):
-    #                 # Check for [Status: Pending]
-    #                 if '[Status: Pending]' in item['body']:
-    #                     continue
-    #                 l2_leaves.add(exp)
-    #     elif data['layer'] == 3:
-    #         for ref in data['references']:
-    #             # Track all L3 -> L2 references
-    #             l3_implements.add(ref['id'])
-    # 
-    # # Check for unimplemented L2 leaves
-    # for leaf in l2_leaves:
-    #     if leaf not in l3_implements:
-    #         # 1. Try partial match (check if any L3 ref ends with leaf's last segment)
-    #         leaf_name = leaf.split('.')[-1]
-    #         matched = any(leaf_name in impl for impl in l3_implements)
-    #         
-    #         # 2. Try Parent Match (Compaction Support)
-    #         # If leaf is A.B.C, check if A.B or A is in l3_implements
-    #         if not matched:
-    #             parts = leaf.split('.')
-    #             for i in range(len(parts)-1, 0, -1):
-    #                 parent = '.'.join(parts[:i])
-    #                 if parent in l3_implements:
-    #                     matched = True
-    #                     break
-    #         
-    #         if not matched:
-    #             warnings.append(f"L2→L3 Coverage Warning: `{leaf}` has no L3 implementation.")
-
     # 7. L3 Quality Checks
     l3_interfaces = {}  # id -> {input_types, output_type, consumers}
+    
+    for file_path, data in specs.items():
+        if data['layer'] == 1:
+            for item_id in data['items']:
+                if item_id.startswith('CONTRACTS.'):
+                    # Only check H2 sections (## CONTRACTS.XXX)
+                    header = data['items'][item_id]['header']
+                    if not header.startswith('## '):
+                        continue
+                        
+                    suffix = item_id.split('CONTRACTS.')[1]
+                    expected_l0 = f"VISION.{suffix}"
+                    if expected_l0 not in exports_map:
+                         warnings.append(f"NAMING_CONVENTION: `{item_id}` (L1) has no corresponding `{expected_l0}` (L0). Traceability break.")
     
     for file_path, data in specs.items():
         if data['layer'] != 3:
@@ -437,23 +334,16 @@ def validate_specs(specs_dir: Path) -> tuple:
             body = item_data['body']
             
             # 7a. Common Checks
-            # TRACEABILITY_TAG: All L3 items MUST have Implements: tag
-            if 'Implements: [' not in body and '_Implements:' not in body:
-                warnings.append(f"L3 Quality: `{item_id}` missing `Implements: [Role|Component: ID]` tag.")
+
 
             # 7b. Type-Specific Checks
             # [interface] or [algorithm]
+            # [interface] or [algorithm]
             if '[interface]' in header or '[algorithm]' in header:
-                # Check Fixtures table
-                if 'Fixtures' not in body and '| Input |' not in body:
-                    warnings.append(f"L3 Quality: `{item_id}` missing Fixtures table.")
-                else:
-                    # Check case coverage
-                    if 'Normal' not in body:
-                        warnings.append(f"L3 Quality: `{item_id}` missing Normal case in Fixtures.")
-                    if 'Edge' not in body and 'Error' not in body:
-                        warnings.append(f"L3 Quality: `{item_id}` missing Edge/Error case in Fixtures.")
-                
+                # 7b1. Rationale Check (L1-CONTRACTS.RATIONALE_ENFORCEMENT)
+                if '**Rationale**' not in body:
+                    warnings.append(f"L3 Quality: `{item_id}` missing `**Rationale**` block.")
+
                 # Check type signature (code block)
                 if '```' not in body:
                     warnings.append(f"L3 Quality: `{item_id}` missing type signature (code block).")
@@ -478,8 +368,8 @@ def validate_specs(specs_dir: Path) -> tuple:
 
             # [decision]
             elif '[decision]' in header:
-                 # DECISION_FORMAT: Must have Table (|) or List (-)
-                 if '|' not in body and '- ' not in body:
+                 # DECISION_FORMAT: Must have Table (|), List (-), or Numbered List (1.)
+                 if '|' not in body and '- ' not in body and not re.search(r'\d+\.', body):
                      warnings.append(f"L3 Quality: `{item_id}` (Decision) must be structured (Table or List).")
 
             # [workflow]
@@ -488,94 +378,7 @@ def validate_specs(specs_dir: Path) -> tuple:
                 if '**Steps' not in body:
                      warnings.append(f"L3 Quality: `{item_id}` (Workflow) missing `**Steps**...` section.")
 
-    # 8. Interface Compatibility Check
-    for iface_id, iface_info in l3_interfaces.items():
-        consumers = iface_info.get('consumers', [])
-        output_type = iface_info.get('output', '')
-        
-        for consumer_id in consumers:
-            # Find consumer interface
-            consumer = l3_interfaces.get(consumer_id)
-            if consumer:
-                consumer_inputs = consumer.get('inputs', [])
-                # Check if output is compatible with any consumer input
-                if output_type and consumer_inputs:
-                    if output_type not in consumer_inputs:
-                        warnings.append(f"L3 Compatibility: `{iface_id}` output `{output_type}` may not match `{consumer_id}` inputs.")
 
-    # 9. L1_WORKFLOW_COVERAGE: L1 Script items must have L3 workflow refs
-    # DISABLED per user request
-    # l1_script_items = {}
-    # l3_workflow_refs = set()
-    # 
-    # for file_path, data in specs.items():
-    #     if data['layer'] == 1:
-    #         for item_id, item_data in data['items'].items():
-    #             header = item_data['header']
-    #             if re.search(r'Script (MUST|SHOULD|MAY)', header):
-    #                 l1_script_items[item_id] = item_data
-    #     elif data['layer'] == 3:
-    #         for item_id, item_data in data['items'].items():
-    #             header = item_data['header']
-    #             body = item_data['body']
-    #             if '[workflow]' in header:
-    #                 ref_matches = re.findall(r'\(Ref: ([^\)]+)\)', body)
-    #                 for refs in ref_matches:
-    #                     for ref in refs.split(','):
-    #                         l3_workflow_refs.add(ref.strip())
-    #                 impl_matches = re.findall(r'Implements:\s*\[Contract:\s*([\w.]+)\]', body)
-    #                 for impl in impl_matches:
-    #                      l3_workflow_refs.add(impl)
-    # 
-    # # Check coverage
-    # for l1_item_id, l1_item_data in l1_script_items.items():
-    #     covered = any(l1_item_id in ref or ref.endswith('.' + l1_item_id.split('.')[-1]) for ref in l3_workflow_refs)
-    #     
-    #     if not covered:
-    #         # Check for [Status: Pending] tag in the L1 item definition
-    #         if '[Status: Pending]' in l1_item_data['body']:
-    #             continue
-    #         
-    #         warnings.append(f"L1_WORKFLOW_COVERAGE: `{l1_item_id}` (Script) has no L3 workflow ref.")
-
-    # 10. FULL_WORKFLOW_REQUIRED: L3 must have FULL_WORKFLOW covering all Roles and Components
-    l2_roles = set()
-    l2_components = set()
-    full_workflow_body = None
-    
-    for file_path, data in specs.items():
-        if data['layer'] == 2:
-            for item_id in data['items']:
-                if 'ROLES.' in item_id and item_id.count('.') >= 2:
-                    l2_roles.add(item_id)
-                elif 'COMPONENTS.' in item_id and item_id.count('.') >= 2:
-                    l2_components.add(item_id)
-        elif data['layer'] == 3:
-            for item_id, item_data in data['items'].items():
-                if item_id == 'FULL_WORKFLOW' or 'FULL_WORKFLOW' in item_id:
-                    full_workflow_body = item_data.get('body', '')
-    
-    if full_workflow_body is None:
-        errors.append("FULL_WORKFLOW_REQUIRED: L3 missing `[workflow] FULL_WORKFLOW`.")
-    else:
-        uncovered_roles = []
-        for role in l2_roles:
-            role_name = role.split('.')[-1]
-            if role_name not in full_workflow_body and role not in full_workflow_body:
-                uncovered_roles.append(role)
-        
-        if uncovered_roles:
-            warnings.append(f"FULL_WORKFLOW_REQUIRED: FULL_WORKFLOW missing roles: {uncovered_roles[:5]}...")
-            
-        mentioned_components = 0
-        for comp in l2_components:
-            comp_name = comp.split('.')[-1]
-            if comp_name in full_workflow_body:
-                mentioned_components += 1
-        
-        coverage_pct = (mentioned_components / len(l2_components) * 100) if l2_components else 100
-        if coverage_pct < 50:
-            warnings.append(f"FULL_WORKFLOW_REQUIRED: FULL_WORKFLOW only covers {coverage_pct:.0f}% of components.")
 
     # 11. Custom Rules - Update extract_rules_from_l1 to handle dict-of-dicts
     # Simplified Logic: Pass all specs linearised

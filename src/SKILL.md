@@ -14,11 +14,17 @@ Manage the refinement of raw thoughts into traceable specifications.
 These triggers rely on the agent's ability to infer intent from the environment, reducing cognitive load.
 
 #### `vibespec` (no arguments)
+1. **Interactive Menu**:
+   - Present a list of available workflows (`onboard`, `test`, `bug`, `reflect`, `distill`, `review`, `idea`).
+   - Ask user to select or provide a new idea.
+
+#### `vibespec onboard`
 1. **Context Scan**:
-   - If `specs/` missing → **Bootstrap Phase**.
-   - If `ideas/` has files → **Refine Phase** (Process pending ideas).
-   - If `SKILL.md` changed → **Reload Phase**.
-   - If nothing pending → **Comprehension Check** (Summarize project status).
+   - If `specs/` missing → **Bootstrap Step**.
+   - If `ideas/` has files → **IdeaToSpecWorkflow** (Process pending ideas).
+   - If nothing pending → 
+      - IF (Inside active session) → **Comprehension Check**.
+      - ELSE → Run **SpecValidationWorkflow** (Self-audit existing health).
 
 #### `vibespec reflect`
 1. **Insight Mining**:
@@ -26,25 +32,12 @@ These triggers rely on the agent's ability to infer intent from the environment,
    - Extract new requirements or architectural changes.
    - Propose them as formal ideas (saves user typing).
 
-#### `vibespec automate`
-1. **Auto-Pilot Mode**:
-   - **Goal**: Zero human interaction until clean.
-   - Loop:
-     1. Analyze & Refine all pending ideas.
-     2. Auto-fix validation warnings (Cascade L1->L3).
-   - Stop when: 0 ideas, 0 warnings.
-
-#### `vibespec reload`
-1. **Hot Reload**:
-   - Re-read `SKILL.md` from disk.
-   - Acknowledge update to user.
-
 ---
 
 ### Active / Power-User
 Explicit commands for specific, targeted actions.
 
-#### `vibespec <content>`
+#### `vibespec idea <content>`
 - **Capture**: Save `<content>` as a new idea file.
 - Use when you have a specific requirement to record.
 
@@ -54,22 +47,17 @@ Explicit commands for specific, targeted actions.
 
 #### `vibespec bug [description]`
 - **Debug**: Start Root Cause Analysis (RCA).
-- Flow: Trace failure Bottom-Up -> Fix Top-Down.
+- **Flow (BugRCAWorkflow)**:
+    1. **Trace (Bottom-Up)**: Recursive failure analysis from Code to Vision (L3 -> L0).
+    2. **Resolve (Top-Down)**: Fix the Root Cause Spec (RCS) and cascade changes downward.
+    3. **Certify**: Verify the fix through **CertificationWorkflow**.
 
 #### `vibespec distill`
-- **Reverse Engineer**: Scan `src/` to generate/update L3 specs.
-- Use when code has drifted ahead of specs.
-
-#### `vibespec test [SPEC_ID]`
-- **Verify**: Run tests for a specific target.
-- Flags: `--generate` to fill in test stubs.
-
-#### `vibespec build`
-- **Sync**: Update artifacts based on `vibespec.yaml`.
+- **DistillWorkflow**: Scan `src/` to update L3 specs when code has drifted ahead.
 
 ---
 
-## Phase 0: Bootstrap (First-Time Setup)
+## BootstrapWorkflow (First-Time Setup)
 
 **Trigger**: `specs/` directory does not exist.
 
@@ -80,14 +68,7 @@ Explicit commands for specific, targeted actions.
    - Split into **In-Scope** (target capabilities) and **Out-of-Scope** (non-goals).
    - Use declarative, machine-verifiable language (e.g., "The system SHALL..." / "The system SHALL NOT...").
 3. **Present for Review**: Use `notify_user` to show the reformulated scope. **STOP** and wait for approval.
-4. **Create L0-VISION.md**: Upon approval, create `specs/L0-VISION.md` with:
-   ```yaml
-   layer: 0
-   id: VISION
-   version: 1.0.0
-   exports:
-     - VISION.SCOPE
-   ```
+4. **Create L0-VISION.md**: Upon approval, create `specs/L0-VISION.md` using the template from `src/assets/specs/L0-VISION.md`.
 5. **Initialize Ideas Folder**: Create `ideas/` directory.
 
 ### Example Dialogue
@@ -113,13 +94,12 @@ Agent: I've reformulated your scope:
 
 ---
 
-## Phase 1: Ingest
+## IdeaToSpecWorkflow: Ingest & Refinement
 
+### Phase 1: Ingest
 1. List all `.md` files in `ideas/`.
 2. If NOT empty → Proceed to Phase 2.
-3. If empty:
-   - IF `SKILL.md` exists (self-hosting mode) → Enter **Phase 6: Validation Mode**.
-   - ELSE → Phase 0 
+3. If empty → **Halt**: Inform user "No pending ideas."
 
 ## Phase 2: Analysis & Decomposition
 
@@ -137,11 +117,11 @@ Process the specific layer L(N) identified in Phase 2:
 ┌─────────────────────────────────────────────────┐
 │ 1. LLM Decompose: Analyze L(N) changes          │
 │ 2. LLM Revise: Draft updates for L(N+1)         │
-│ 3. Validate: Run `python3 scripts/validate.py`  │
+│ 3. Validate: Run `python3 src/scripts/validate.py` │
 │    ├─ FAIL (<3x) → Return to step 2 (Self-fix)  │
 │    ├─ FAIL (>3x) → **REVERT** changes & STOP    │
 │    └─ PASS → Continue to step 4                 │
-│ 4. **Self-Review** (REVIEW_PROTOCOL):           │
+│ 4. **Self-Audit** (REVIEW_PROTOCOL):           │
 │    ├─ HIERARCHY_CHECK: Load L(N-1), verify full │
 │    │  implementation of parent requirements.    │
 │    ├─ OMISSION_CHECK: Every key in L(N-1) must  │
@@ -154,8 +134,7 @@ Process the specific layer L(N) identified in Phase 2:
 │    - Call notify_user with findings             │
 │    - WAIT for explicit human approval           │
 │    - **REJECT**? → **REVERT** changes & Re-plan │
-│    - **APPROVE**? → Proceed to L(N+1) OR        │
-│      **STOP** (if Code-First preferred)         │
+│    - **APPROVE**? → Proceed to L(N+1)           │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -163,15 +142,32 @@ Process the specific layer L(N) identified in Phase 2:
 > **INV_HUMAN_APPROVAL Enforcement**: Each layer is a SEPARATE approval cycle.
 > Never batch multiple layers. One validate → One human review → One approval.
 
-## Phase 4: Archive & Complete
+### Phase 4: Archive & Complete
 
-1. Move processed ideas to `ideas/archived/`.
-2. **Scan**: Check if `ideas/*.md` exists.
-3. **Compile Prompt**: 
-   - IF (No pending ideas): Explicitly ask user: "Run compilation now?"
-   - ELSE: Loop back to Phase 2.
-4. If yes: Run `python3 scripts/generate_tests.py`.
+1. **Move processed ideas**: Agent moves processed files to `ideas/archived/`.
+2. **Post-Refinement (Manual Gate)**: If `ideas/` is empty, Agent SHALL explicitly ask: "Refinement complete. Should I proceed to **Certification** (tests/coverage)?"
+   - **STOP**: Do NOT run scripts until user says 'yes'.
 
+---
+
+## CertificationWorkflow (Acceptance Gates)
+
+**Purpose**: Verify system correctness by generating, refining, and executing L1 contract tests.
+
+**Trigger**: **Manual Approval** after Phase 4 or explicit `vibespec test` command.
+
+**Constraint**: Only L1 items (Contracts) SHALL generate automated tests.
+
+### Steps
+1. **Generate**: Run `python3 src/scripts/generate_tests.py specs/`.
+   - Action: Processes L1 specs to create Answer Keys and Test Papers in `tests/specs/agent/`.
+2. **Refine (Batch Mode)**:
+   - Agent finds ALL tests with `# TODO` or `pass` in `tests/specs/agent/`.
+   - Reads requirements from `@verify_spec("ID")`.
+   - **Batching**: Group all assertion logic proposals into a SINGLE `notify_user` call.
+   - **Write**: Save approved files.
+3. **Execute**: Run `python3 src/scripts/test.py`.
+   - Action: Executes regression tests and reports PASS/FAIL counts.
 
 ---
 
@@ -183,11 +179,11 @@ Process the specific layer L(N) identified in Phase 2:
 
 ---
 
-## Phase 6: Validation Mode
+## SpecValidationWorkflow
 
 **Trigger**: No pending ideas AND `SKILL.md` exists (self-hosting mode).
 
-1. Run `python3 scripts/validate.py specs/`.
+1. Run `python3 src/scripts/validate.py specs/`.
 
 2. **Report**: Summarize findings:
    - Orphan IDs (L0/L1 items with no downstream refs)
@@ -195,19 +191,19 @@ Process the specific layer L(N) identified in Phase 2:
    - Terminology warnings
    - Expansion ratio warnings
 3. **Propose Fixes**: If errors found, generate ideas to resolve them.
-4. **Compile**: If validation passes, prompt for compilation.
+4. **Trigger**: If validation passes, prompt for test generation/sync.
 
 ---
 
 ## Tools
 
-Use standalone scripts (zero dependencies) for mechanical operations:
-- `python3 scripts/validate.py specs/` - Structural validation.
-- `python3 scripts/generate_tests.py specs/ --tests-dir tests/` - Generate test stubs.
-- `bash scripts/archive_ideas.sh` - Archive processed ideas.
+Use standalone scripts for mechanical operations:
+- `python3 src/scripts/validate.py specs/` - Structural validation (PascalCase, RFC2119).
+- `python3 src/scripts/generate_tests.py specs/` - Generate L1 test artifacts.
+- `python3 src/scripts/test.py` - Coverage reporting and test execution.
+- `bash src/scripts/archive_ideas.sh` - Archive processed ideas.
 
-
-**IMPORTANT**: Run `python3 scripts/validate.py specs/` IMMEDIATELY after each layer modification, BEFORE presenting to human for review.
+**IMPORTANT**: Run `python3 src/scripts/validate.py` IMMEDIATELY after each refinement cycle, BEFORE presenting to human review.
 
 ---
 
@@ -264,65 +260,36 @@ tests/specs/
 └── contracts/   # L1 Contract answer_key placeholders
 ```
 
-**Phase 1: Run Coverage Analyzer**
+**Phase 1: Run Test Runner**
 ```bash
-python3 src/scripts/test_coverage.py
+python3 src/scripts/test.py
 ```
 This script outputs:
-- 📈 Overall coverage percentage
-- ❌ MISSING tests (need `vibespec compile`)
-- ⚠️ STUB tests (need `vibespec test --generate`) with YAML format for Contracts
-- ✅ COMPLETE tests
+- 📈 Overall coverage percentage (L1 Contracts)
+- ❌ MISSING artifacts (need `generate_tests.py`)
+- ⚠️ STUB tests (need `TestRefinementWorkflow`)
+- ✅ COMPLETE/CERTIFIED tests
 
-**Phase 2: Analyze Coverage Output**
-- Agent reads the YAML output under `tests_to_generate:`
-- Each item includes: `id`, `type`, `test_owner`, `path`, `fixtures` count
+**Phase 2: Analyze Coverage Dashboard**
+- Agent checks the `[acceptance]` group in the dashboard.
+- Any deficit in `Agent Contracts (YAML)` denotes a gap in the Certification suite.
 
 
-**Phase 3: Execute Existing Tests**
-- Run `python -m pytest tests/specs/` or individual test files
-- Report PASS/FAIL counts
-
-**Phase 4: Report**
-```
-=== Vibespec Test Coverage ===
-L1 Contracts: X/Y (Z%)
----
-Tests: PASS/FAIL
-```
-
-### `vibespec test --generate`
-
-**Purpose**: Agent fills in stub tests generated by `vibespec compile`.
-
-**Trigger**: Tests exist but contain `# TODO` or `pass` statements.
-
-**TEST_DESIGNER Role Actions**:
-
-1. **Scan for Stubs**:
-   - Find tests with `# TODO: Implement test logic` or empty `pass` statements.
-   
-2. **For Each Stub Test**:
-   a. **Read Source Spec**: Extract the referenced `@verify_spec("ID")` to locate the spec requirement.
-   b. **Generate Assertion Logic**:
-      - Create test logic that verifies the spec requirement is met.
-      - Ensure independent verification (no implementation leakage).
-   
-3. **Request Approval**:
-   - Present generated code to user via `notify_user`.
-   - ⛔ **STOP** and wait for explicit approval.
-   
-4. **Write Updated Test**:
-   - Upon approval, save the filled-in test file.
+**Phase 3: Execute Regression Tests**
+- The runner executes all finalized Python tests in `tests/specs/agent/`.
+- Report PASS/FAIL status for each contract rule.
 
 **Example Flow**:
 ```
 Agent: I found 3 stub tests in tests/specs/agent/.
-       Generating assertions for test_contract_validator.py...
+       Generated assertion proposals for all of them.
        
-       [Shows generated code]
+       [Proposal 1: test_contract_a.py]
+       ...
+       [Proposal 2: test_contract_b.py]
+       ...
        
-       Approve? (y/n)
+       Approve all and write to disk? (y/n)
 User: y
-Agent: ✅ Updated test_contract_validator.py.
+Agent: ✅ Certified 3 tests.
 ```

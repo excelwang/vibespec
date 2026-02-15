@@ -1,9 +1,9 @@
-# Answer Key: L1.CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION
-<!-- @verify_spec("L1.CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION") -->
+# Answer Key: L1.CONTRACTS.REFLECTION.HUMAN_REVIEW
+<!-- @verify_spec("L1.CONTRACTS.REFLECTION.HUMAN_REVIEW") -->
 
 ## Question
 
-**Contract Rule**: Agent MUST generate tests for uncovered L1 items.
+**Contract Rule**: Agent MUST get approval before saving distilled ideas or specs.
 
 Describe how the Agent should behave in the following scenarios:
 
@@ -12,6 +12,6 @@ Describe how the Agent should behave in the following scenarios:
 
 | Scenario | Agent Action | Expected Outcome |
 |----------|--------------|------------------|
-| Standard Compliance | Adhere to contract TEST_GENERATION | Contract satisfied |
+| Standard Compliance | Adhere to contract HUMAN_REVIEW | Contract satisfied |
 | Edge Case | Handle gracefully | no violation |
 <!-- ANSWER_END -->

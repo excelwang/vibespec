@@ -1,9 +1,9 @@
-# Answer Key: L1.CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION
-<!-- @verify_spec("L1.CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION") -->
+# Answer Key: L1.CONTRACTS.VALIDATION.FIX_PROPOSAL
+<!-- @verify_spec("L1.CONTRACTS.VALIDATION.FIX_PROPOSAL") -->
 
 ## Question
 
-**Contract Rule**: Agent MUST generate tests for uncovered L1 items.
+**Contract Rule**: Agent MUST generate ideas for found errors during interactive sessions.
 
 Describe how the Agent should behave in the following scenarios:
 
@@ -12,6 +12,6 @@ Describe how the Agent should behave in the following scenarios:
 
 | Scenario | Agent Action | Expected Outcome |
 |----------|--------------|------------------|
-| Standard Compliance | Adhere to contract TEST_GENERATION | Contract satisfied |
+| Standard Compliance | Adhere to contract FIX_PROPOSAL | Contract satisfied |
 | Edge Case | Handle gracefully | no violation |
 <!-- ANSWER_END -->

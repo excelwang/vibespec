@@ -30,8 +30,7 @@ Validate the framework using its own bootstrap specifications:
 # Validate the bootstrap specs
 python3 scripts/validate.py specs/
 
-# Compile to a single authoritative document
-python3 scripts/compile.py specs/ vibespecS.md
+
 ```
 
 ## The Spec Hierarchy

@@ -5,7 +5,20 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 1. L1.CONTRACTS.LEAF_TYPE_PURITY.DECOMPOSE_MIXED
+## 1. L1.CONTRACTS.L3_TYPE_ANNOTATION.ADAPTIVE_TYPING
+
+**Contract**: Agent MUST classify L3 items based on project topology.
+
+| Scenario | Your Decision | Rationale |
+|----------|---------------|----------|
+| Standard Case | | |
+| Edge Case | | |
+
+> [Answer Key](./answer_key_l1_contracts_l3_type_annotation_adaptive_typing.md)
+
+---
+
+## 2. L1.CONTRACTS.LEAF_TYPE_PURITY.DECOMPOSE_MIXED
 
 **Contract**: Agent MUST decompose mixed items until each leaf is pure.
 
@@ -18,7 +31,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 2. L1.CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING
+## 3. L1.CONTRACTS.IDEAS_PIPELINE.LEVEL_SEEKING
 
 **Contract**: Agent MUST classify each idea to highest applicable layer.
 
@@ -31,7 +44,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 3. L1.CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION
+## 4. L1.CONTRACTS.IDEAS_PIPELINE.DECOMPOSITION
 
 **Contract**: Agent MUST split mixed-level ideas and process sequentially.
 
@@ -44,7 +57,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 4. L1.CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED
+## 5. L1.CONTRACTS.IDEAS_PIPELINE.APPROVAL_REQUIRED
 
 **Contract**: Agent MUST pause for human review after creating idea file.
 
@@ -57,7 +70,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 5. L1.CONTRACTS.IDEAS_PIPELINE.CONFLICT_DETECT
+## 6. L1.CONTRACTS.IDEAS_PIPELINE.CONFLICT_DETECT
 
 **Contract**: Agent MUST identify conflicting ideas before resolution.
 
@@ -70,7 +83,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 6. L1.CONTRACTS.IDEAS_PIPELINE.CONFLICT_RES
+## 7. L1.CONTRACTS.IDEAS_PIPELINE.CONFLICT_RES
 
 **Contract**: Agent MUST resolve detected conflicts by latest timestamp.
 
@@ -83,7 +96,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 7. L1.CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT
+## 8. L1.CONTRACTS.REVIEW_PROTOCOL.SELF_AUDIT
 
 **Contract**: Agent MUST read full layer content after revision.
 
@@ -96,7 +109,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 8. L1.CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK
+## 9. L1.CONTRACTS.REVIEW_PROTOCOL.HIERARCHY_CHECK
 
 **Contract**: Agent MUST load parent layer before editing child.
 
@@ -109,7 +122,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 9. L1.CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY
+## 10. L1.CONTRACTS.REVIEW_PROTOCOL.REDUNDANCY
 
 **Contract**: Agent MUST flag duplicate definitions and overlapping content.
 
@@ -122,7 +135,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 10. L1.CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION
+## 11. L1.CONTRACTS.REVIEW_PROTOCOL.CONTRADICTION
 
 **Contract**: Agent MUST flag conflicts with existing content.
 
@@ -135,7 +148,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 11. L1.CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION
+## 12. L1.CONTRACTS.REVIEW_PROTOCOL.NOTIFICATION
 
 **Contract**: Agent MUST present all findings during approval.
 
@@ -148,7 +161,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 12. L1.CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY
+## 13. L1.CONTRACTS.REVIEW_PROTOCOL.SEQUENTIAL_ONLY
 
 **Contract**: Agent MUST NOT edit multiple layers in one turn.
 
@@ -161,7 +174,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 13. L1.CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY
+## 14. L1.CONTRACTS.REVIEW_PROTOCOL.SKILL_TRACEABILITY
 
 **Contract**: Agent MUST NOT edit SKILL.md without updating L3.
 
@@ -174,20 +187,20 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 14. L1.CONTRACTS.REVIEW_PROTOCOL.ROLE_FIRST_REVIEW
+## 15. L1.CONTRACTS.REVIEW_PROTOCOL.ROLE_SELF_AUDIT
 
-**Contract**: Agent MUST evaluate revision quality through REVIEWER role before fixing validation errors.
+**Contract**: Agent MUST evaluate revision quality through self-audit before fixing validation errors.
 
 | Scenario | Your Decision | Rationale |
 |----------|---------------|----------|
 | Standard Case | | |
 | Edge Case | | |
 
-> [Answer Key](./answer_key_l1_contracts_review_protocol_role_first_review.md)
+> [Answer Key](./answer_key_l1_contracts_review_protocol_role_self_audit.md)
 
 ---
 
-## 15. L1.CONTRACTS.REVIEW_PROTOCOL.LAYER_SPECIFIC
+## 16. L1.CONTRACTS.REVIEW_PROTOCOL.LAYER_SPECIFIC
 
 **Contract**: Agent MUST apply layer-specific review criteria during quality review.
 
@@ -200,7 +213,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 16. L1.CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW
+## 17. L1.CONTRACTS.REVIEW_PROTOCOL.CASCADE_REVIEW
 
 **Contract**: Agent MUST evaluate downstream spec impact when reviewing current level.
 
@@ -213,7 +226,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 17. L1.CONTRACTS.REJECTION_HANDLING.AUTOMATED_GIVEUP
+## 18. L1.CONTRACTS.REJECTION_HANDLING.AUTOMATED_GIVEUP
 
 **Contract**: Agent MUST revert and halt after 3 failed retries.
 
@@ -226,7 +239,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 18. L1.CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION
+## 19. L1.CONTRACTS.REJECTION_HANDLING.HUMAN_REJECTION
 
 **Contract**: Agent MUST revert to pre-task state on user rejection.
 
@@ -239,7 +252,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 19. L1.CONTRACTS.REFLECT.HUMAN_REVIEW
+## 20. L1.CONTRACTS.REFLECT.HUMAN_REVIEW
 
 **Contract**: Agent MUST get approval before saving distilled ideas.
 
@@ -252,7 +265,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 20. L1.CONTRACTS.SCRIPT_FIRST.PROACTIVE
+## 21. L1.CONTRACTS.SCRIPT_FIRST.PROACTIVE
 
 **Contract**: Agent MUST propose scripts for repetitive workflows.
 
@@ -265,7 +278,20 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 21. L1.CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY
+## 22. L1.CONTRACTS.EVOLUTION.DISTILLATION
+
+**Contract**: Agent MUST distill L2/L3 specs from source code before verifying feature completion.
+
+| Scenario | Your Decision | Rationale |
+|----------|---------------|----------|
+| Standard Case | | |
+| Edge Case | | |
+
+> [Answer Key](./answer_key_l1_contracts_evolution_distillation.md)
+
+---
+
+## 23. L1.CONTRACTS.BOOTSTRAP.SCOPE_INQUIRY
 
 **Contract**: Agent MUST ask user to describe project.
 
@@ -278,7 +304,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 22. L1.CONTRACTS.BOOTSTRAP.SCOPE_REFORM
+## 24. L1.CONTRACTS.BOOTSTRAP.SCOPE_REFORM
 
 **Contract**: Agent MUST convert input to SHALL/SHALL NOT statements.
 
@@ -291,7 +317,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 23. L1.CONTRACTS.BOOTSTRAP.APPROVAL_GATE
+## 25. L1.CONTRACTS.BOOTSTRAP.APPROVAL_GATE
 
 **Contract**: Agent MUST get approval before creating files.
 
@@ -304,59 +330,46 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 24. L1.CONTRACTS.TRIGGERS.IDLE_BEHAVIOR
+## 26. L1.CONTRACTS.VALIDATION.FIX_PROPOSAL
 
-**Contract**: Agent MUST enter Validation Mode when ideas/ empty and SKILL.md exists.
-
-| Scenario | Your Decision | Rationale |
-|----------|---------------|----------|
-| Standard Case | | |
-| Edge Case | | |
-
-> [Answer Key](./answer_key_l1_contracts_triggers_idle_behavior.md)
-
----
-
-## 25. L1.CONTRACTS.TRIGGERS.EMPTY_PROMPT
-
-**Contract**: Agent MUST invite brainstorming when project empty.
+**Contract**: Agent MUST generate ideas for found errors during interactive sessions.
 
 | Scenario | Your Decision | Rationale |
 |----------|---------------|----------|
 | Standard Case | | |
 | Edge Case | | |
 
-> [Answer Key](./answer_key_l1_contracts_triggers_empty_prompt.md)
+> [Answer Key](./answer_key_l1_contracts_validation_fix_proposal.md)
 
 ---
 
-## 26. L1.CONTRACTS.VALIDATION_MODE.REPORT
+## 27. L1.CONTRACTS.REFLECTION.HUMAN_REVIEW
 
-**Contract**: Agent MUST summarize orphans, ratio warnings, terminology issues.
+**Contract**: Agent MUST get approval before saving distilled ideas or specs.
 
 | Scenario | Your Decision | Rationale |
 |----------|---------------|----------|
 | Standard Case | | |
 | Edge Case | | |
 
-> [Answer Key](./answer_key_l1_contracts_validation_mode_report.md)
+> [Answer Key](./answer_key_l1_contracts_reflection_human_review.md)
 
 ---
 
-## 27. L1.CONTRACTS.VALIDATION_MODE.FIX_PROPOSAL
+## 28. L1.CONTRACTS.GAP_ANALYSIS.GAP_DETECTION
 
-**Contract**: Agent MUST generate ideas for found errors.
+**Contract**: Agent MUST detect missing links between L1->L2->L3->Code during `reflect` or `validate` phases.
 
 | Scenario | Your Decision | Rationale |
 |----------|---------------|----------|
 | Standard Case | | |
 | Edge Case | | |
 
-> [Answer Key](./answer_key_l1_contracts_validation_mode_fix_proposal.md)
+> [Answer Key](./answer_key_l1_contracts_gap_analysis_gap_detection.md)
 
 ---
 
-## 28. L1.CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION
+## 29. L1.CONTRACTS.STRICT_TESTABILITY.MOCK_GENERATION
 
 **Contract**: Agent MUST generate mock objects for external interfaces.
 
@@ -369,7 +382,20 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 29. L1.CONTRACTS.BUILD_STRATEGY.REWRITE_THRESHOLD
+## 30. L1.CONTRACTS.BUILD_STRATEGY.GAP_ANALYSIS_FIRST
+
+**Contract**: Agent MUST perform gap analysis during self-audit before implementation.
+
+| Scenario | Your Decision | Rationale |
+|----------|---------------|----------|
+| Standard Case | | |
+| Edge Case | | |
+
+> [Answer Key](./answer_key_l1_contracts_build_strategy_gap_analysis_first.md)
+
+---
+
+## 31. L1.CONTRACTS.BUILD_STRATEGY.REWRITE_THRESHOLD
 
 **Contract**: Agent MUST request human approval if gap exceeds 70%.
 
@@ -382,9 +408,9 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 30. L1.CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION
+## 32. L1.CONTRACTS.TESTING_WORKFLOW.TEST_GENERATION
 
-**Contract**: Agent MUST generate tests for uncovered L3 fixtures.
+**Contract**: Agent MUST generate tests for uncovered L1 items.
 
 | Scenario | Your Decision | Rationale |
 |----------|---------------|----------|
@@ -395,7 +421,7 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 
 ---
 
-## 31. L1.CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST
+## 33. L1.CONTRACTS.TESTING_WORKFLOW.HUMAN_APPROVAL_TEST
 
 **Contract**: Agent MUST request approval before saving generated tests.
 
@@ -405,32 +431,6 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 | Edge Case | | |
 
 > [Answer Key](./answer_key_l1_contracts_testing_workflow_human_approval_test.md)
-
----
-
-## 32. L1.CONTRACTS.CERTIFICATION.ANSWER_KEY_FORMAT
-
-**Contract**: Agent MUST generate answer keys as Markdown files with `<!-- ANSWER_START -->` and `<!-- ANSWER_END -->` markers.
-
-| Scenario | Your Decision | Rationale |
-|----------|---------------|----------|
-| Standard Case | | |
-| Edge Case | | |
-
-> [Answer Key](./answer_key_l1_contracts_certification_answer_key_format.md)
-
----
-
-## 33. L1.CONTRACTS.CERTIFICATION.VERIFY_SPEC_ANNOTATION
-
-**Contract**: Agent MUST include `@verify_spec_id("SPEC_ID")` annotation per test item.
-
-| Scenario | Your Decision | Rationale |
-|----------|---------------|----------|
-| Standard Case | | |
-| Edge Case | | |
-
-> [Answer Key](./answer_key_l1_contracts_certification_verify_spec_annotation.md)
 
 ---
 
@@ -496,6 +496,19 @@ Reference `specs/L1-CONTRACTS.md` for policy decisions.
 | Edge Case | | |
 
 > [Answer Key](./answer_key_l1_contracts_template_generation_use_templates.md)
+
+---
+
+## 39. L1.CONTRACTS.WORKFLOW_EXECUTION.BUILD_BEFORE_TEST
+
+**Contract**: Agent MUST execute Build phase before Test phase in E2E workflows.
+
+| Scenario | Your Decision | Rationale |
+|----------|---------------|----------|
+| Standard Case | | |
+| Edge Case | | |
+
+> [Answer Key](./answer_key_l1_contracts_workflow_execution_build_before_test.md)
 
 ---
 
