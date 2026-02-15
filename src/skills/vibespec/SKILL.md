@@ -80,7 +80,7 @@ Explicit commands for specific, targeted actions.
 2. If NOT empty → Proceed to Phase 2.
 3. If empty → **Halt**: Inform user "No pending ideas."
 
-## Phase 2: Analysis & Decomposition
+### Phase 2: Analysis & Decomposition
 
 → **Load** `references/layer_system.md` for classification rules.
 
@@ -91,7 +91,7 @@ Explicit commands for specific, targeted actions.
    - **Decomposition**: If idea contains mixed levels (e.g., L1 contract + L3 implementation), decompose into segments.
 4. **Queueing**: Order segments by layer (Highest -> Lowest).
 
-## Phase 3: Layered Refinement Cycle
+### Phase 3: Layered Refinement Cycle
 
 → **Load** `references/review_and_quality.md` for format rules and review checklist.
 
@@ -120,6 +120,7 @@ Process the specific layer L(N) identified in Phase 2:
 > Never batch multiple layers. One validate → One human review → One approval.
 
 ### Phase 4: Archive & Complete
+
 
 1. **Move processed ideas**: Agent moves processed files to `ideas/archived/` (e.g., using `mv`).
 2. **Gap Analysis**: Agent MUST detect missing links (MISSING, OUTDATED, ORPHAN) across L1→L2→L3→Code.

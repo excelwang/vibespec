@@ -2,12 +2,12 @@
 """
 Vibespec Unified Validator & Auditor
 Enforces structural standards and implementation coverage.
-Uses only standard library to ensure portability across agent environments.
+Dependencies: PyYAML (for custom rule parsing from L1 VIBE_SPEC_RULES).
 """
 import os
 import re
 import sys
-import yaml # Only external dependency, but required for custom rules
+import yaml
 from pathlib import Path
 import argparse
 
