@@ -186,11 +186,11 @@ Use standalone scripts for mechanical operations:
   - `ideas/` - Draft requirements and backlog.
 
 - **Test Generation Protocol**: When authoring tests in `tests/specs/`, follow these rules:
-  1. **Mapping**: L1 Contract items (e.g., `CONTRACTS.ALGEBRAIC_VALIDATION`) MUST be implemented as System/Compliance tests.
-  2. **Naming**: Use `test_<item_id_lowercased_snake_case>.<ext>`. 
-     - Pattern: `test_<spec_id_lowercase>_<hex_id_lowercase>.<ext>`
-     - Example: `CONTRACTS.BOOTSTRAP` -> `test_contracts_bootstrap.py`.
-  3. **Mandatory Annotation**: Every test MUST include `@verify_spec("ID")` (as a decorator or comment) to enable coverage auditing by `validate.py`.
+  1. **Mapping**: Tests MUST verify L1 Contract items (e.g., `CONTRACTS.BOOTSTRAP`). Do NOT map to L2/L3 component names.
+  2. **Naming**: Use `test_contracts_<suffix_snake_case>.py`.
+     - Example: `CONTRACTS.TRACEABILITY` -> `test_contracts_traceability.py`.
+  3. **Mandatory Annotation**: Every test MUST use `@verify_spec("CONTRACTS.XXX")` to enable L1 coverage auditing.
+  4. **Validation**: Tests MUST exercise `validate.py` or `src/` code against synthetic spec fixtures (Integration Tests).
 
 - **Template-Based**: Use templates from `assets/` when generating files:
   - `IDEA_TEMPLATE.md` → idea files
