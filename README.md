@@ -20,7 +20,7 @@ pip install -e .
 
 - **[Philosophy & Concepts](docs/PHILOSOPHY.md)** - Understanding Vibe Coding and Self-Hosting.
 - **[Technical Architecture](docs/TECHNICAL_DESIGN.md)** - How the compiler, traceability, and testing protocols work.
-- **[小白入门概念 (Concepts for Beginners)](docs/CONCEPTS.md)** - 通俗易懂的解释。
+- **[Concepts for Beginners](docs/CONCEPTS.md)** - Easy to understand explanations.
 
 ## Quick Start (Dogfooding)
 
