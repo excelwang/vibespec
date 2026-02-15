@@ -170,22 +170,42 @@ def parse_spec_file(spec_file: Path) -> dict:
 
     return {'layer': layer, 'id': spec_id, 'version': version, 'exports': exports, 'references': references, 'file': str(spec_file), 'items': items, 'body': body}
 
-def scan_existing_tests(tests_root: Path) -> set:
-    covered_ids = set()
+def scan_existing_tests(tests_root: Path) -> dict:
+    """Scan tests and identify if they are skeletons (Phase 1) or implemented (Phase 2)."""
+    test_metadata = {}
     extensions = {'.py', '.js', '.ts', '.go'}
     if tests_root.exists():
         for test_file in tests_root.rglob("*"):
             if test_file.suffix in extensions:
                 try:
                     content = test_file.read_text()
+                    # Find all @verify_spec matches
                     for match in re.finditer(r'@verify_spec\(["\']([^"\']+)["\']\)', content):
-                        covered_ids.add(match.group(1))
+                        spec_id = match.group(1)
+                        
+                        # Heuristic: Check if the function following this decorator contains skipTest
+                        # We look at the block of text after the match until the next decorator or function end
+                        start_pos = match.end()
+                        next_block = content[start_pos : start_pos + 500] # Look ahead 500 chars
+                        
+                        is_skeleton = "self.skipTest" in next_block
+                        
+                        # If multiple tests cover the same ID, Phase 2 wins
+                        if spec_id not in test_metadata or not is_skeleton:
+                            test_metadata[spec_id] = "skeleton" if is_skeleton else "implemented"
                 except Exception: continue
-    return covered_ids
+    return test_metadata
 
 def validate_references(references_dir: Path, tests_dir: Path = None) -> tuple:
     errors, warnings = [], []
-    coverage = {'total': 0, 'implemented': 0, 'implemented_ids': set(), 'missing_ids': set()}
+    coverage = {
+        'total': 0, 
+        'implemented': 0, 
+        'skeletons': 0,
+        'implemented_ids': set(), 
+        'skeleton_ids': set(),
+        'missing_ids': set()
+    }
     references = {}
     for spec_file in sorted(references_dir.glob('**/*.md')):
         if spec_file.name.startswith('.'): continue
@@ -206,9 +226,25 @@ def validate_references(references_dir: Path, tests_dir: Path = None) -> tuple:
                     testable_ids.add(item_id)
 
     if tests_dir:
-        covered = scan_existing_tests(tests_dir)
-        impl, miss = testable_ids.intersection(covered), testable_ids - covered
-        coverage.update({'total': len(testable_ids), 'implemented': len(impl), 'implemented_ids': impl, 'missing_ids': miss})
+        test_metadata = scan_existing_tests(tests_dir)
+        covered_ids = set(test_metadata.keys())
+        
+        impl_ids = {sid for sid, status in test_metadata.items() if status == "implemented"}
+        skel_ids = {sid for sid, status in test_metadata.items() if status == "skeleton"}
+        
+        # Intersection with testable_ids from specs
+        actual_impl = testable_ids.intersection(impl_ids)
+        actual_skel = testable_ids.intersection(skel_ids) - actual_impl
+        miss_ids = testable_ids - (actual_impl | actual_skel)
+        
+        coverage.update({
+            'total': len(testable_ids),
+            'implemented': len(actual_impl),
+            'skeletons': len(actual_skel),
+            'implemented_ids': actual_impl,
+            'skeleton_ids': actual_skel,
+            'missing_ids': miss_ids
+        })
 
     # Structural L1-L0 Traceability
     for file_path, data in references.items():
@@ -255,8 +291,17 @@ def main():
 
     print(f"\n📊 Step 2: Implementation Audit (L1 Contracts)")
     if coverage['total'] > 0:
-        pct = (coverage['implemented'] / coverage['total'] * 100)
-        print(f"   L1 Coverage: {coverage['implemented']}/{coverage['total']} ({pct:.1f}%)")
+        total = coverage['total']
+        impl = coverage['implemented']
+        skel = coverage['skeletons']
+        pct_verified = (impl / total * 100)
+        pct_traced = ((impl + skel) / total * 100)
+        
+        print(f"   L1 Traceability: {impl + skel}/{total} ({pct_traced:.1f}%)")
+        print(f"   L1 Verification: {impl}/{total} ({pct_verified:.1f}%)")
+        print(f"   - Implemented (Phase 2): {impl}")
+        print(f"   - Skeletons   (Phase 1): {skel}")
+        
         if coverage['missing_ids']:
             print(f"   Missing Impl:")
             for mid in sorted(list(coverage['missing_ids']))[:5]: print(f"      - {mid}")
