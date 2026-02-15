@@ -12,7 +12,7 @@
 | Metric | Signal | Verdict | Action |
 |--------|--------|---------|--------|
 | **Information Gain** | Spec repeats parent layer without adding detail | **LOW_GAIN** | ❌ REJECT: "Mere repetition. Add implementation detail or remove." |
-| **Terminology** | Uses "Script" instead of "System", or inconsistent terms | **INCONSISTENT** | ⚠️ WARN: "Standardize on L1/L2 defined terms." |
+| **Terminology** | Uses "Script" or "Script-driven", or inconsistent terms | **INCONSISTENT** | ⚠️ WARN: "Standardize on Agent \| System." |
 | **Expansion Ratio** | L(N) is shorter than L(N-1) | **COMPRESSION** | ⚠️ WARN: "Verify no requirements were dropped." |
 | **Atomic IDs** | Item contains multiple unrelated assertions | **COMPOUND** | ❌ REJECT: "Split into atomic items." |
 
@@ -26,12 +26,12 @@ When performing self-audit during refinement or review, apply these checks in or
 |-------|-------------|----------------|
 | **ROLE_SELF_AUDIT** | Evaluate revision quality BEFORE fixing validation errors | Self-correct first |
 | **HIERARCHY_CHECK** | Load L(N-1), verify full implementation of parent requirements | BLOCK if parent req missing |
+| **TRACEABILITY** | Verify L1-L0 matching by ID prefix (CONTRACTS.X -> VISION.X) | Warn on break |
 | **LAYER_SPECIFIC** | Apply layer-appropriate criteria (L0=Vision, L1=Contracts, L2=Architecture, L3=Runtime) | Flag misplaced content |
 | **OMISSION_CHECK** | Every key in L(N-1) must be represented in L(N) | BLOCK |
 | **REDUNDANCY** | Flag duplicate keys/sections across layers | Warn |
 | **CONTRADICTION** | Flag conflicts with L(N-1) | BLOCK |
 | **CASCADE_REVIEW** | Evaluate downstream impact, propose L(N+1) reorganization | Advise |
-| **FOCUS_CHECK** | Verify L(N) content matches layer focus | Flag violations |
 
 ---
 
@@ -62,6 +62,7 @@ When performing self-audit during refinement or review, apply these checks in or
   > Responsibility: Automation — machine-parseable metadata.
   > Verification: Error on missing version.
 ```
+*Note: Traceability to L0 is implicit via ID suffix matching.*
 
 ### L2-ARCHITECTURE Format
 ```markdown
@@ -107,5 +108,6 @@ interface Validator {
 
 1. **Progressive Formalization**: Specs refine L0 (natural language) → L1 (RFC2119) → L2 (interfaces) → L3 (code).
 2. **Strict Testability**: Every L1/L2/L3 item is an assertion that can be covered by tests.
-3. **Traceability**: All items in specs SHOULD use consistent formatting for addressability.
+3. **Implicit Traceability**: L1-L0 relationship is tracked by shared ID suffixes. L2/L3 traceability is enforced via **Agent-led Logic Audit** during refinement.
+4. **Terminology**: Standardize on `Agent | System` (deterministic vs. stochastic).
 5. **RFC2119 Keywords**: L1 items MUST use MUST/SHOULD/MAY for enforceability.

@@ -11,20 +11,20 @@ version: 1.0.0
 
 L3 items must be tagged with one of these types:
 
-| Type | Owner | Description | Format |
-|------|-------|-------------|--------|
-| `interface` | Script | API contract with inputs/outputs | Fixtures: Input/Expected/Case |
-| `decision` | Agent | Semantic judgment matrix | Fixtures: Situation/Decision/Rationale |
-| `algorithm` | Script | Deterministic computation | Fixtures: Input/Expected/Case |
-| `workflow` | Script/Agent | Multi-step orchestration | Fixtures: Scenario/Flow/Outcome |
+| Type | Owner | Description |
+|------|-------|-------------|
+| `interface` | System | API contract with inputs/outputs |
+| `decision` | Agent | Semantic judgment matrix |
+| `algorithm` | System | Deterministic computation |
+| `workflow` | System/Agent | Multi-step orchestration |
 
 ---
 
 ## [interface] {{INTERFACE_NAME}}
 
-> Implements: [Component: COMPONENTS.{{PARENT}}]
-
 [Description of what this interface does]
+
+**Rationale**: [Why this interface is designed this way]
 
 ```typescript
 interface {{InterfaceName}} {
@@ -34,41 +34,29 @@ interface {{InterfaceName}} {
 }
 ```
 
-**Fixtures**:
-| Input | Expected | Case |
-|-------|----------|------|
-| [Valid input] | [Success result] | Normal |
-| [Invalid input] | [Error code] | Error |
-| [Edge case] | [Edge result] | Edge |
-
-(Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
-
 ---
 
 ## [decision] {{DECISION_NAME}}
 
-> Implements: [Component: COMPONENTS.{{PARENT}}]
-
-Agent decision matrix for [scenario].
+Agent decision logic for [scenario].
 
 **Context**: [When to apply this decision]
 
-**Fixtures**:
+**Rationale**: [Why this decision follows these rules]
+
+**Rules**:
 | Situation | Decision | Rationale |
 |-----------|----------|-----------|
 | [Condition A] | [Action 1] | [Reason] |
 | [Condition B] | [Action 2] | [Reason] |
-| [Edge case] | [Fallback] | [Reason] |
-
-(Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
 
 ---
 
 ## [algorithm] {{ALGORITHM_NAME}}
 
-> Implements: [Component: COMPONENTS.{{PARENT}}]
-
 [Description of what this algorithm computes]
+
+**Rationale**: [Why this algorithm is used]
 
 ```pseudocode
 algorithm {{AlgorithmName}}:
@@ -82,22 +70,20 @@ algorithm {{AlgorithmName}}:
 
 **Complexity**: O([complexity])
 
-**Fixtures**:
-| Input | Expected | Case |
-|-------|----------|------|
-| [Normal data] | [Normal result] | Normal |
-| [Empty] | [Empty result] | Edge |
-| [Invalid] | [Error] | Error |
-
-(Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
-
 ---
 
-## [workflow] FULL_WORKFLOW
+## [workflow] {{WORKFLOW_NAME}}
 
-> Implements: [Component: COMPONENTS.{{PARENT}}]
+Complete project workflow orchestrating components and roles.
 
-Complete project workflow orchestrating all components and roles.
+**Purpose**: [What this workflow achieves]
+
+**Rationale**: [Why this flow is necessary]
+
+**Steps**:
+1. [Role] `{{ROLE_NAME}}.{{ACTION}}` → {{RESULT}}
+2. `{{COMPONENT_NAME}}.{{METHOD}}({{RESULT}})`
+3. **Human Approval**: `notify_user({{OUTCOME}})`
 
 ```mermaid
 flowchart TD
@@ -112,18 +98,9 @@ flowchart TD
 **Phases**:
 1. **Phase 1**: [Description]
 2. **Phase 2**: [Description]
-3. **Phase 3**: [Description]
 
 **Role Orchestration**:
 | Phase | Role | Component |
 |-------|------|-----------|
-| [Phase 1] | Agent/Script | [Component] |
-| [Phase 2] | Agent/Script | [Component] |
-
-**Fixtures**:
-| Scenario | Expected Flow | Outcome |
-|----------|---------------|---------|
-| Happy path | A→B→C→D→F | Success |
-| Alternative | A→B→C→E→F | Alternative result |
-
-(Ref: CONTRACTS.{{RELEVANT_CONTRACT}})
+| [Phase 1] | Agent/System | [Component] |
+| [Phase 2] | Agent/System | [Component] |

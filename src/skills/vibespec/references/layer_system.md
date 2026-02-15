@@ -92,7 +92,7 @@ User wants vibespec to [do something / have capability]
 | **Interface** | `[interface]` | **Component** | System boundaries, function signatures |
 | **Decision** | `[decision]` | **Role** | Complex logic, judgment, policy rules |
 | **Algorithm** | `[algorithm]` | **Component** | Deterministic computational steps |
-| **Workflow** | `[workflow]` | **Component** | End-to-end process orchestration |
+| **Workflow** | `[workflow]` | **Component** | End-to-end process orchestration (System/Agent) |
 
 ### Layer Classification Decision Rules
 
@@ -131,4 +131,4 @@ L0 (Why) → L1 (What) → L2 (Who) → L3 (How)
   Intent    System      Component  Details
 ```
 
-L1 items MUST use naming conventions (Prefix) that map to L0 items.
+L1 items MUST use naming conventions (ID Suffix) that match L0 items for implicit traceability (e.g., `CONTRACTS.VAL` maps to `VISION.VAL`). L2/L3 traceability is enforced via **Agent-led Logic Audit** (Self-Audit) during refinement.

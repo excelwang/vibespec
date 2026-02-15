@@ -27,8 +27,6 @@ EXAMPLE: 2026-02-07T1200-add-auth-contract.md
 <!-- Why this approach? Connect to specific pillars in L0-VISION, if applicable. -->
 
 ## Verification Plan
-<!-- How will we know this is working? if applicable -->
-## Verification Plan
 <!-- How will we know this is working? -->
 
 ### Automated Validation
@@ -36,6 +34,6 @@ EXAMPLE: 2026-02-07T1200-add-auth-contract.md
 - [ ] No circular dependencies introduced.
 
 ### Manual Review Criteria
-- [ ] **Alignment**: Does this support the L0 VISION? (Ref: VISION.SCOPE)
+- [ ] **Alignment**: Does this support the L0 VISION?
 - [ ] **Traceability**: Are all new L2/L3 items anchored to parent specs?
 - [ ] **Testability**: Can we write a test case for this change?
