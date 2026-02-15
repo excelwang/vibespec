@@ -69,8 +69,8 @@ Use precise, unambiguous terminology across all specs:
 
 | Term | Definition |
 |------|------------|
-| Validate | Structural/static checks (客观/机械校验) |
-| Verify | Dynamic/runtime checks (运行时验证) |
+| Validate | Structural/static checks |
+| Verify | Dynamic/runtime checks |
 | Audit | Objective compliance check against the 'Law' (L1) |
 | Draft | Unverified or work-in-progress specification |
 | Assert | Hard blocking condition in code |
