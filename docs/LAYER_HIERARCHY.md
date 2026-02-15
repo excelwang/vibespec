@@ -1,6 +1,6 @@
 # Layer Hierarchy System
 
-> Design document for vibespec's layered specification architecture
+> Reference guide for vibespec's layered specification architecture
 
 ## Overview
 
@@ -11,19 +11,9 @@ vibespec uses a four-layer specification system (L0-L3) to define software syste
 | Layer | Subject | Responsibility | Focus |
 |-------|---------|----------------|-------|
 | **L0** | User → vibespec | Vision & Expectations | Why (Purpose) |
-| **L1** | Agent \| Script | Behavior Contracts + Metrics | What (Rules) |
+| **L1** | Agent \| System | Behavior Contracts + Metrics | What (Rules) |
 | **L2** | Role \| Component | Architectural Entities | Who (Actors) |
 | **L3** | Role/Component Interaction | Implementation Details | How (Mechanics) |
-
-## Annotation System
-
-Annotate specific sections to control their mutability and purpose:
-
-| Annotation | Meaning | Directive |
-|------------|---------|-----------|
-| `[system]` | **Implementation Details** | **Do not change** (Reserved for System Architect) |
-| `[standard]` | **Design Patterns** | **Follow strictures** (Enforced by linters/tests) |
-| *(none)* | **User Content** | Free to edit by Agent/User |
 
 ---
 
@@ -37,7 +27,7 @@ User wants vibespec to [do something / have capability]
 ### Examples
 ```markdown
 - **SCOPE.IDEAS**: User wants vibespec to process idea files in timestamp order.
-- **TARGET_PROJECT.MODULARITY**: User wants vibespec to produce specs that help even weak agents build modular software.
+- **CODE_QUALITY_GOALS.MODULARITY**: User wants specs to guide agents to generate modular code.
 ```
 
 ### Responsibilities
@@ -51,7 +41,7 @@ User wants vibespec to [do something / have capability]
 
 ### Subject Pattern
 ```
-[Agent|Script] MUST/SHOULD [do what]
+[Agent|System] MUST/SHOULD [do what]
   > Responsibility: [accountability description]
   > Verification: [how to measure compliance]
 ```
@@ -61,22 +51,22 @@ User wants vibespec to [do something / have capability]
 | Type | Responsibility | Verification Metrics |
 |------|----------------|---------------------|
 | **Agent** | Autonomous decision-making, accountable for decision quality | Decision accuracy, rollback rate, approval rate |
-| **Script** | Mechanical execution of deterministic tasks, accountable for reliability | Execution success rate, output consistency, no side effects |
+| **System** | Mechanical execution of deterministic tasks, accountable for reliability | Execution success rate, output consistency, no side effects |
 
 ### Examples
 ```markdown
-- **BATCH_READ**: Script MUST read all idea files before analysis begins.
-  > Responsibility: Ensure data integrity
-  > Verification: idea file count == read count
+- **BATCH_READ**: System MUST read all idea files before analysis begins.
+  > Responsibility: Efficiency — prevent N round-trips.
+  > Verification: `vibespec` reads all new ideas at start.
 
-- **APPROVAL_REQUIRED**: Agent MUST request human review immediately after creating an idea file.
-  > Responsibility: Prevent unauthorized changes from entering the system
-  > Verification: notify_user call exists for each idea creation
+- **APPROVAL_REQUIRED**: Agent MUST pause for human review after creating idea file.
+  > Responsibility: Human gate — prevent drift from user intent.
+  > Verification: `notify_user` called after each idea creation.
 ```
 
 ### Responsibilities
 - Define verifiable behavior rules
-- Assign clear accountability (Agent or Script)
+- Assign clear accountability (Agent or System)
 - Provide quantitative verification metrics
 
 ---
@@ -88,136 +78,113 @@ User wants vibespec to [do something / have capability]
 | L1 Type | L2 Entity | Characteristics |
 |---------|-----------|-----------------|
 | **Agent** | **Role** | Active observation, autonomous judgment, reactive behavior |
-| **Script** | **Component** | Invoked, deterministic execution, no autonomy |
+| **System** | **Component** | Invoked, deterministic execution, no autonomy |
 
 ### Subject Patterns
 
-**Role**:
+**Role** (Active entity):
 ```
-[ROLE_NAME]: Responsible for [description]
+[RoleName]: Responsible for [description]
   - Observes: [what it monitors]
   - Decides: [judgment criteria]
+  - Acts: [what actions it takes]
 ```
 
-**Component**:
+**Component** (Passive entity):
 ```
-[COMPONENT_NAME]: Responsible for [description]
+[ComponentName]: Responsible for [description]
   - Input: [what it receives]
   - Output: [what it produces]
 ```
 
-### Examples
+### Examples (from vibespec L2)
 ```markdown
 # Role (maps to L1 Agent contracts)
-- **REVIEWER**: Responsible for auditing changes and requesting human confirmation
-  - Observes: File change events, spec consistency
-  - Decides: Change impact scope, historical rollback rate
+- **Agent**: Interprets intent, designs specifications, orchestrates implementation.
+  - Observes: User ideas, conversation context, existing specs, source code.
+  - Decides: Refinement strategy, layer classification, adherence to contracts.
 
-# Component (maps to L1 Script contracts)
-- **IDEAS_PROCESSOR.READER**: Responsible for reading all files in ideas/ directory
-  - Input: Directory path
-  - Output: List of file contents
+# Component (maps to L1 System contracts)
+- **Validator**: Enforces rules and quality standards.
+  - Input: Specs, Rules
+  - Output: Validation Results
 ```
 
 ---
 
 ## L3: Runtime Layer
 
-> **File**: L3-RUNTIME.md
-> **Purpose**: 固化复杂/易出错的实现细节，确保可测试
+> **Directory**: `specs/L3-RUNTIME/`
+> **Purpose**: Capture complex/error-prone implementation details for testability.
 
-### 三种内容类型
+### Four Content Types
 
-| 类型 | 来源 | 必须性 | 格式 |
-|------|------|--------|------|
-| **INTERFACES** | 所有 L2 叶子 Component | ✓ 必须 | TypeScript 签名 |
-| **DECISIONS** | L2 Role 复杂决策 | ⚠️ 选择性 | 决策规则表 |
-| **ALGORITHMS** | L2 Component 复杂逻辑 | ⚠️ 选择性 | 伪代码 |
+| Type | Tag | Associated Entity | Purpose | Content Requirement |
+|------|-----|-------------------|---------|---------------------|
+| **Interface** | `[interface]` | **Component** | Define system boundaries and function signatures. | Typed code block, Fixtures table, **Rationale**. |
+| **Decision** | `[decision]` | **Role** | Capture complex logic, judgment, or policy rules. | Logic Table or Decision Tree. Fixtures: Situation/Decision/Rationale. |
+| **Algorithm** | `[algorithm]` | **Component** | Describe deterministic computational steps. | Pseudocode or Flowchart, **Rationale**. |
+| **Workflow** | `[workflow]` | **Component** | Orchestrate Components and Roles into end-to-end processes. | Ordered Steps list with Actor assignment, **Rationale**. |
 
-### 组织结构
+### Organization Structure
 
 ```markdown
-L3-RUNTIME.md
-├── ## INTERFACES (接口规格)
-│   ├── ### COMPILER_PIPELINE
-│   │   ├── #### SCANNER
-│   │   ├── #### PARSER
-│   │   └── ...
-│   └── ### VALIDATOR_CORE
-│       └── ...
-├── ## DECISIONS (复杂决策)
-│   ├── ### LAYER_CLASSIFICATION
-│   └── ### CONFLICT_RESOLUTION
-└── ## ALGORITHMS (复杂算法)
-    └── ### COVERAGE_VALIDATION
+L3-RUNTIME/
+├── 00-preamble.md        (Type definitions)
+├── 02-validation.md      (Validator, QualityEngine, CoverageValidation)
+├── 03-automation.md      (LayerClassification, IdeaToSpecWorkflow, etc.)
+├── 04-infrastructure.md  (TestEngine, ProjectManager, CertificationWorkflow)
+└── 05-system.md          (System interface, BootstrapWorkflow)
 ```
 
-### 可测试性要求
-
-每个 L3 item **必须**包含:
-
-| 要素 | 描述 | 最小数量 |
-|------|------|---------|
-| **Fixtures** | 输入/期望输出对 | ≥ 3 |
-| **Edge Cases** | 边界情况 | ≥ 1 |
-| **Error Cases** | 错误场景 | ≥ 1 |
-
-### 示例: 接口规格
+### Example: Interface
 
 ```markdown
-#### SCANNER
+## [interface] Validator
 
-> Implements: [Component: COMPONENTS.COMPILER_PIPELINE.SCANNER]
+**Rationale**: Core entry point for all static architectural checks.
 
-**Interface**:
-```code
-interface Scanner {
-  scan(path: string): File[]
+\```code
+interface Validator {
+  validate(specs: ParsedSpec[]): ValidationResult
+  detectGaps(specs: Spec[], tests: TestResult, src: SourceCode): GapReport
 }
+\```
 ```
 
-**Fixtures**:
-| Input | Expected | Edge Case |
-|-------|----------|-----------|
-| "specs/" | File[] | Normal |
-| "" | Error | Empty path |
-| "nonexistent/" | [] | Not found |
-
-**Consumers**: [ARCHITECT, COMPILER_PIPELINE]
-```
-
-### 示例: 复杂决策
+### Example: Decision
 
 ```markdown
-### LAYER_CLASSIFICATION
+## [decision] LayerClassification
 
-> Implements: [Role: ROLES.SPEC_MANAGEMENT.ARCHITECT]
-
-**决策规则**:
-| 优先级 | 信号 | 目标层级 |
-|--------|------|----------|
-| 1 | 含 RFC2119 | L1 |
-| 2 | 提及架构实体 | L2 |
-| 3 | 含算法描述 | L3 |
-| 4 | 默认 | L0 |
-
-**Fixtures**:
-| Input | Expected | Reason |
-|-------|----------|--------|
-| "系统 MUST..." | L1 | RFC2119 |
-| "添加 Cache Component" | L2 | 组件 |
-| "做得更好" | L0 | 默认 |
+**Rules**:
+| Priority | Signal | Layer |
+|----------|--------|-------|
+| 1 | RFC2119 (MUST/SHOULD/SHALL/MAY) | L1 |
+| 2 | Architecture entity (Role/Component) | L2 |
+| 3 | Algorithm description | L3 |
+| 4 | User expectation | L0 |
+| 5 | Default | L0 + clarify |
 ```
 
-### 校验规则
+### Example: Workflow
 
-| 规则 ID | 描述 |
-|---------|------|
-| `INTERFACE_COMPLETE` | 每个 L2 叶子 Component 必须有 L3 接口 |
-| `FIXTURES_MIN_3` | 每个 L3 item 必须有 ≥3 个 Fixtures |
-| `IMPLEMENTS_VALID` | Implements 引用必须指向有效 L2 item |
-| `NO_SYSTEM_STANDARD` | L3 不区分 system/standard |
+```markdown
+## [workflow] IdeaToSpecWorkflow
 
+**Purpose**: Ingest raw ideas and refine them into formal specifications.
+**Rationale**: Core pipeline for transforming user intent into verifiable system laws.
+
+**Steps**:
+1. [Role] `Agent.read("ideas/")` → Extract Raw Intent
+2. [Loop: Layer Refinement]
+    - [Role] `Agent.design(Intent)` → DraftSpecs
+    - `Validator.validate(DraftSpecs)`
+    - [Role] `Agent.audit(DraftSpecs)` → AuditLog
+    - **Human Approval**: `notify_user(AuditLog)`
+3. `System.commit()` → Apply changes to `specs/`
+4. [Role] `Agent.cleanup("ideas/")` → Move to archive
+```
 
 ---
 
@@ -245,32 +212,31 @@ User ──dialog──→ Role ──invoke──→ Component
 
 ## Testing Framework
 
-### Test Type Implied by L1 Subject
+### Test Structure
 
-| L1 Subject | Test Type | Location |
-|------------|-----------|----------|
-| **Agent** | PROMPT tests (blind tests) | `tests/acceptance/prompt/*.yaml` |
-| **Script** | SCRIPT tests (automated) | `tests/acceptance/script/*.py` |
+Tests are organized at L1 H2 (`## CONTRACTS.*`) granularity:
 
-### PROMPT Test Structure (Agent Blind Testing)
-```yaml
-# Agent can only see setup and trigger during execution, not expect
-- id: CONTRACTS.REVIEW.APPROVAL_REQUIRED
-  setup:
-    description: "Agent has created an idea file"
-  trigger: "Continue processing"
-  expect:  # Hidden from Agent
-    behavior: "Agent should call notify_user"
-    evidence: "notify_user call record exists"
-```
+| Mapping | Location |
+|---------|----------|
+| One test file per `## CONTRACTS.*` section | `tests/specs/test_contracts_<suffix>.py` |
+| Every test annotated with `@verify_spec("CONTRACTS.XXX")` | Enables automated L1 coverage auditing |
 
-### SCRIPT Test Structure (Automated Testing)
+### Two-Phase Test Generation
+
+| Phase | Content | Body |
+|-------|---------|------|
+| **Phase 1: Shell** | `@verify_spec` + docstring + ASSERTION INTENT | `self.skipTest("Pending src/ implementation")` |
+| **Phase 2: Fill** | Same annotations (immutable) | Real `self.assert*` calls with `src/` imports |
+
+### Example
 ```python
-@verify_spec("CONTRACTS.IDEAS.BATCH_READ")
-def test_batch_read():
+@verify_spec("CONTRACTS.IDEAS_PIPELINE.BATCH_READ")
+def test_batch_read(self):
+    """System MUST read multiple idea files in one pass."""
+    # ASSERTION INTENT: Verify idea file count == read count
     files = create_test_ideas(3)
     result = reader.read_all(ideas_dir)
-    assert len(result) == 3  # Verification: file count == read count
+    assert len(result) == 3
 ```
 
 ---
@@ -281,7 +247,7 @@ def test_batch_read():
 L0 (Why) → L1 (What) → L2 (Who) → L3 (How)
    ↓           ↓           ↓          ↓
   User      Agent/      Role/      Impl
-  Intent    Script      Component  Details
+  Intent    System      Component  Details
 ```
 
-Each lower-layer item MUST include `(Ref: UPPER_LAYER.XXX)` referencing its parent.
+L1 items MUST use naming conventions (Prefix) that map to L0 items. L2/L3 items DO NOT need to explicitly reference L1.

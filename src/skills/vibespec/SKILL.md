@@ -69,6 +69,7 @@ Explicit commands for specific, targeted actions.
 3. **Present for Review**: Use `notify_user` to show the reformulated scope. **STOP** and wait for approval.
 4. **Create L0-VISION.md**: Upon approval, create `specs/L0-VISION.md` using the template from `assets/L0-VISION.md`.
 5. **Initialize Ideas Folder**: Create `ideas/` directory.
+6. **Validate Readiness**: Run `Validator.validate()` → ReadinessReport.
 
 ---
 
@@ -81,39 +82,37 @@ Explicit commands for specific, targeted actions.
 
 ## Phase 2: Analysis & Decomposition
 
+→ **Load** `references/layer_system.md` for classification rules.
+
 1. **Scope Check**: Read `specs/L0-VISION.md`. Reject/Archive out-of-scope ideas.
-2. **Recursive Analysis**: For each in-scope idea:
+2. **Conflict Detection**: Identify conflicting ideas. Resolve by latest timestamp (INV_TIMESTAMP_ORDER).
+3. **Recursive Analysis**: For each in-scope idea:
    - **Level Seeking**: Identify the *highest* applicable layer (L0, L1, L2, or L3).
-   - **Decomposition**: If idea contains mixed levels (e.g., L1 contract + L3 script), decompose into segments.
-3. **Queueing**: Order segments by layer (Highest -> Lowest).
+   - **Decomposition**: If idea contains mixed levels (e.g., L1 contract + L3 implementation), decompose into segments.
+4. **Queueing**: Order segments by layer (Highest -> Lowest).
 
 ## Phase 3: Layered Refinement Cycle
+
+→ **Load** `references/review_and_quality.md` for format rules and review checklist.
 
 Process the specific layer L(N) identified in Phase 2:
 
 ```
-┌─────────────────────────────────────────────────┐
-│ 1. LLM Decompose: Analyze L(N) changes          │
-│ 2. LLM Revise: Draft updates for L(N+1)         │
-│ 3. Validate: Run `python3 scripts/validate.py` │
-│    ├─ FAIL (<3x) → Return to step 2 (Self-fix)  │
-│    ├─ FAIL (>3x) → **REVERT** changes & STOP    │
-│    └─ PASS → Continue to step 4                 │
-│ 4. **Self-Audit** (REVIEW_PROTOCOL):           │
-│    ├─ HIERARCHY_CHECK: Load L(N-1), verify full │
-│    │  implementation of parent requirements.    │
-│    ├─ OMISSION_CHECK: Every key in L(N-1) must  │
-│    │  be represented in L(N). Missing = BLOCK.  │
-│    ├─ REDUNDANCY: Flag duplicate keys/sections. │
-│    ├─ CONTRADICTION: Flag conflicts with L(N-1).│
-│    └─ FOCUS_CHECK: Verify L(N) content matches  │
-│       layer focus (no impl details in L0/L1).   │
-│ 5. ⛔ MANDATORY STOP ⛔                         │
-│    - Call notify_user with findings             │
-│    - WAIT for explicit human approval           │
-│    - **REJECT**? → **REVERT** changes & Re-plan │
-│    - **APPROVE**? → Proceed to L(N+1)           │
-└─────────────────────────────────────────────────┘
+┌───────────────────────────────────────────┐
+│ 1. Agent.design(): Analyze L(N) changes   │
+│ 2. Agent.refine(): Draft updates for L(N) │
+│ 3. Validator.validate(): Run validation   │
+│    ├─ FAIL (<3x) → Self-audit, then fix   │
+│    ├─ FAIL (>3x) → REVERT & STOP          │
+│    └─ PASS → Step 4                       │
+│ 4. Self-Audit (REVIEW_PROTOCOL) ←──────── │
+│    See review_and_quality.md for full      │
+│    checklist (8 checks in order).          │
+│ 5. ⛔ MANDATORY STOP ⛔                   │
+│    - notify_user with findings             │
+│    - REJECT → REVERT & Re-plan            │
+│    - APPROVE → Proceed to L(N+1)          │
+└───────────────────────────────────────────┘
 ```
 
 > [!CAUTION]
@@ -123,35 +122,30 @@ Process the specific layer L(N) identified in Phase 2:
 ### Phase 4: Archive & Complete
 
 1. **Move processed ideas**: Agent moves processed files to `ideas/archived/`.
-2. **Post-Refinement (Manual Gate)**: If `ideas/` is empty, Agent SHALL explicitly ask: "Refinement complete. Should I proceed to **Certification** (verification audit)?"
+2. **Gap Analysis**: Agent MUST detect missing links (MISSING, OUTDATED, ORPHAN) across L1→L2→L3→Code.
+3. **Post-Refinement (Manual Gate)**: If `ideas/` is empty, Agent SHALL explicitly ask: "Refinement complete. Should I proceed to **Certification** (verification audit)?"
    - **STOP**: Do NOT run verification until user says 'yes'.
 
 ---
 
 ## CertificationWorkflow (Acceptance Gates)
 
-**Purpose**: Verify system correctness by tracking L1 spec implementation coverage across codebase.
+→ **Load** `references/testing_protocol.md` for format rules and quality guards.
+
+**Purpose**: Verify system correctness by tracking L1 spec implementation coverage.
 
 **Trigger**: Manual Approval or `vibespec test` command.
 
+**Initiation Gate**: Agent MUST propose certification and receive human approval before starting.
+
 ### Phase 1: Test Shell Generation (after L1 approval)
-1. For each `## CONTRACTS.*` section in L1, generate a test skeleton:
-   - `@verify_spec("CONTRACTS.XXX")` annotation.
-   - Docstring quoting the L1 contract statement verbatim.
-   - `# ASSERTION INTENT:` block from L1 Verification clause.
-   - Body: `self.skipTest("Pending src/ implementation")`.
-2. Save to `tests/specs/test_contracts_<suffix>.py`.
-3. **STOP**: Request human approval before saving.
+1. Generate test skeleton per `## CONTRACTS.*` section → `tests/specs/test_contracts_<suffix>.py`.
+2. **STOP**: Request human approval before saving.
 
 ### Phase 2: Test Body Fill (smart detection)
-1. **Validate & Audit**: Run `python3 scripts/validate.py`.
-   - Reports the "Certification Dashboard" (L1 Coverage %).
-2. **Detect Fillable Tests**: Scan `tests/specs/` for `skipTest` markers.
-   - For each skipped test, check if corresponding `src/` module exists.
-   - If yes → propose filling to user.
-3. **Fill**: Generate real assertions (import src/ modules, write assert*).
-   - **INTENT_LOCK**: Do NOT modify docstrings or ASSERTION INTENT blocks.
-   - **QUALITY_GUARD**: Reject `assertTrue(True)`, bare `pass`, missing imports.
+1. Run `python3 scripts/validate.py` → Certification Dashboard.
+2. Detect fillable tests (`skipTest` markers where `src/` module exists).
+3. Fill with real assertions (follow INTENT_LOCK and QUALITY_GUARD rules in testing_protocol.md).
 4. **Review**: Present L1 text + Intent + Code side-by-side. **STOP** for approval.
 5. **Execute**: Run project-native test commands (e.g., `pytest`).
 6. Re-run Step 1 to verify coverage updates.
@@ -192,33 +186,32 @@ Use standalone scripts for mechanical operations:
 
 ---
 
+## References
+
+Load precisely when the workflow step requires domain knowledge:
+
+| Reference | Load when | Contents |
+|-----------|-----------|----------|
+| `references/layer_system.md` | **Phase 2** (Layer Classification), **DistillWorkflow** | L0-L3 subjects, L3 types, classification rules, call direction |
+| `references/review_and_quality.md` | **Phase 3** (Self-Audit), **vibespec review** | REVIEW_PROTOCOL checklist, format rules, quality principles |
+| `references/testing_protocol.md` | **CertificationWorkflow** | Two-phase test generation, test rules, invariant testing |
+| `references/concepts.md` | User unfamiliar with vibespec terms | Plain-language concept explanations |
+
+---
+
 ## Key Constraints
 
-- **Project Structure**: Follow the mandatory organization:
-  - `specs/` - Root-level directory for L0-L3 specifications.
-  - `tests/specs/` - Native test cases authored by the Agent.
-  - `ideas/` - Draft requirements and backlog.
-
-- **Test Generation Protocol**: When authoring tests in `tests/specs/`, follow these rules:
-  1. **Mapping**: Tests MUST verify L1 Contract items (e.g., `CONTRACTS.BOOTSTRAP`). Do NOT map to L2/L3 component names.
-  2. **Naming**: Use `test_contracts_<suffix_snake_case>.py`.
-     - Example: `CONTRACTS.TRACEABILITY` -> `test_contracts_traceability.py`.
-  3. **Mandatory Annotation**: Every test MUST use `@verify_spec("CONTRACTS.XXX")` to enable L1 coverage auditing.
-  4. **Two-Phase**: Phase 1 = skeleton with skip. Phase 2 = real assertions with src/ imports.
-  5. **Integrity**: Docstrings and ASSERTION INTENT blocks are immutable after Phase 1. Agent MUST NOT weaken pass conditions.
-
-- **Template-Based**: Use templates from `assets/` when generating files:
-  - `IDEA_TEMPLATE.md` → idea files
-  - `L0-VISION.md`, `L1-CONTRACTS.md`, `L2-ARCHITECTURE.md`, `L3-RUNTIME.md` → spec files
+- **Project Structure**:
+  - `specs/` — L0-L3 specifications
+  - `tests/specs/` — L1 contract tests (see `testing_protocol.md`)
+  - `ideas/` — Draft requirements and backlog
+- **Template-Based**: Use templates from `assets/` when generating files.
 - **Scope-First**: Always check `VISION.SCOPE` before refining.
-- **Code-First Priority**: In `DistillWorkflow`, Source Code MUST be prioritized over existing Specs if a discrepancy is found (Code is the executable truth).
+- **Code-First Priority**: In `DistillWorkflow`, Code > Specs when discrepant.
 - **Reformulation**: Natural language → Declarative, unambiguous statements.
 - **Validate-Before-Review**: Human sees only passing specs.
-- **Strict Sequencing**: L(N) must be approved before L(N+1) begins. Simultaneous multi-layer edits are FORBIDDEN.
-- **Traceability**: All lists in specs MUST be numbered (`1. `) for addressability. Bullet points (`- `) are forbidden in spec bodies.
-- **Automation-First**: Use CLI tools for file operations, not raw LLM output.
-- **Layer Focus**:
-  - L0: "Why/What". No implementation details, tool names, file paths.
-  - L1: "Rules/Invariants". No architecture components, script logic.
-  - L2: "Components/Data Flow". No class methods, variable names.
-  - L3: "How". No vague vision statements.
+- **Strict Sequencing**: L(N) approved before L(N+1) begins. Multi-layer edits FORBIDDEN.
+- **Traceability**: Numbered lists (`1. `) only in spec bodies. Bullets (`- `) forbidden.
+- **Automation-First**: Use CLI tools, not raw LLM output.
+- **Deletion Justification**: Document reason for L1-L3 deletions, request review.
+- **Hot-Reload**: Re-read relevant specs when user provides new context.

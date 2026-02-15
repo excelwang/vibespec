@@ -1,13 +1,13 @@
 # Technical Architecture & Design Principles
 
-vibespecs is not just a documentation standard; it is a **meta-framework** that enforces correctness through traceability and rigorous testing protocols.
+vibespec is a **specification management framework** that enforces correctness through traceability and testing protocols.
 
 ## 1. Traceability & The Compiler
 
-The `vibespecs` compiler ensures that every technical decision is traceable back to a user requirement.
+The vibespec compiler ensures that every technical decision is traceable back to a user requirement.
 
-### Implicit Metadata System (Evolution)
-vibespec has evolved to minimize boilerplate. Metadata is now **derived** rather than declared:
+### Implicit Metadata System
+vibespec minimizes boilerplate by **deriving** metadata rather than declaring it:
 
 - **Layer & ID**: Derived from filename `L{N}-{ID}.md`.
     - `L0-VISION.md` -> Layer 0, ID: `VISION`
@@ -18,67 +18,63 @@ vibespec has evolved to minimize boilerplate. Metadata is now **derived** rather
 ### Validation Rules
 - **Layer Strictness**: `L(N)` conceptually depends on `L(N-1)`.
 - **Unique IDs**: Every Spec ID and Export ID must be unique.
-- **Strict Approval**: `L(N)` must be human-approved before `L(N+1)` refinement begins.
+- **Strict Approval**: `L(N)` must be human-approved before `L(N+1)` refinement begins (INV_HUMAN_APPROVAL).
 
-This implicit graph maintains full traceability while keeping spec files clean and readable.
+## 2. Two-Phase Test Generation
 
-## 2. Abstract Acceptance Protocol
+To ensure specification coverage, tests are generated in two phases:
 
-To enable "Shift-Left Verification", we decouple testing from implementation.
+1. **Phase 1: Shell** — Immediately after L1 approval, generate test skeletons:
+   - `@verify_spec("CONTRACTS.XXX")` annotation
+   - Docstring quoting L1 contract verbatim
+   - `# ASSERTION INTENT:` block from Verification clause
+   - Body: `self.skipTest("Pending src/ implementation")`
+   - Location: `tests/specs/test_contracts_<suffix>.py`
 
-We define an abstract base class `UnifiedDataSystem` (the **Protocol**) that defines the *capabilities* of the system under test, not its implementation.
+2. **Phase 2: Fill** — When `src/` modules exist for skipped tests:
+   - Replace `skipTest` with real assertions importing `src/` modules
+   - Docstrings and ASSERTION INTENT blocks are **immutable** (INTENT_LOCK)
+   - Quality guard rejects `assertTrue(True)` or bare `pass`
 
-```python
-class UnifiedDataSystem(ABC):
-    @abstractmethod
-    def submit_event(self, event): ...
-    @abstractmethod
-    def observe(self, id): ...
-```
-
-This leads to the **Dual-Adapter Pattern**:
-
-1.  **Mock Adapter (`MockSystem`)**: An in-memory, dict-based implementation. It is written *fast* and is used to validate the **Logic** of the L1 Contracts.
-2.  **Real Adapter (`RealSystem`)**: An adapter that talks to the actual deployed service (via HTTP, gRPC, etc.).
-
-We write one set of tests (`test_contracts.py`) and run them against *both* adapters.
+Tests are organized at L1 H2 (`## CONTRACTS.*`) granularity — one test file per contract section.
 
 ## 3. Invariants & Property-Based Testing
 
-Unit tests (doing specific actions) are insufficient for complex distributed systems. We rely on **Invariants** – properties that must *always* be true, regardless of the sequence of events.
+Unit tests (specific actions) are insufficient for complex systems. We rely on **Invariants** — properties that must *always* hold:
 
 Examples:
-- "A file's version number never decreases."
-- " A deleted file never reappears unless re-created."
+- INV_TIMESTAMP_ORDER: "Ideas are processed in timestamp order; later ideas supersede earlier ones on conflict."
+- INV_HUMAN_APPROVAL: "L(N) must be human-approved before L(N+1) refinement begins."
 
-We use **Hypothesis** (Python's property-based testing library) to generate thousands of random event sequences (Stateful Testing). If the system (Mock or Real) ever violates an invariant, Hypothesis provides the exact minimal sequence of steps to reproduce the bug.
+**Hypothesis** (Python's property-based testing library) can generate thousands of random event sequences. If the system violates an invariant, Hypothesis provides the minimal reproduction steps.
 
-## 4. The "Single Source of Truth" Artifact
+## 4. Ideas Ingestion Pipeline
 
-The final output of the framework is `vibespecS.md`. This is a compiled, flattened, authoritative document generated from the `specs/` directory.
+To bridge "Raw Thoughts" and "Formal Specs":
 
-- It strips away file system noise.
-- It orders sections logically by layer.
-- It includes a generated traceablity matrix.
+1. **Capture**: Raw ideas saved to `ideas/YYYY-MM-DDTHHMM-desc.md`.
+2. **Batch Processing**: System reads pending ideas in timestamp order (INV_TIMESTAMP_ORDER).
+3. **Conflict Detection**: Identify conflicting ideas, resolve by latest timestamp.
+4. **Refinement Cycle**:
+    - L0 Scope Check (stop if out-of-scope).
+    - Layer-by-Layer Refinement (L0 → L1 → L2 → L3).
+    - **Strict Gating**: Mandatory human approval after *each* layer's validation (INV_HUMAN_APPROVAL).
+5. **Gap Analysis**: Detect MISSING, OUTDATED, or ORPHAN links across layers.
+6. **Archival**: Processed ideas move to `ideas/archived/`.
 
-This artifacts serves as the **Context Context** for the AI Coding Agent. Instead of feeding the agent 20 scattered markdown files, we feed it one coherent, verified spec.
+## 5. Self-Hosting (Bootstrap) Philosophy
 
-## 5. Ideas Ingestion Pipeline
+vibespec is a **self-hosting** tool — we use vibespec to define vibespec.
 
-To bridge the gap between "Raw Thoughts" and "Formal Specs", we use a dedicated pipeline:
+- The repository's `specs/` directory contains the specifications for the validator, workflows, and traceability engine.
+- Every release is verified against its own L0-L3 specs.
+- This "dogfooding" ensures the tool remains practical and capable of handling its own complexity.
 
-1.  **Capture**: Raw ideas saved to `ideas/YYYY-MM-DDTHHMM-desc.md`.
-2.  **Batch Processing**: `vibespec` reads pending ideas in timestamp order.
-3.  **Refinement Cycle**:
-    - L0 Scope Check (Stop if out-of-scope).
-    - Layer-by-Layer Refinement (L0 -> L1 -> L2 -> L3).
-    - **Strict Gating**: Mandatory human approval after *each* layer's validation.
-4.  **Archival**: Processed ideas move to `ideas/archived/`.
+## 6. Code-First Evolution
 
-## 6. Self-Hosting (Bootstrap) Philosophy
+vibespec supports bidirectional workflows:
 
-vibespec is a **self-hosting** tool. This means we use vibespec to define vibespec.
+- **Idea-First**: Idea → Spec → Code (traditional)
+- **Code-First**: Code → Reflect → Spec (agile)
 
-- The repository's [specs/](specs/) directory contains the bootstrap specifications for the compiler, validator, and traceability engine.
-- Every release of vibespec is verified against its own L0-L3 specs.
-- This "Dogfooding" ensures that the tool remains practical, intuitive, and capable of handling its own complexity.
+The `DistillWorkflow` syncs specifications when code-first changes occur. When discrepancies are found between code and specs, **code is the executable truth** — specs are updated to match code reality.
