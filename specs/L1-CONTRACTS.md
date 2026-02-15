@@ -553,36 +553,46 @@ standard_terms:
 
 ## CONTRACTS.TESTING_WORKFLOW
 
-- **UNCOVERED_LIST**: Report MUST list specs with 0 tests.
-  > Responsibility: Transparency.
-  > Verification: List exists.
+- **UNCOVERED_LIST**: System MUST list L1 contract sections with 0 test coverage.
+  > Responsibility: Transparency — make gaps visible.
+  > Verification: `validate.py` output includes "Missing Impl" list.
 
-- **META_TEST_GENERATION**: Testing Phase MUST allow generating missing tests from specs (`--generate`).
-  > Responsibility: Acceleration.
-  > Verification: Command works.
+- **TWO_PHASE_GENERATION**: Agent MUST generate tests in two distinct phases.
+  > Responsibility: Integrity — separate assertion intent from implementation.
+  > Verification: Phase 1 shells exist before Phase 2 fill.
 
+- **PHASE1_SHELL**: Agent MUST generate test skeletons immediately after L1 approval, containing:
+  1. `@verify_spec("CONTRACTS.XXX")` annotation.
+  2. Docstring quoting the L1 contract statement verbatim.
+  3. `# ASSERTION INTENT:` comment block derived from L1 Verification clause.
+  4. `self.skipTest("Pending src/ implementation")` as body.
+  > Responsibility: Shift-Left — coverage dashboard is meaningful from day one.
+  > Verification: Skeleton files exist in `tests/specs/` with skip markers.
 
+- **PHASE2_FILL**: Agent MUST fill test bodies when `vibespec test` detects skipped tests AND corresponding `src/` modules exist.
+  > Responsibility: Completeness — close coverage gaps when code is ready.
+  > Verification: `skipTest` replaced with real assertions.
 
-- **TEST_GENERATION**: Agent MUST generate tests for uncovered L1 items.
-  > Responsibility: Completeness — close coverage gaps.
-  > Verification: Test file created for each uncovered L1 item.
+- **INTENT_LOCK**: Agent MUST NOT modify docstrings or `ASSERTION INTENT` blocks during Phase 2 fill.
+  > Responsibility: Integrity — prevent weakening of pass conditions.
+  > Verification: Diff between Phase 1 and Phase 2 shows changes only in test body.
 
-- **HUMAN_APPROVAL_TEST**: Agent MUST request approval before saving generated tests.
-  > Responsibility: Quality gate — human reviews test design.
-  > Verification: notify_user called before file write.
+- **QUALITY_GUARD**: System MUST reject test bodies containing tautological assertions (e.g., `assertTrue(True)`, bare `pass`).
+  > Responsibility: Quality — prevent meaningless tests.
+  > Verification: Lint script checks for real `self.assert*` calls and `src/` imports.
 
-- **EXECUTION_REPORT**: System MUST report PASS/FAIL counts by test type.
+- **HUMAN_APPROVAL_TEST**: Agent MUST present L1 original text + Assertion Intent + Generated Code side-by-side for human review.
+  > Responsibility: Transparency — make intent violations obvious to reviewer.
+  > Verification: notify_user called with three-column comparison before file write.
+
+- **TEST_GRANULARITY**: Tests MUST be organized at L1 H2 (`## CONTRACTS.*`) level granularity.
+  > Responsibility: Maintainability — one test file per H2 section.
+  > Naming: `test_contracts_<suffix_snake_case>.py`.
+  > Verification: Each test file maps to exactly one `## CONTRACTS.*` section.
+
+- **EXECUTION_REPORT**: System MUST report PASS/FAIL/SKIP counts.
   > Responsibility: Transparency — summarize test results.
-  > Verification: Report includes SCRIPT and PROMPT results.
-
-- **RESULT_EVALUATION**: Agent SHOULD analyze failures and propose fixes.
-  > Responsibility: Actionability — convert failures to work items.
-  > Verification: Idea generated for failing tests.
-
-- **TEST_GRANULARITY**: System AND Agent tests MUST be organized at H2 (##) level spec granularity.
-  > Responsibility: Maintainability — one test per H2 section for easy updates.
-  > Naming: `test_{item_id}.*` or `answer_key_{item_id}.md` (extension per project framework).
-  > Verification: Each test artifact maps to exactly one `## [...]` spec section.
+  > Verification: Report distinguishes filled vs skipped tests.
 
 
 ---
@@ -624,13 +634,13 @@ standard_terms:
 
 ## CONTRACTS.TEMPLATE_GENERATION
 
-- **USE_TEMPLATES**: Agent MUST use templates from `src/assets/specs/` when generating files.
+- **USE_TEMPLATES**: Agent MUST use templates from `assets/` when generating files.
   > Responsibility: Consistency — ensure uniform formatting across all generated specs.
   > Verification: Generated files match template structure.
 
-- **TEMPLATE_FILES**: Templates MUST include: IDEA_TEMPLATE.md, L0-VISION.md, L1-CONTRACTS.md, L2-ARCHITECTURE.md, L3-IMPLEMENTATION.md.
+- **TEMPLATE_FILES**: Templates MUST include: IDEA_TEMPLATE.md, L0-VISION.md, L1-CONTRACTS.md, L2-ARCHITECTURE.md, L3-RUNTIME.md.
   > Responsibility: Completeness — provide templates for all spec types.
-  > Verification: All template files exist in `src/assets/specs/`.
+  > Verification: All template files exist in `assets/`.
 
 ---
 

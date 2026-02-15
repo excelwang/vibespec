@@ -134,13 +134,27 @@ Process the specific layer L(N) identified in Phase 2:
 
 **Trigger**: Manual Approval or `vibespec test` command.
 
-### Steps
+### Phase 1: Test Shell Generation (after L1 approval)
+1. For each `## CONTRACTS.*` section in L1, generate a test skeleton:
+   - `@verify_spec("CONTRACTS.XXX")` annotation.
+   - Docstring quoting the L1 contract statement verbatim.
+   - `# ASSERTION INTENT:` block from L1 Verification clause.
+   - Body: `self.skipTest("Pending src/ implementation")`.
+2. Save to `tests/specs/test_contracts_<suffix>.py`.
+3. **STOP**: Request human approval before saving.
+
+### Phase 2: Test Body Fill (smart detection)
 1. **Validate & Audit**: Run `python3 scripts/validate.py`.
-   - Action: Performs structural checks and scans `tests/specs/` for spec implementation coverage.
    - Reports the "Certification Dashboard" (L1 Coverage %).
-2. **Execute**:
-   - Agent runs project-native test commands (e.g., `npm test`, `pytest`).
-   - Re-run Step 1 to verify coverage updates.
+2. **Detect Fillable Tests**: Scan `tests/specs/` for `skipTest` markers.
+   - For each skipped test, check if corresponding `src/` module exists.
+   - If yes → propose filling to user.
+3. **Fill**: Generate real assertions (import src/ modules, write assert*).
+   - **INTENT_LOCK**: Do NOT modify docstrings or ASSERTION INTENT blocks.
+   - **QUALITY_GUARD**: Reject `assertTrue(True)`, bare `pass`, missing imports.
+4. **Review**: Present L1 text + Intent + Code side-by-side. **STOP** for approval.
+5. **Execute**: Run project-native test commands (e.g., `pytest`).
+6. Re-run Step 1 to verify coverage updates.
 
 ---
 
@@ -190,7 +204,8 @@ Use standalone scripts for mechanical operations:
   2. **Naming**: Use `test_contracts_<suffix_snake_case>.py`.
      - Example: `CONTRACTS.TRACEABILITY` -> `test_contracts_traceability.py`.
   3. **Mandatory Annotation**: Every test MUST use `@verify_spec("CONTRACTS.XXX")` to enable L1 coverage auditing.
-  4. **Validation**: Tests MUST exercise `validate.py` or `src/` code against synthetic spec fixtures (Integration Tests).
+  4. **Two-Phase**: Phase 1 = skeleton with skip. Phase 2 = real assertions with src/ imports.
+  5. **Integrity**: Docstrings and ASSERTION INTENT blocks are immutable after Phase 1. Agent MUST NOT weaken pass conditions.
 
 - **Template-Based**: Use templates from `assets/` when generating files:
   - `IDEA_TEMPLATE.md` → idea files
