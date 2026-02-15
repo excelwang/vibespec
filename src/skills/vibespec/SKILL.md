@@ -121,7 +121,9 @@ Process the specific layer L(N) identified in Phase 2:
 
 ### Phase 4: Archive & Complete
 
-1. **Move processed ideas**: Agent moves processed files to `ideas/archived/`.
+### Phase 4: Archive & Complete
+
+1. **Move processed ideas**: Agent moves processed files to `ideas/archived/` (e.g., using `mv`).
 2. **Gap Analysis**: Agent MUST detect missing links (MISSING, OUTDATED, ORPHAN) across L1→L2→L3→Code.
 3. **Post-Refinement (Manual Gate)**: If `ideas/` is empty, Agent SHALL explicitly ask: "Refinement complete. Should I proceed to **Certification** (verification audit)?"
    - **STOP**: Do NOT run verification until user says 'yes'.
@@ -143,7 +145,7 @@ Process the specific layer L(N) identified in Phase 2:
 2. **STOP**: Request human approval before saving.
 
 ### Phase 2: Test Body Fill (smart detection)
-1. Run `python3 scripts/validate.py` → Certification Dashboard.
+1. Run `python3 src/skills/vibespec/scripts/validate.py` → Certification Dashboard.
 2. Detect fillable tests (`skipTest` markers where `src/` module exists).
 3. Fill with real assertions (follow INTENT_LOCK and QUALITY_GUARD rules in testing_protocol.md).
 4. **Review**: Present L1 text + Intent + Code side-by-side. **STOP** for approval.
@@ -164,25 +166,22 @@ Process the specific layer L(N) identified in Phase 2:
 
 **Trigger**: No pending ideas AND `SKILL.md` exists (self-hosting mode).
 
-1. Run `python3 scripts/validate.py specs/`.
-
-2. **Report**: Summarize findings:
-   - Orphan IDs (L0/L1 items with no downstream refs)
-   - INFO_GAIN violations
-   - Terminology warnings
-   - Expansion ratio warnings
-3. **Propose Fixes**: If errors found, generate ideas to resolve them.
-4. **Trigger**: If validation passes, prompt for verification audit.
+1. Run `python3 src/skills/vibespec/scripts/validate.py specs/` (Structural Validation).
+2. **Quality Audit (Agent Decision)**:
+   - Review `references/review_and_quality.md` → `[decision] QualityAudit`.
+   - Manually evaluate: **Information Gain**, **Terminology**, **Expansion Ratio**.
+3. **Report**: Summarize findings (Structural Errors + Quality Warnings).
+4. **Propose Fixes**: If errors found, generate ideas to resolve them.
+5. **Trigger**: If validation passes, prompt for verification audit.
 
 ---
 
 ## Tools
 
 Use standalone scripts for mechanical operations:
-- `python3 scripts/validate.py specs/` - Structural validation & Coverage auditing.
-- `bash scripts/archive_ideas.sh` - Archive processed ideas.
+- `python3 src/skills/vibespec/scripts/validate.py specs/` - Structural validation & Coverage auditing.
 
-**IMPORTANT**: Run `python3 scripts/validate.py` IMMEDIATELY after each refinement cycle.
+**IMPORTANT**: Run `validate.py` IMMEDIATELY after each refinement cycle.
 
 ---
 

@@ -2,6 +2,22 @@
 
 > **Load when**: Phase 3 (Self-Audit), `vibespec review`, or spec quality evaluation.
 
+## [decision] QualityAudit
+
+**Role**: Agent
+**Trigger**: Phase 3 Self-Audit or SpecValidationWorkflow.
+
+**Decision Rules**:
+
+| Metric | Signal | Verdict | Action |
+|--------|--------|---------|--------|
+| **Information Gain** | Spec repeats parent layer without adding detail | **LOW_GAIN** | ❌ REJECT: "Mere repetition. Add implementation detail or remove." |
+| **Terminology** | Uses "Script" instead of "System", or inconsistent terms | **INCONSISTENT** | ⚠️ WARN: "Standardize on L1/L2 defined terms." |
+| **Expansion Ratio** | L(N) is shorter than L(N-1) | **COMPRESSION** | ⚠️ WARN: "Verify no requirements were dropped." |
+| **Atomic IDs** | Item contains multiple unrelated assertions | **COMPOUND** | ❌ REJECT: "Split into atomic items." |
+
+---
+
 ## REVIEW_PROTOCOL Checklist
 
 When performing self-audit during refinement or review, apply these checks in order:
