@@ -40,15 +40,57 @@ Explicit commands for specific, targeted actions.
 - **Capture**: Save `<content>` as a new idea file.
 - Use when you have a specific requirement to record.
 
-#### `vibespec review [SPEC_ID]`
+#### `vibespec review [SPEC_ID] (e.g., L3.Validator)`
 - **Audit**: Perform deep inspection of a specific spec item.
-- Checks: Hierarchy, Redundancy, Contradiction, Focus.
+- **Flow (SpecAuditWorkflow)**:
 
-#### `vibespec bug [description]`
+    1. **Context Loading**:
+       - Locate [Item] at Layer N.
+       - Identify [Parent] at Layer N-1 (if N>0).
+       - Identify [Children] at Layer N+1 (if exists).
+
+    2. **Upward Check (Compliance)**:
+       *Goal: Ensure item fulfills its contract.*
+       - **Compare [Item] vs [Parent]**:
+         - Does [Item] fully implement the intent of [Parent]?
+         - Are there constraints in [Parent] that [Item] ignores?
+       - **Action**: If violation found → Mark as **VIOLATION**.
+
+    3. **Internal Check (Quality)**:
+       *Goal: Ensure item is well-formed.*
+       - Check: Terminology, Atomic ID, Rationale presence, Testability.
+       - **Action**: If defects found → Mark as **MALFORMED**.
+
+    4. **Downward Check (Impact)**:
+       *Goal: Ensure children are still valid.*
+       - **Compare [Item] vs [Children]**:
+         - Does [Item] change require [Children] to update?
+         - Are [Children] employing logic now forbidden by [Item]?
+       - **Action**: If drift found → Mark as **DRIFT** (Requires Update).
+
+#### `vibespec bug [description]` / `vibespec bug review`
 - **Debug**: Start Root Cause Analysis (RCA).
 - **Flow (BugRCAWorkflow)**:
-    1. **Trace (Bottom-Up)**: Recursive failure analysis from Code to Vision (L3 -> L0).
-    2. **Resolve (Top-Down)**: Fix the Root Cause Spec (RCS) and cascade changes downward.
+
+    **Phase 1: Trace (Bottom-Up Analysis)**
+    *Goal: Identify the highest layer where the spec is wrong (Root Cause).*
+    1. **Check Code vs L3**: Does code match L3?
+       - NO → 🐛 Bug in Code. **Fix Code**. STOP.
+       - YES → Go to Step 2.
+    2. **Check L3 vs L2**: Does L3 match L2 Architecture?
+       - NO → 🐛 Bug in L3. **Root Cause Found**. Go to Phase 2.
+       - YES → Go to Step 3.
+    3. **Check L2 vs L1**: Does L2 match L1 Contracts?
+       - NO → 🐛 Bug in L2. **Root Cause Found**. Go to Phase 2.
+       - YES → Go to Step 4.
+    4. **Check L1 vs L0**: Does L1 match L0 Vision?
+       - NO → 🐛 Bug in L1. **Root Cause Found**. Go to Phase 2.
+       - YES → 🐛 Bug in L0 (Vision misalignment). **Root Cause Found**. Go to Phase 2.
+
+    **Phase 2: Resolve (Top-Down Fix)**
+    *Goal: Fix the Root Cause Spec (RCS) and cascade changes downward.*
+    1. **Fix RCS**: Update the spec at the Root Cause layer.
+    2. **Cascade**: Update L(N+1) -> ... -> Code to align with the fix.
     3. **Certify**: Verify the fix through **CertificationWorkflow**.
 
 #### `vibespec distill`
