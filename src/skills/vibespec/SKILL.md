@@ -40,28 +40,33 @@ Explicit commands for specific, targeted actions.
 - **Capture**: Save `<content>` as a new idea file.
 - Use when you have a specific requirement to record.
 
-#### `vibespec review [SPEC_ID] (e.g., L3.Validator)`
+#### `vibespec review [SPEC_ID] (Default: L0)`
 - **Audit**: Perform deep inspection of a specific spec item.
 - **Flow (SpecAuditWorkflow)**:
 
-    1. **Context Loading**:
+    1. **Layer Positioning (The Gatekeeper)**:
+       *Goal: Ensure item belongs in this layer.*
+       - **Check**: Does content match `references/layer_system.md` definition for Layer N?
+       - **Action**: If misplaced → **MOVE** to correct layer.
+
+    2. **Context Loading**:
        - Locate [Item] at Layer N.
        - Identify [Parent] at Layer N-1 (if N>0).
        - Identify [Children] at Layer N+1 (if exists).
 
-    2. **Upward Check (Compliance)**:
+    3. **Upward Check (Compliance)**:
        *Goal: Ensure item fulfills its contract.*
        - **Compare [Item] vs [Parent]**:
          - Does [Item] fully implement the intent of [Parent]?
          - Are there constraints in [Parent] that [Item] ignores?
        - **Action**: If violation found → Mark as **VIOLATION**.
 
-    3. **Internal Check (Quality)**:
+    4. **Internal Check (Quality)**:
        *Goal: Ensure item is well-formed.*
        - Check: Terminology, Atomic ID, Rationale presence, Testability.
        - **Action**: If defects found → Mark as **MALFORMED**.
 
-    4. **Downward Check (Impact)**:
+    5. **Downward Check (Impact)**:
        *Goal: Ensure children are still valid.*
        - **Compare [Item] vs [Children]**:
          - Does [Item] change require [Children] to update?
