@@ -14,11 +14,11 @@ These triggers rely on the agent's ability to infer intent from the environment,
 
 #### `vibespec` (no arguments)
 1. **Interactive Menu**:
-   - Present a list of available workflows (`onboard`, `test`, `bug`, `reflect`, `distill`, `review`, `idea`).
+   - Present a list of available workflows (`ingest`, `test`, `bug`, `reflect`, `distill`, `review`, `idea`).
    - Ask user to select or provide a new idea.
 
-#### `vibespec onboard`
-1. **Context Scan**:
+#### `vibespec ingest`
+1. **Context Scan (Internalization)**:
    - If `specs/` missing → **Bootstrap Step**.
    - If `ideas/` has files → **IdeaToSpecWorkflow** (Process pending ideas).
    - If nothing pending → 
@@ -80,16 +80,18 @@ Explicit commands for specific, targeted actions.
 2. If NOT empty → Proceed to Phase 2.
 3. If empty → **Halt**: Inform user "No pending ideas."
 
-### Phase 2: Analysis & Decomposition
+### Phase 2: Consolidated Analysis & Decomposition
 
 → **Load** `references/layer_system.md` for classification rules.
 
-1. **Scope Check**: Read `specs/L0-VISION.md`. Reject/Archive out-of-scope ideas.
-2. **Conflict Detection**: Identify conflicting ideas. Resolve by latest timestamp (INV_TIMESTAMP_ORDER).
-3. **Recursive Analysis**: For each in-scope idea:
-   - **Level Seeking**: Identify the *highest* applicable layer (L0, L1, L2, or L3).
-   - **Decomposition**: If idea contains mixed levels (e.g., L1 contract + L3 implementation), decompose into segments.
-4. **Queueing**: Order segments by layer (Highest -> Lowest).
+1.  **Batch Read**: Read ALL pending idea files in `ideas/` at once.
+2.  **Scope Check**: Read `specs/L0-VISION.md`. Reject/Archive out-of-scope ideas.
+3.  **Conflict Detection**: Identify conflicting ideas. Resolve by latest timestamp (INV_TIMESTAMP_ORDER).
+4.  **Consolidated Decision**:
+    - Synthesize all in-scope ideas into a single logical change set.
+    - Determine the *highest* applicable layer (L0, L1, L2, or L3) for the entire batch.
+    - **Decomposition**: If the batch contains mixed levels (e.g., L1 contract + L3 implementation), decompose into sequential segments.
+5.  **Queueing**: Order segments by layer (Highest -> Lowest).
 
 ### Phase 3: Layered Refinement Cycle
 

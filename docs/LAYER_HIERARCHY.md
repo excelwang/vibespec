@@ -176,14 +176,15 @@ interface Validator {
 **Rationale**: Core pipeline for transforming user intent into verifiable system laws.
 
 **Steps**:
-1. [Role] `Agent.read("ideas/")` → Extract Raw Intent
-2. [Loop: Layer Refinement]
-    - [Role] `Agent.design(Intent)` → DraftSpecs
+1. [Role] `Agent.read_batch("ideas/")` → Consolidated Intent
+2. [Role] `Agent.analyze(Intent)` → ChangePlan (L0-L3)
+3. [Loop: Layer Refinement]
+    - [Role] `Agent.refine(ChangePlan, Layer)` → DraftSpecs
     - `Validator.validate(DraftSpecs)`
     - [Role] `Agent.audit(DraftSpecs)` → AuditLog
     - **Human Approval**: `notify_user(AuditLog)`
-3. `System.commit()` → Apply changes to `specs/`
-4. [Role] `Agent.cleanup("ideas/")` → Move to archive
+4. `System.commit()` → Apply changes to `specs/`
+5. [Role] `Agent.cleanup("ideas/")` → Move to archive
 ```
 
 ---

@@ -6,41 +6,25 @@ A hierarchical specification system for LLM-driven development. Define specs in 
 
 **This project is self-hosting**: It uses vibespec to define its own goals, architecture, and contracts. See the [specs/](specs/) directory for a live demonstration.
 
-## Installation
-
-```bash
-# Using uv (recommended)
-uv tool install .
-
-# Or using pip
-pip install -e .
-```
-
-## Documentation
-
-- **[Philosophy & Concepts](docs/PHILOSOPHY.md)** - Understanding Vibe Coding and Self-Hosting.
-- **[Technical Architecture](docs/TECHNICAL_DESIGN.md)** - How the compiler, traceability, and testing protocols work.
-- **[Concepts for Beginners](docs/CONCEPTS.md)** - Easy to understand explanations.
-
 ## Quick Start (Dogfooding)
 
 Validate the framework using its own bootstrap specifications:
 
 ```bash
 # Validate the bootstrap specs
-python3 scripts/validate.py specs/
+python3 src/skills/vibespec/scripts/validate.py specs/
 
-
+# Ingest new ideas or pending changes
+vibespec ingest
 ```
 
 ## The Spec Hierarchy
 
 vibespec enforces a 4-layer hierarchy with **implicit metadata** (Layer/ID derived from filename, Exports from headings):
 
-- **L0: Vision** ([L0-VISION.md](specs/L0-VISION.md)) - High-level goals (e.g., Full-Chain Traceability).
 - **L1: Contracts** ([L1-CONTRACTS.md](specs/L1-CONTRACTS.md)) - Semantic rules (e.g., Unique IDs, Layer order).
 - **L2: Architecture** ([L2-ARCHITECTURE.md](specs/L2-ARCHITECTURE.md)) - Component topology (e.g., Compiler Pipeline).
-- **L3: Implementation** ([L3-COMPILER.md](specs/L3-COMPILER.md)) - Execution details (e.g., CLI Interface).
+- **L3: Runtime** ([L3-RUNTIME/](specs/L3-RUNTIME/)) - Implementation details.
 
 ## Testing & Verification
 

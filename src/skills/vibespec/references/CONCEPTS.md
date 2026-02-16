@@ -1,80 +1,80 @@
-# 核心概念指南：给编程小白的 vibespecs 入门
+# Core Concepts Guide: vibespec for Beginners
 
-如果你看到"契约"、"不变式"这些词感到头大，别担心！这篇文档就是为你准备的。我们将用生活中的例子来解释 vibespecs 背后的思想。
-
----
-
-## 1. 什么是"Spec"（规格说明书）？
-
-想象你要装修房子。
-
-*   **没有 Spec**: 你跟装修师傅口头说："给我弄得漂亮点，要温馨。"
-    *   *结果*：师傅给你刷了大红墙，装了霓虹灯。你崩溃了，因为这完全不是你想要的。
-*   **有 Spec**: 你给师傅一张图纸，详细写着："墙面色号 #F5F5DC，灯光色温 3000K。"
-    *   *结果*：师傅按图施工，做出来的跟你想的一模一样。
-
-在 vibespecs 中，**Spec** 就是你写给 AI（你的装修师傅）的那份详细图纸。你写得越清楚，AI 写出的代码就越靠谱。
+If terms like "Contract" or "Invariant" make your head spin, don't worry! This guide explains the philosophy behind vibespec using real-world analogies.
 
 ---
 
-## 2. 什么是"契约"（Contract）？
+## 1. What is a "Spec"?
 
-**契约就是一份"承诺书"。**
+Imagine you are renovating a house.
 
-就像你去在网购：
-*   **你的承诺**：我付钱，填对地址。
-*   **商家的承诺**：我给你发货，保证正品。
+*   **No Spec**: You tell the contractor: "Make it look nice and cozy."
+    *   *Result*: They paint the walls bright red and install neon lights. You are devastated because this is not what you wanted.
+*   **With Spec**: You give the contractor a blueprint: "Wall color #F5F5DC, light temperature 3000K."
+    *   *Result*: The contractor follows the blueprint, and the result is exactly what you envisioned.
 
-在代码世界里：
-*   **系统（System）** 承诺："只要你给我正确的输入，我就返回正确的结果。"
-
-vibespecs 里的 **L1 Contracts** 就是用来定义这些承诺的。承诺的发起者分两类：
-*   **Agent**（智能体）：负责需要判断力的决策，比如"这个想法属于哪个层级？"
-*   **System**（系统）：负责机械性的确定任务，比如"验证文件格式是否正确"。
-
-我们只关心承诺是否兑现，不关心内部实现细节。
+In vibespec, a **Spec** is that detailed blueprint you write for AI (your contractor). The clearer you are, the more reliable the code AI generates.
 
 ---
 
-## 3. 什么是"不变式"（Invariant）？
+## 2. What is a "Contract"?
 
-**不变式就是"绝对不能打破的铁律"。**
+**A Contract is a "Promise".**
 
-想象一个银行保险柜：
-*   不管是存钱、取钱、转账，还是遭遇停电、地震。
-*   **铁律**：保险柜里的总金额，必须等于所有账本记录之和。
+Just like shopping online:
+*   **Your Promise**: I pay, and provide the correct address.
+*   **Merchant's Promise**: I ship the goods, guaranteeing authenticity.
 
-如果有一天，保险柜里的钱比账本少了一分钱，那就是**出大事了**（Bug）。
+In the code world:
+*   **The System** promises: "As long as you give me valid input, I will return the correct result."
 
-在 vibespecs 中，我们定义这些"铁律"：
-*   **INV_TIMESTAMP_ORDER**：*"想法必须按时间顺序处理，后提交的优先。"*
-*   **INV_HUMAN_APPROVAL**：*"每一层 spec 必须获得人类批准后，才能开始下一层。"*
+**L1 Contracts** in vibespec define these promises. There are two types of initiators:
+*   **Agent**: Responsible for decisions requiring judgment, e.g., "Which layer does this idea belong to?"
+*   **System**: Responsible for mechanical, deterministic tasks, e.g., "Validate file format."
 
-只要系统违反了任何一条铁律，就立刻报警。
-
----
-
-## 4. 什么是"状态机"（State Machine）？
-
-想象你在玩一个游戏手柄：
-*   你可以按 `A`，按 `B`，按 `上下左右`。
-*   你按键的**顺序**不同，游戏里的**状态**就不同。
-
-**状态机测试** 就像是一个不知疲倦的机器人，拿着手柄疯狂乱按：
-1.  先按A（创建想法文件）
-2.  再按B（提交到 specs）
-3.  又按A（再创建一个）
-4.  突然拔电源（模拟故障）
-
-甚至按上几万次！
-
-它的目的就是为了找出："有没有某一种特定的操作顺序，能让系统崩溃？"。这就是 vibespecs 帮你做的事情：**它可以自动生成成千上万种操作序列，试图找出那你永远想不到的 Bug。**
+We only care if the promise is kept, not the details of how it's done.
 
 ---
 
-## 总结
+## 3. What is an "Invariant"?
 
-*   **Spec**: 装修图纸（告诉 AI 做什么）
-*   **Contract (契约)**: 买卖承诺（Agent 负责判断，System 负责执行）
-*   **Invariant (不变式)**: 宇宙铁律（无论如何都不能违反的规则）
-*   **State Machine (状态机)**: 疯狂乱按的测试机器人（帮你找 Bug）
+**An Invariant is an "Unbreakable Iron Law".**
+
+Imagine a bank vault:
+*   Whether depositing, withdrawing, transferring, or during a power outage or earthquake.
+*   **Iron Law**: The total money in the vault must equal the sum of all ledger records.
+
+If one day the money in the vault is even one cent less than the ledger, **it's a disaster** (Bug).
+
+In vibespec, we define these "Iron Laws":
+*   **INV_TIMESTAMP_ORDER**: *"Ideas must be processed in batch by timestamp order; later submissions supersede earlier ones."*
+*   **INV_HUMAN_APPROVAL**: *"Each spec layer must be human-approved before the next layer begins."*
+
+If the system violates any iron law, an alarm is triggered immediately.
+
+---
+
+## 4. What is a "State Machine"?
+
+Imagine playing with a game controller:
+*   You can press `A`, press `B`, press `Up/Down/Left/Right`.
+*   Different **sequences** of presses result in different **states** in the game.
+
+**State Machine Testing** is like a tireless robot mashing buttons:
+1.  Press A (Create Idea)
+2.  Press B (Commit to Specs)
+3.  Press A (Create another)
+4.  Pull the plug (Simulate failure)
+
+It might press buttons tens of thousands of times!
+
+Its purpose is to find: "Is there a specific sequence of actions that crashes the system?" This is what vibespec does for you: **It automatically generates thousands of action sequences to find bugs you would never imagine.**
+
+---
+
+## Summary
+
+*   **Spec**: Blueprint (Telling AI what to do)
+*   **Contract**: Promise (Agent judges, System executes)
+*   **Invariant**: Iron Law (Rules that must never be broken)
+*   **State Machine**: Button-mashing Robot (Finding hidden bugs)

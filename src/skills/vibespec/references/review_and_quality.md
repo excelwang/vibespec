@@ -99,7 +99,7 @@ interface Validator {
 ## [workflow] IdeaToSpecWorkflow
 **Purpose**: Ingest raw ideas into formal specifications.
 **Steps**:
-1. [Role] `Agent.read("ideas/")` → Raw Intent
+1. [Role] `Agent.read_batch("ideas/")` → Consolidated Intent
 ```
 
 ---

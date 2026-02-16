@@ -55,7 +55,8 @@ To bridge "Raw Thoughts" and "Formal Specs":
 1. **Capture**: Raw ideas saved to `ideas/YYYY-MM-DDTHHMM-desc.md`.
 2. **Batch Processing**: System reads pending ideas in timestamp order (INV_TIMESTAMP_ORDER).
 3. **Conflict Detection**: Identify conflicting ideas, resolve by latest timestamp.
-4. **Refinement Cycle**:
+4. **Consolidated Refinement Cycle**:
+    - **Consolidated Analysis**: Synthesize all in-scope ideas into a single logical change set.
     - L0 Scope Check (stop if out-of-scope).
     - Layer-by-Layer Refinement (L0 → L1 → L2 → L3).
     - **Strict Gating**: Mandatory human approval after *each* layer's validation (INV_HUMAN_APPROVAL).

@@ -131,4 +131,12 @@ L0 (Why) → L1 (What) → L2 (Who) → L3 (How)
   Intent    System      Component  Details
 ```
 
-L1 items MUST use naming conventions (ID Suffix) that match L0 items for implicit traceability (e.g., `CONTRACTS.VAL` maps to `VISION.VAL`). L2/L3 traceability is enforced via **Agent-led Logic Audit** (Self-Audit) during refinement.
+
+### Example: Workflow
+
+```markdown
+## [workflow] IdeaToSpecWorkflow
+**Purpose**: Ingest raw ideas into formal specifications.
+**Steps**:
+1. [Role] `Agent.read_batch("ideas/")` → Consolidated Intent
+```
