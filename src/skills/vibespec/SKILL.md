@@ -113,7 +113,9 @@ Process the specific layer L(N) identified in Phase 2:
 │ 5. ⛔ MANDATORY STOP ⛔                   │
 │    - notify_user with findings             │
 │    - REJECT → REVERT & Re-plan            │
-│    - APPROVE → Proceed to L(N+1)          │
+│    - APPROVE →                            │
+│         IF layers remain: Proceed to L(N+1)│
+│         ELSE: Proceed to **Phase 4**       │
 └───────────────────────────────────────────┘
 ```
 
