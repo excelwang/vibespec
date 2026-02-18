@@ -2,7 +2,6 @@
 """
 Vibespec Unified Validator & Auditor
 Enforces structural standards and implementation coverage.
-Dependencies: PyYAML (for custom rule parsing from L1 VIBE_SPEC_RULES).
 """
 import os
 import re
@@ -161,6 +160,18 @@ def parse_spec_file(spec_file: Path) -> dict:
             else: current_export = None
             continue
 
+        list_match = re.match(r'^(\d+)\. \*\*([A-Z0-9_.]+)\*\*', stripped)
+        if list_match:
+            hid = list_match.group(2)
+            parent = current_h3 or current_h2
+            if re.match(r'^[a-zA-Z0-9_.]+$', hid):
+                full_id = f"{parent}.{hid}" if parent else f"{spec_id}.{hid}"
+                current_export = full_id
+                exports.append(full_id)
+                items[full_id] = {'header': stripped, 'body': '', 'line': i+1}
+            else: current_export = None
+            continue
+
         if current_export and current_export in items:
             items[current_export]['body'] += line + '\n'
             impl_matches = re.findall(r'Implements:\s*\[(?:Role|Component):\s*([A-Z][\w.]+)\]', line)
@@ -171,7 +182,7 @@ def parse_spec_file(spec_file: Path) -> dict:
     return {'layer': layer, 'id': spec_id, 'version': version, 'exports': exports, 'references': references, 'file': str(spec_file), 'items': items, 'body': body}
 
 def scan_existing_tests(tests_root: Path) -> dict:
-    """Scan tests and identify if they are skeletons (Phase 1) or implemented (Phase 2)."""
+    """Scan tests and identify implementation phases (Skeleton, Logic, System)."""
     test_metadata = {}
     extensions = {'.py', '.js', '.ts', '.go'}
     if tests_root.exists():
@@ -179,20 +190,25 @@ def scan_existing_tests(tests_root: Path) -> dict:
             if test_file.suffix in extensions:
                 try:
                     content = test_file.read_text()
-                    # Find all @verify_spec matches
-                    for match in re.finditer(r'@verify_spec\(["\']([^"\']+)["\']\)', content):
+                    # Match @verify_spec("ID") or @verify_spec("ID", mode="...")
+                    pattern = r'@verify_spec\(["\']([^"\']+)["\'](?:,\s*mode=["\']([^"\']+)["\'])?\)'
+                    for match in re.finditer(pattern, content):
                         spec_id = match.group(1)
+                        mode = match.group(2) or "logic"
                         
-                        # Heuristic: Check if the function following this decorator contains skipTest
-                        # We look at the block of text after the match until the next decorator or function end
                         start_pos = match.end()
-                        next_block = content[start_pos : start_pos + 500] # Look ahead 500 chars
+                        next_block = content[start_pos : start_pos + 500]
+                        is_skeleton = "self.skipTest" in next_block or "pytest.skip" in next_block
                         
-                        is_skeleton = "self.skipTest" in next_block
+                        status = "skeleton" if is_skeleton else mode
                         
-                        # If multiple tests cover the same ID, Phase 2 wins
-                        if spec_id not in test_metadata or not is_skeleton:
-                            test_metadata[spec_id] = "skeleton" if is_skeleton else "implemented"
+                        # Phase 3 (system) > Phase 2 (logic) > Phase 1 (skeleton)
+                        if spec_id not in test_metadata:
+                            test_metadata[spec_id] = status
+                        else:
+                            order = {"skeleton": 1, "logic": 2, "system": 3}
+                            if order[status] > order[test_metadata[spec_id]]:
+                                test_metadata[spec_id] = status
                 except Exception: continue
     return test_metadata
 
@@ -200,10 +216,9 @@ def validate_references(references_dir: Path, tests_dir: Path = None) -> tuple:
     errors, warnings = [], []
     coverage = {
         'total': 0, 
-        'implemented': 0, 
+        'system': 0,
+        'logic': 0, 
         'skeletons': 0,
-        'implemented_ids': set(), 
-        'skeleton_ids': set(),
         'missing_ids': set()
     }
     references = {}
@@ -219,41 +234,44 @@ def validate_references(references_dir: Path, tests_dir: Path = None) -> tuple:
             if exp in exports_map: errors.append(f"Duplicate ID: {exp} (in {file_path} and {exports_map[exp]})")
             exports_map[exp] = file_path
         
-        # Policy: Only L1 Contracts require implementation verification
         if data['layer'] == 1:
             for item_id, item_data in data['items'].items():
-                if item_id.startswith('CONTRACTS.') and item_data['header'].startswith('## '):
+                if item_id.startswith('CONTRACTS.') and item_id.count('.') == 2:
                     testable_ids.add(item_id)
 
     if tests_dir:
         test_metadata = scan_existing_tests(tests_dir)
-        covered_ids = set(test_metadata.keys())
         
-        impl_ids = {sid for sid, status in test_metadata.items() if status == "implemented"}
+        system_ids = {sid for sid, status in test_metadata.items() if status == "system"}
+        logic_ids = {sid for sid, status in test_metadata.items() if status == "logic"}
         skel_ids = {sid for sid, status in test_metadata.items() if status == "skeleton"}
         
-        # Intersection with testable_ids from specs
-        actual_impl = testable_ids.intersection(impl_ids)
-        actual_skel = testable_ids.intersection(skel_ids) - actual_impl
-        miss_ids = testable_ids - (actual_impl | actual_skel)
+        actual_system = testable_ids.intersection(system_ids)
+        actual_logic = testable_ids.intersection(logic_ids) - actual_system
+        actual_skel = testable_ids.intersection(skel_ids) - (actual_system | actual_logic)
+        miss_ids = testable_ids - (actual_system | actual_logic | actual_skel)
         
         coverage.update({
             'total': len(testable_ids),
-            'implemented': len(actual_impl),
+            'system': len(actual_system),
+            'logic': len(actual_logic),
             'skeletons': len(actual_skel),
-            'implemented_ids': actual_impl,
-            'skeleton_ids': actual_skel,
             'missing_ids': miss_ids
         })
 
-    # Structural L1-L0 Traceability
+    # Structural L1-L0 Traceability (Section Level)
     for file_path, data in references.items():
         if data['layer'] == 1:
+            sections = set()
             for item_id in data['items']:
-                if item_id.startswith('CONTRACTS.'):
-                    suffix = item_id.split('CONTRACTS.')[1]
+                if '.' in item_id:
+                    sections.add(item_id.split('.')[0] + '.' + item_id.split('.')[1])
+            
+            for section in sections:
+                if section.startswith('CONTRACTS.'):
+                    suffix = section.split('CONTRACTS.')[1]
                     if f"VISION.{suffix}" not in exports_map:
-                        warnings.append(f"Traceability break: `{item_id}` has no corresponding L0 item.")
+                        warnings.append(f"Traceability break: Section `{section}` has no corresponding L0 section.")
 
     # L3 Detailed Quality Checks
     for file_path, data in references.items():
@@ -289,28 +307,45 @@ def main():
     for w in warnings: print(f"   ⚠️  WARNING: {w}")
     if not errors and not warnings: print("   ✅ Specs are structuraly valid.")
 
-    print(f"\n📊 Step 2: Implementation Audit (L1 Contracts)")
+    print(f"\n📊 Step 2: L1 Contract Test Coverage Audit")
     if coverage['total'] > 0:
         total = coverage['total']
-        impl = coverage['implemented']
+        system = coverage['system']
+        logic = coverage['logic']
         skel = coverage['skeletons']
-        pct_verified = (impl / total * 100)
-        pct_traced = ((impl + skel) / total * 100)
         
-        print(f"   L1 Traceability: {impl + skel}/{total} ({pct_traced:.1f}%)")
-        print(f"   L1 Verification: {impl}/{total} ({pct_verified:.1f}%)")
-        print(f"   - Implemented (Phase 2): {impl}")
-        print(f"   - Skeletons   (Phase 1): {skel}")
+        pct_system = (system / total * 100)
+        pct_logic = (logic / total * 100)
+        pct_traced = ((system + logic + skel) / total * 100)
+        
+        print(f"   Traceability (Phase 1): {system + logic + skel}/{total} ({pct_traced:.1f}%)")
+        print(f"   Logic Verif  (Phase 2): {logic}/{total} ({pct_logic:.1f}%)")
+        print(f"   System Verif (Phase 3): {system}/{total} ({pct_system:.1f}%)")
+        print(f"   - Phase 1 (Skeletons): {skel}")
+        print(f"   - Phase 2 (Logic/Mock): {logic}")
+        print(f"   - Phase 3 (System/E2E): {system}")
         
         if coverage['missing_ids']:
             print(f"   Missing Impl:")
             for mid in sorted(list(coverage['missing_ids']))[:5]: print(f"      - {mid}")
     else: print("   ⏭️  No testable L1 items found.")
 
-    print("\n" + "=" * 55)
-    status = "✅ PASSED" if not errors and coverage['implemented'] == coverage['total'] else "⚠️  ACTION REQUIRED"
-    print(f"=== Certification Status: {status} ===")
-    print("=" * 55)
+    print("\n🚀 Actionable Guidance:")
+    if errors:
+        print("   👉 [CRITICAL] Fix structural ERRORS in Step 1 before proceeding.")
+    elif warnings:
+        print("   👉 [WARNING] Review Step 1 warnings to ensure spec quality and traceability.")
+    
+    if coverage['total'] > 0:
+        if coverage['missing_ids']:
+            print("   👉 [TRACEABILITY] Generate missing test skeletons for L1 contracts.")
+        elif coverage['skeletons'] > 0:
+            print(f"   👉 [LOGIC] Implement Phase 2 assertions for {coverage['skeletons']} skeletons.")
+        elif coverage['logic'] > 0:
+            print(f"   👉 [SYSTEM] Promote {coverage['logic']} Phase 2 tests to Phase 3 System/E2E verification.")
+        elif pct_system == 100:
+            print("   👉 [COMPLETE] L1 is fully verified at System level. Proceed to Code implementation.")
+    
     return 1 if errors else 0
 
 if __name__ == "__main__":

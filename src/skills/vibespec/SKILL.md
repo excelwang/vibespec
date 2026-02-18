@@ -173,7 +173,7 @@ Process the specific layer L(N) identified in Phase 2:
 ### Phase 4: Archive & Complete
 
 
-1. **Move processed ideas**: Agent moves processed files to `ideas/archived/` (e.g., using `mv`).
+1. **Move processed ideas**: Agent moves processed files to `ideas/archived/` (e.g., using `mkdir -p ideas/archived && mv`).
 2. **Gap Analysis**: Agent MUST detect missing links (MISSING, OUTDATED, ORPHAN) across L1→L2→L3→Code.
 3. **Post-Refinement (Manual Gate)**: If `ideas/` is empty, Agent SHALL explicitly ask: "Refinement complete. Should I proceed to **Certification** (verification audit)?"
    - **STOP**: Do NOT run verification until user says 'yes'.
@@ -229,7 +229,7 @@ Process the specific layer L(N) identified in Phase 2:
 ## Tools
 
 Use standalone scripts for mechanical operations:
-- `python3 scripts/validate.py specs/` — Structural validation & Coverage auditing.
+- `python3 scripts/validate.py specs/` — Structural validation, section-level traceability, and three-phase coverage auditing.
 
 **IMPORTANT**: Run `python3 scripts/validate.py` IMMEDIATELY after each refinement cycle.
 

@@ -131,6 +131,16 @@ L0 (Why) → L1 (What) → L2 (Who) → L3 (How)
   Intent    System      Component  Details
 ```
 
+### Granularity & Traceability Rules
+
+| Layer | Granularity | Traceability Rule |
+|-------|-------------|-------------------|
+| **L0** | High-level (Sections) | Root of the tree. Vision is macro-level only. |
+| **L1** | Granular (Items) | **Section-level** MUST trace back to L0 Section. |
+| **Tests** | Granular (Items) | **Item-level** (@verify_spec) MUST trace back to L1 Item. |
+
+> Rationale: Prevents over-specification in L0 (Vision) while ensuring 100% verification coverage in L1 (Contracts).
+
 
 ### Example: Workflow
 
