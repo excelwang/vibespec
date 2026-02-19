@@ -15,7 +15,7 @@
 
 | Layer | Content | Forbidden |
 |-------|---------|-----------|
-| L0 | User expectations, project vision | Implementation details, tool names, file paths |
+| L0 | User expectations, project vision | Implementation details, tool names, file paths, architectural metaphors (see Anti-Patterns) |
 | L1 | `Agent\|System MUST/SHOULD` with Responsibility + Verification | Architecture components, script logic |
 | L2 | Role (observes/decides/acts) \| Component (input/output) | Class methods, variable names |
 | L3 | `[interface]` \| `[decision]` \| `[algorithm]` \| `[workflow]` | Vague vision statements |
@@ -34,6 +34,24 @@ User wants vibespec to [do something / have capability]
 - **SCOPE.IDEAS**: User wants vibespec to process idea files in timestamp order.
 - **CODE_QUALITY_GOALS.MODULARITY**: User wants specs to guide agents to generate modular code.
 ```
+
+---
+
+### L0 Anti-Patterns (MUST NOT appear in L0)
+
+L0 describes **what the user wants** in domain terms, not **how the system is built**.
+
+| Anti-Pattern | Example | Why | Correct Layer |
+|:---|:---|:---|:---|
+| **Architectural metaphor** | "Kernel", "Syscall", "Ring 0/3", "Microkernel" | Assumes implementation form | L2 |
+| **Protocol name** | "QUIC", "TLS-PSK", "gRPC", "mTLS" | Implementation choice | L2/L3 |
+| **Packaging detail** | "cdylib", "pip install", "maturin" | Distribution mechanism | L2 |
+| **Specific tool name** | "dnctl", "cargo geiger" | Implementation artifact | L2/L3 |
+| **Internal component name** | "Supervisor", "PeerMatcher", "Gossip" | Architecture entity | L2 |
+| **Data structure / type** | "RingBuffer", "VecDeque", "Arc<Event>" | Implementation detail | L3 |
+
+> **Litmus Test**: If removing the term would change the *system's form* but not the *user's desire*, it belongs in L2/L3.
+> Example: "User wants plugin isolation" ✅ (L0) vs. "Processes run in separate memory regions with catch_unwind" ❌ (L2/L3).
 
 ---
 

@@ -7,6 +7,26 @@ description: Spec-driven development workflow. Distills raw ideas into traceable
 
 Manage the refinement of raw thoughts into traceable specifications.
 
+## Layer Quick Reference
+
+> **Use this as the first check when classifying or reviewing content.**
+
+| Layer | One-liner | Voice | Litmus Test |
+|:---|:---|:---|:---|
+| **L0** | **Why** — User desires | "User wants..." | If you remove a term and the *desire* survives but the *implementation* breaks → the term belongs in L2/L3, not here |
+| **L1** | **What** — Behavioral contracts | "Kernel/System MUST..." with Responsibility + Verification | Contains RFC2119 keywords (MUST/SHOULD/SHALL) |
+| **L2** | **Who** — Architectural entities | "Component X receives Y, produces Z" | Names Roles (observe/decide/act) or Components (input/output) |
+| **L3** | **How** — Implementation details | `[interface]` / `[algorithm]` / `[workflow]` / `[decision]` | Contains code, data structures, protocols, algorithms |
+
+**Key anti-patterns per layer**:
+
+| In L0, NEVER use | Belongs in |
+|:---|:---|
+| Architecture terms (Kernel, Syscall, Ring 0, Microkernel) | L2 |
+| Protocol names (QUIC, TLS-PSK, gRPC) | L2/L3 |
+| Implementation details (cdylib, dlopen, Arc, VecDeque) | L3 |
+| Internal component names (Supervisor, PeerMatcher, Gossip) | L2 |
+
 ## Triggers
 
 ### Passive / Context-Aware (Recommended)
@@ -188,19 +208,15 @@ Process the specific layer L(N) identified in Phase 2:
 
 **Trigger**: Manual Approval or `vibespec test` command.
 
-**Initiation Gate**: Agent MUST propose certification and receive human approval before starting.
+**Precondition**: `src/` MUST be non-empty. If empty, skip generation and inform user.
 
-### Phase 1: Test Shell Generation (after L1 approval)
-1. Generate test skeleton per `## CONTRACTS.*` section → `tests/specs/test_contracts_<suffix>.py`.
-2. **STOP**: Request human approval before saving.
-
-### Phase 2: Test Body Fill (smart detection)
-1. Run `python3 scripts/validate.py` → Certification Dashboard.
-2. Detect fillable tests (`skipTest` markers where `src/` module exists).
-3. Fill with real assertions (follow INTENT_LOCK and QUALITY_GUARD rules in testing_protocol.md).
-4. **Review**: Present L1 text + Intent + Code side-by-side. **STOP** for approval.
-5. **Execute**: Run project-native test commands (e.g., `pytest`).
-6. Re-run Step 1 to verify coverage updates.
+### Single-Pass Test Generation
+1. For each `## CONTRACTS.*` section in L1:
+   - `src/` has implementation → generate **complete test** (real assertions, `src/` imports).
+   - `src/` lacks implementation → generate **skip-marked test** (`skipTest`).
+2. **Review**: Present L1 text + Intent + Code side-by-side. **STOP** for approval.
+3. **Execute**: Run project-native test commands (e.g., `pytest`).
+4. Report PASS/FAIL/SKIP counts.
 
 ---
 
