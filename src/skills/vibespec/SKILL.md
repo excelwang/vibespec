@@ -247,6 +247,7 @@ Process the specific layer L(N) identified in Phase 2:
 
 Use standalone scripts for mechanical operations:
 - `python3 scripts/validate.py specs/` — Structural validation, section-level traceability, and three-phase coverage auditing.
+  - **Black-Box Testing Enforcement**: When running validation on projects with test code, ALWAYS pass `--project-prefix <prefix>` and `--allowed-imports <pattern>`. Set prefix to the project's root namespace (e.g., `datanix`), and pattern to specify public interfaces (e.g., `^datanix_api::|^datanix_core::syscall::SyscallDispatcher`). Any test importing a project module outside this allowed pattern will trigger a violation.
 
 **IMPORTANT**: Run `python3 scripts/validate.py` IMMEDIATELY after each refinement cycle.
 

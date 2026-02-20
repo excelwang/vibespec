@@ -219,7 +219,7 @@ def scan_existing_tests(tests_root: Path) -> dict:
                 except Exception: continue
     return test_metadata
 
-def validate_references(references_dir: Path, tests_dir: Path = None) -> tuple:
+def validate_references(references_dir: Path, tests_dir: Path = None, project_prefix: str = None, allowed_imports: str = None) -> tuple:
     errors, warnings = [], []
     coverage = {
         'total': 0, 
@@ -316,16 +316,35 @@ def validate_references(references_dir: Path, tests_dir: Path = None) -> tuple:
         ce, cw = apply_custom_rules(custom_rules, references)
         errors.extend(ce); warnings.extend(cw)
         
+    if tests_dir and project_prefix and allowed_imports:
+        extensions = {'.py', '.js', '.ts', '.go', '.rs'}
+        for test_file in tests_dir.rglob("*"):
+            if test_file.suffix not in extensions: continue
+            try: content = test_file.read_text(encoding='utf-8', errors='ignore')
+            except Exception: continue
+            
+            imports = []
+            imports.extend(re.findall(r'^\s*use\s+([a-zA-Z0-9_:]+)', content, re.MULTILINE))
+            imports.extend(re.findall(r'^\s*from\s+([a-zA-Z0-9_\.]+)', content, re.MULTILINE))
+            imports.extend(re.findall(r'^\s*import\s+([a-zA-Z0-9_\.]+)', content, re.MULTILINE))
+            
+            for imp in imports:
+                if imp.startswith(project_prefix):
+                    if not re.search(allowed_imports, imp):
+                        errors.append(f"Black-Box Violation in {test_file.name}: Import `{imp}` is an internal path not matching allowed pattern `{allowed_imports}`.")
+            
     return errors, warnings, coverage
 
 def main():
     parser = argparse.ArgumentParser(description="Unified Vibespec Validator & Auditor")
     parser.add_argument('specs_dir', nargs='?', default='./specs'); parser.add_argument('--tests-dir', default='./tests/specs')
+    parser.add_argument('--project-prefix', help='Prefix of project modules for black-box test enforcement (e.g. datanix)')
+    parser.add_argument('--allowed-imports', help='Regex pattern for allowed project imports in L1 tests')
     args = parser.parse_args(); specs_p, tests_p = Path(args.specs_dir), Path(args.tests_dir)
     if not specs_p.exists(): return 1
     
     print(f"=== Vibespec Unified Validator ===\n")
-    errors, warnings, coverage = validate_references(specs_p, tests_p)
+    errors, warnings, coverage = validate_references(specs_p, tests_p, args.project_prefix, args.allowed_imports)
     print(f"✔️  Step 1: Structural Validation")
     for e in errors: print(f"   ❌ ERROR: {e}")
     for w in warnings: print(f"   ⚠️  WARNING: {w}")
