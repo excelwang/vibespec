@@ -557,25 +557,20 @@ standard_terms:
   > Responsibility: Transparency — make gaps visible.
   > Verification: `validate.py` output includes "Missing Impl" list.
 
-- **TWO_PHASE_GENERATION**: Agent MUST generate tests in two distinct phases.
-  > Responsibility: Integrity — separate assertion intent from implementation.
-  > Verification: Phase 1 shells exist before Phase 2 fill.
+- **SRC_PRECONDITION**: Agent MUST NOT generate tests when `src/` is empty. Test generation requires existing implementation code.
+  > Responsibility: Pragmatism — no empty shells without code to test.
+  > Verification: `vibespec test` skips generation if `src/` is empty or missing.
 
-- **PHASE1_SHELL**: Agent MUST generate test skeletons immediately after L1 approval, containing:
-  1. `@verify_spec("CONTRACTS.XXX")` annotation.
-  2. Docstring quoting the L1 contract statement verbatim.
-  3. `# ASSERTION INTENT:` comment block derived from L1 Verification clause.
-  4. `self.skipTest("Pending src/ implementation")` as body.
-  > Responsibility: Shift-Left — coverage dashboard is meaningful from day one.
-  > Verification: Skeleton files exist in `tests/specs/` with skip markers.
+- **SINGLE_PASS_GENERATION**: Agent MUST generate tests in a single pass. For each L1 `## CONTRACTS.*` section:
+  1. If `src/` has corresponding implementation → generate **complete test** with real assertions and `src/` imports.
+  2. If `src/` lacks corresponding implementation → generate **skip-marked test** with `self.skipTest("Pending src/ implementation")`.
+  Both cases include: `@verify_spec("CONTRACTS.XXX")` annotation, docstring quoting L1 contract, and `# ASSERTION INTENT:` comment block.
+  > Responsibility: Completeness — dashboard shows passing + skipped counts from day one.
+  > Verification: All L1 sections have test files; filled tests import from `src/`; unfilled tests have `skipTest`.
 
-- **PHASE2_FILL**: Agent MUST fill test bodies when `vibespec test` detects skipped tests AND corresponding `src/` modules exist.
-  > Responsibility: Completeness — close coverage gaps when code is ready.
-  > Verification: `skipTest` replaced with real assertions.
-
-- **INTENT_LOCK**: Agent MUST NOT modify docstrings or `ASSERTION INTENT` blocks during Phase 2 fill.
+- **INTENT_LOCK**: Agent MUST NOT modify docstrings or `ASSERTION INTENT` blocks when updating a previously skipped test.
   > Responsibility: Integrity — prevent weakening of pass conditions.
-  > Verification: Diff between Phase 1 and Phase 2 shows changes only in test body.
+  > Verification: Diff shows changes only in test body, not in docstrings or intent comments.
 
 - **QUALITY_GUARD**: System MUST reject test bodies containing tautological assertions (e.g., `assertTrue(True)`, bare `pass`).
   > Responsibility: Quality — prevent meaningless tests.

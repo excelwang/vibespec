@@ -27,6 +27,7 @@ When performing self-audit during refinement or review, apply these checks in or
 | **ROLE_SELF_AUDIT** | Evaluate revision quality BEFORE fixing validation errors | Self-correct first |
 | **HIERARCHY_CHECK** | Load L(N-1), verify full implementation of parent requirements | BLOCK if parent req missing |
 | **TRACEABILITY** | Verify L1-L0 matching by ID prefix (CONTRACTS.X -> VISION.X) | Warn on break |
+| **L0_L1_COVERAGE** | Every substantive H3 item in L0 MUST be covered by at least one L1 Contract | BLOCK if L0 item lacks L1 coverage |
 | **LAYER_SPECIFIC** | Apply layer-appropriate criteria (L0=Vision, L1=Contracts, L2=Architecture, L3=Runtime) | Flag misplaced content |
 | **OMISSION_CHECK** | Every key in L(N-1) must be represented in L(N) | BLOCK |
 | **REDUNDANCY** | Flag duplicate keys/sections across layers | Warn |
@@ -50,10 +51,15 @@ When performing self-audit during refinement or review, apply these checks in or
 
 ### L0-VISION Format
 ```markdown
-## VISION.SCOPE
+## In-Scope
+### 1. Feature Set
 - **IN**: User wants vibespec to manage specifications...
+
+## Out-of-Scope
+### 2. Exclusions
 - **OUT**: User does NOT want vibespec to generate code...
 ```
+*Note: Substantive vision requirements (e.g. `IN`, `OUT`, `VAL`) MUST ONLY be placed under H3 (`###`) headings, OR exist directly under top-level Scope lists. H2 (`##`) headings are strictly for short chapter titles. **CRITICAL: Every substantive item listed under an H3 MUST have a corresponding L1 contract that provides verification coverage for that specific vision item.** *
 
 ### L1-CONTRACTS Format
 ```markdown
@@ -62,7 +68,7 @@ When performing self-audit during refinement or review, apply these checks in or
   > Responsibility: Automation — machine-parseable metadata.
   > Verification: Error on missing version.
 ```
-*Note: Traceability to L0 is implicit via ID suffix matching.*
+*Note: Traceability to L0 is implicit via ID suffix matching (e.g., `CONTRACTS.SCOPE` traces to `VISION.SCOPE`).*
 
 ### L2-ARCHITECTURE Format
 ```markdown

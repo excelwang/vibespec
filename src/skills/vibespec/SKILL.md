@@ -157,6 +157,7 @@ Explicit commands for specific, targeted actions.
 4.  **Consolidated Decision**:
     - Synthesize all in-scope ideas into a single logical change set.
     - Determine the *highest* applicable layer (L0, L1, L2, or L3) for the entire batch.
+    - **L0 Generation Rules**: When generating/updating L0, all substantive vision content MUST be placed under H3 (`###`) list items. For each generated H3 item, the Agent MUST ensure there is or will be a corresponding L1 contract that provides verification coverage for that specific vision item.
     - **Decomposition**: If the batch contains mixed levels (e.g., L1 contract + L3 implementation), decompose into sequential segments.
 5.  **Queueing**: Order segments by layer (Highest -> Lowest).
 
@@ -274,6 +275,7 @@ Load precisely when the workflow step requires domain knowledge:
 - **Scope-First**: Always check `VISION.SCOPE` before refining.
 - **Code-First Priority**: In `DistillWorkflow`, Code > Specs when discrepant.
 - **Reformulation**: Natural language → Declarative, unambiguous statements.
+- **L0-L1 Coverage**: Every substantive H3 item in L0 MUST be covered by at least one L1 Contract.
 - **Validate-Before-Review**: Human sees only passing specs.
 - **Strict Sequencing**: L(N) approved before L(N+1) begins. Multi-layer edits FORBIDDEN.
 - **Traceability**: Numbered lists (`1. `) only in spec bodies. Bullets (`- `) forbidden.

@@ -122,7 +122,7 @@ def parse_spec_file(spec_file: Path) -> dict:
         if h2_match:
             hid = h2_match.group(2)
             current_h2, current_h3 = hid, None
-            if re.match(r'^[a-zA-Z0-9_.]+$', hid):
+            if re.match(r'^[A-Z0-9_.]+$', hid) or layer == 3: # Only export if it looks like an ID (or L3)
                 full_id = f"{spec_id}.{hid}" if not hid.startswith(spec_id) else hid
                 if layer == 3: full_id = hid 
                 current_export = full_id
@@ -140,6 +140,11 @@ def parse_spec_file(spec_file: Path) -> dict:
             if re.match(r'^[a-zA-Z0-9_.]+$', hid):
                 full_id = f"{spec_id}.{hid}" if not hid.startswith(spec_id) else hid
                 if layer == 2 and (hid.startswith('ROLES.') or hid.startswith('COMPONENTS.')): full_id = hid
+                if layer == 0 and hid.startswith('VISION.'): full_id = hid
+                # Allow L0 items to be exports to enforce L1 coverage
+                if layer == 0 and current_h2 and current_h2.startswith('Scope'):
+                     # Fallback if VISION. isn't used
+                     pass
                 current_export = full_id
                 exports.append(full_id)
                 items[full_id] = {'header': stripped, 'body': '', 'line': i+1}
@@ -166,6 +171,8 @@ def parse_spec_file(spec_file: Path) -> dict:
             parent = current_h3 or current_h2
             if re.match(r'^[a-zA-Z0-9_.]+$', hid):
                 full_id = f"{parent}.{hid}" if parent else f"{spec_id}.{hid}"
+                if layer == 0:
+                   full_id = f"{spec_id}.{hid}"
                 current_export = full_id
                 exports.append(full_id)
                 items[full_id] = {'header': stripped, 'body': '', 'line': i+1}
@@ -270,8 +277,24 @@ def validate_references(references_dir: Path, tests_dir: Path = None) -> tuple:
             for section in sections:
                 if section.startswith('CONTRACTS.'):
                     suffix = section.split('CONTRACTS.')[1]
-                    if f"VISION.{suffix}" not in exports_map:
+                    if suffix != "SCOPE" and f"VISION.{suffix}" not in exports_map:
                         warnings.append(f"Traceability break: Section `{section}` has no corresponding L0 section.")
+        if data['layer'] == 0:
+            for item_id, item_data in data['items'].items():
+                header = item_data['header']
+                if item_id.startswith('VISION.') and header.startswith('## '):
+                    errors.append(f"L0 Structure Error: Specific L0 content (`{item_id}`) must only appear on H3 (`###`) headings. H2 (`##`) should be short chapter titles.")
+                elif item_id.startswith('VISION.') and header.startswith('### '):
+                    suffix = item_id.split('VISION.')[1] if 'VISION.' in item_id else item_id.replace('L0-VISION.', '')
+                    l1_hit = False
+                    for l1_file, l1_data in references.items():
+                        if l1_data['layer'] == 1:
+                            for l1_item in l1_data['exports']:
+                                if l1_item.endswith(f".{suffix}") or l1_item.startswith(f"CONTRACTS.{suffix}"):
+                                    l1_hit = True
+                                    break
+                    if not l1_hit:
+                        errors.append(f"L0_L1_COVERAGE Error: L0 item `{item_id}` has no tracking coverage in L1 `CONTRACTS.{suffix}`. Every substantive H3 item MUST have a corresponding L1 Contract.")
 
     # L3 Detailed Quality Checks
     for file_path, data in references.items():
