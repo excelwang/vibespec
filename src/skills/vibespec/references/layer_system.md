@@ -153,11 +153,11 @@ L0 (Why) → L1 (What) → L2 (Who) → L3 (How)
 
 | Layer | Granularity | Traceability Rule |
 |-------|-------------|-------------------|
-| **L0** | High-level (Sections) | Root of the tree. Vision is macro-level only. |
-| **L1** | Granular (Items) | **Section-level** MUST trace back to L0 Section. |
+| **L0** | High-level (Items) | Root of the tree. All substantive items must be explicitly ID'd bullets. |
+| **L1** | Granular (Items) | **Item-level** MUST trace back directly to a specific L0 bullet item (unless L0 item is marked `(Context)`). |
 | **Tests** | Granular (Items) | **Item-level** (@verify_spec) MUST trace back to L1 Item. |
 
-> Rationale: Prevents over-specification in L0 (Vision) while ensuring 100% verification coverage in L1 (Contracts).
+> Rationale: Prevents over-specification in L0 (Vision) while ensuring 100% verification coverage in L1 (Contracts) via strictly enforced 1-to-1 mapping.
 
 
 ### Example: Workflow

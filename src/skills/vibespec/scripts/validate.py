@@ -165,9 +165,9 @@ def parse_spec_file(spec_file: Path) -> dict:
             else: current_export = None
             continue
 
-        list_match = re.match(r'^(\d+)\. \*\*([A-Z0-9_.]+)\*\*', stripped)
+        list_match = re.match(r'^(?:\d+\.|-)\s+\*\*([A-Z0-9_.]+)\*\*', stripped)
         if list_match:
-            hid = list_match.group(2)
+            hid = list_match.group(1)
             parent = current_h3 or current_h2
             if re.match(r'^[a-zA-Z0-9_.]+$', hid):
                 full_id = f"{parent}.{hid}" if parent else f"{spec_id}.{hid}"
@@ -284,17 +284,18 @@ def validate_references(references_dir: Path, tests_dir: Path = None) -> tuple:
                 header = item_data['header']
                 if item_id.startswith('VISION.') and header.startswith('## '):
                     errors.append(f"L0 Structure Error: Specific L0 content (`{item_id}`) must only appear on H3 (`###`) headings. H2 (`##`) should be short chapter titles.")
-                elif item_id.startswith('VISION.') and header.startswith('### '):
+                elif item_id.startswith('VISION.') and re.match(r'^(?:\d+\.|-)\s+\*\*', header):
+                    if '(Context)' in header: continue
                     suffix = item_id.split('VISION.')[1] if 'VISION.' in item_id else item_id.replace('L0-VISION.', '')
                     l1_hit = False
                     for l1_file, l1_data in references.items():
                         if l1_data['layer'] == 1:
                             for l1_item in l1_data['exports']:
-                                if l1_item.endswith(f".{suffix}") or l1_item.startswith(f"CONTRACTS.{suffix}"):
+                                if l1_item.endswith(f".{suffix}") or l1_item.endswith(f".{suffix}_CMD"):
                                     l1_hit = True
                                     break
                     if not l1_hit:
-                        errors.append(f"L0_L1_COVERAGE Error: L0 item `{item_id}` has no tracking coverage in L1 `CONTRACTS.{suffix}`. Every substantive H3 item MUST have a corresponding L1 Contract.")
+                        errors.append(f"L0_L1_COVERAGE Error: L0 bullet item `{item_id}` has no tracking coverage in L1. Every substantive L0 item MUST have a corresponding L1 Contract.")
 
     # L3 Detailed Quality Checks
     for file_path, data in references.items():

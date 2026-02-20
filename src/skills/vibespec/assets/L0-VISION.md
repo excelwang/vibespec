@@ -5,6 +5,7 @@ version: 1.0.0
 # L0: {{PROJECT_NAME}} Vision
 
 > **CRITICAL AGENT INSTRUCTION**: Substantive vision requirements (statements with IDs like **VAL**, **TRACE**, **COMPLIANCE**) MUST ONLY be placed as a listed item (with a id as the short name) under H3 (`###`) headings (e.g. `### VISION.SECURITY`). H2 (`##`) headings are strictly for short chapter titles (e.g., `## Context`, `## Security`). Do NOT place any bullet points or substantive text directly under an H2 heading.
+> **COVERAGE INSTRUCTION**: Every substantive bullet MUST directly map to an L1 contract using the same ID. High-level or purely philosophical points that do not map to verified contracts MUST be appended with `(Context)` (e.g., `- **ID** (Context): ...`) so the validator ignores them.
 
 > **Core Purpose**: Define the strategic vision that guides all lower layers (L1-L3).
 > All spec statements must trace back to items defined here.
