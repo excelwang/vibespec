@@ -191,21 +191,21 @@ def parse_spec_file(spec_file: Path) -> dict:
 def scan_existing_tests(tests_root: Path) -> dict:
     """Scan tests and identify implementation phases (Skeleton, Logic, System)."""
     test_metadata = {}
-    extensions = {'.py', '.js', '.ts', '.go'}
+    extensions = {'.py', '.js', '.ts', '.go', '.rs'}
     if tests_root.exists():
         for test_file in tests_root.rglob("*"):
             if test_file.suffix in extensions:
                 try:
                     content = test_file.read_text()
-                    # Match @verify_spec("ID") or @verify_spec("ID", mode="...")
-                    pattern = r'@verify_spec\(["\']([^"\']+)["\'](?:,\s*mode=["\']([^"\']+)["\'])?\)'
+                    # Match @verify_spec("ID") or // @verify_spec("ID", mode="...")
+                    pattern = r'(?:@|//\s*@|#\[)verify_spec\(["\']([^"\']+)["\'](?:,\s*mode=["\']([^"\']+)["\'])?[)\]]*'
                     for match in re.finditer(pattern, content):
                         spec_id = match.group(1)
                         mode = match.group(2) or "logic"
                         
                         start_pos = match.end()
                         next_block = content[start_pos : start_pos + 500]
-                        is_skeleton = "self.skipTest" in next_block or "pytest.skip" in next_block
+                        is_skeleton = "self.skipTest" in next_block or "pytest.skip" in next_block or "#[ignore" in next_block or "todo!(" in next_block
                         
                         status = "skeleton" if is_skeleton else mode
                         
