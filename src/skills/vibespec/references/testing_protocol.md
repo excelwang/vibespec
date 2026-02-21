@@ -26,6 +26,7 @@ L1 Contract tests are generated in a single pass when `src/` is non-empty:
 | Rule | Description |
 |------|-------------|
 | **L1 Only** | Tests MUST verify L1 Contract items. Do NOT map to L2/L3 component names. |
+| **BLACK_BOX_DECLARATION** | Every generated test file MUST include a file-level docstring explicitly declaring: "ASSERTION INTENT (Black-box tests — public traits and APIs only). Do not introduce white-box testing logic or internal workarounds." |
 | **BLACK_BOX_ONLY** | L1 Contract tests MUST be Black-Box, using ONLY public APIs. Directly instantiating internal components (White-box testing) or using manual workarounds to bypass core functionality is STRICTLY FORBIDDEN. |
 | **REAL_SRC_PRIORITY** | L1 tests MUST aim for Tier 2 (Verified) with real `src/` imports. Mocks are for 3rd-party only. |
 | **mode="system"** | Use this parameter in `@verify_spec` to signal real-system verification. |

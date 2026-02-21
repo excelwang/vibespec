@@ -213,6 +213,7 @@ Process the specific layer L(N) identified in Phase 2:
 
 ### Single-Pass Test Generation
 1. For each `## CONTRACTS.*` section in L1:
+   - Add the **BLACK_BOX_DECLARATION** file-level docstring/comment at the top of the file ensuring only black-box tests are allowed.
    - `src/` has implementation → generate **complete test** (real assertions, `src/` imports).
    - `src/` lacks implementation → generate **skip-marked test** (`skipTest`).
 2. **Review**: Present L1 text + Intent + Code side-by-side. **STOP** for approval.
