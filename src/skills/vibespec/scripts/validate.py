@@ -285,15 +285,32 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
                 if item_id.startswith('VISION.') and header.startswith('## '):
                     errors.append(f"L0 Structure Error: Specific L0 content (`{item_id}`) must only appear on H3 (`###`) headings. H2 (`##`) should be short chapter titles.")
                 elif item_id.startswith('VISION.') and re.match(r'^(?:\d+\.|-)\s+\*\*', header):
-                    if '(Context)' in header: continue
+                    if re.search(r'\((?:HOLD(?:,\s*)?)?Context\)', header, re.IGNORECASE): continue
                     suffix = item_id.split('VISION.')[1] if 'VISION.' in item_id else item_id.replace('L0-VISION.', '')
                     l1_hit = False
+                    # Build explicit coverage set from L1 annotations: "> Covers L0: ITEM1, ITEM2"
+                    explicit_l0_coverage = set()
                     for l1_file, l1_data in references.items():
                         if l1_data['layer'] == 1:
-                            for l1_item in l1_data['exports']:
-                                if l1_item.endswith(f".{suffix}") or l1_item.endswith(f".{suffix}_CMD"):
-                                    l1_hit = True
-                                    break
+                            for l1_item_id, l1_item_data in l1_data.get('items', {}).items():
+                                for cov_match in re.finditer(r'>\s*Covers\s+L0:\s*(.+)', l1_item_data.get('body', '')):
+                                    for cov_id in re.split(r'[,;]\s*', cov_match.group(1).strip()):
+                                        cov_id = cov_id.strip().strip('`')
+                                        explicit_l0_coverage.add(cov_id)
+                            # Also check section-level Traces to annotations for > Covers L0:
+                            for cov_match in re.finditer(r'>\s*Covers\s+L0:\s*(.+)', l1_data.get('body', '')):
+                                for cov_id in re.split(r'[,;]\s*', cov_match.group(1).strip()):
+                                    cov_id = cov_id.strip().strip('`')
+                                    explicit_l0_coverage.add(cov_id)
+                    if item_id in explicit_l0_coverage or suffix in explicit_l0_coverage:
+                        l1_hit = True
+                    else:
+                        for l1_file, l1_data in references.items():
+                            if l1_data['layer'] == 1:
+                                for l1_item in l1_data['exports']:
+                                    if l1_item.endswith(f".{suffix}") or l1_item.endswith(f".{suffix}_CMD"):
+                                        l1_hit = True
+                                        break
                     if not l1_hit:
                         errors.append(f"L0_L1_COVERAGE Error: L0 bullet item `{item_id}` has no tracking coverage in L1. Every substantive L0 item MUST have a corresponding L1 Contract.")
 
