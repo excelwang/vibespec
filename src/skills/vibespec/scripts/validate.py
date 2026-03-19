@@ -10,6 +10,11 @@ import yaml
 from pathlib import Path
 import argparse
 
+SUPPORTED_TEST_EXTENSIONS = {'.py', '.js', '.ts', '.go', '.rs', '.cs'}
+IMPORT_CHECK_EXTENSIONS = {'.py', '.js', '.ts', '.go', '.rs'}
+IGNORED_TEST_DIRS = {'bin', 'obj', '.git', '.hg', '.svn', '.pytest_cache', 'node_modules', 'target', '.venv', 'venv'}
+STATUS_ORDER = {"skeleton": 1, "logic": 2, "system": 3}
+
 def extract_rules_from_l1(references: dict) -> list:
     """Extract custom validation rules from the VIBE_SPEC_RULES section of L1-CONTRACTS."""
     l1_spec = None
@@ -40,6 +45,98 @@ def extract_rules_from_l1(references: dict) -> list:
         return rules_data.get('rules', [])
     except yaml.YAMLError:
         return []
+
+def is_ignored_test_path(path: Path) -> bool:
+    return any(part in IGNORED_TEST_DIRS for part in path.parts)
+
+def iter_test_files(tests_root: Path, extensions: set) -> iter:
+    if not tests_root.exists():
+        return
+    for test_file in tests_root.rglob("*"):
+        if test_file.is_dir() or is_ignored_test_path(test_file):
+            continue
+        if test_file.suffix.lower() in extensions:
+            yield test_file
+
+def has_supported_test_files(tests_root: Path) -> bool:
+    return any(True for _ in iter_test_files(tests_root, SUPPORTED_TEST_EXTENSIONS))
+
+def resolve_tests_root(references_dir: Path, requested_tests_dir: Path) -> tuple:
+    warnings = []
+    project_root = references_dir.parent
+    candidates = [requested_tests_dir]
+
+    sibling_tests = project_root / "tests"
+    if sibling_tests != requested_tests_dir:
+        candidates.append(sibling_tests)
+
+    default_specs_tests = sibling_tests / "specs"
+    if default_specs_tests not in candidates:
+        candidates.append(default_specs_tests)
+
+    for candidate in candidates:
+        if has_supported_test_files(candidate):
+            if candidate != requested_tests_dir:
+                warnings.append(
+                    f"Test discovery fallback: `{requested_tests_dir}` had no supported test files; using `{candidate}`."
+                )
+            return candidate, warnings
+
+    if requested_tests_dir.exists():
+        warnings.append(f"Test discovery warning: `{requested_tests_dir}` contains no supported test files.")
+    else:
+        warnings.append(
+            f"Test discovery warning: `{requested_tests_dir}` does not exist and no fallback test directory with supported files was found."
+        )
+    return requested_tests_dir, warnings
+
+def read_text_if_possible(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding='utf-8', errors='ignore')
+    except Exception:
+        return None
+
+def merge_test_status(test_metadata: dict, spec_id: str, status: str):
+    current = test_metadata.get(spec_id)
+    if current is None or STATUS_ORDER.get(status, 0) > STATUS_ORDER.get(current, 0):
+        test_metadata[spec_id] = status
+
+def scan_verify_spec_annotations(content: str) -> list:
+    matches = []
+    patterns = [
+        r'(?m)^\s*(?://|#)\s*@verify_spec\(["\']([^"\']+)["\'](?:,\s*mode=["\']([^"\']+)["\'])?[)\]]*',
+        r'(?m)^\s*#\[\s*verify_spec\(["\']([^"\']+)["\'](?:,\s*mode=["\']([^"\']+)["\'])?[)\]]*',
+    ]
+    for pattern in patterns:
+        for match in re.finditer(pattern, content):
+            spec_id = match.group(1)
+            mode = match.group(2) or "logic"
+            next_block = content[match.end() : match.end() + 500]
+            is_skeleton = (
+                "self.skipTest" in next_block
+                or "pytest.skip" in next_block
+                or "#[ignore" in next_block
+                or "todo!(" in next_block
+            )
+            matches.append((spec_id, "skeleton" if is_skeleton else mode))
+    return matches
+
+def scan_csharp_contract_methods(content: str) -> list:
+    matches = []
+    pattern = re.compile(
+        r'\[(?:Fact|Theory)(?:Attribute)?(?P<args>\s*\([^)]*\))?\]\s*'
+        r'(?:\[[^\]]+\]\s*)*'
+        r'public\s+(?:async\s+)?(?:void|Task(?:<[^>]+>)?)\s+'
+        r'Contracts_(?P<section>SCOPE|NON_GOAL)_(?P<name>[A-Z0-9_]+)\s*\(',
+        re.MULTILINE,
+    )
+    for match in pattern.finditer(content):
+        section = match.group('section')
+        name = match.group('name')
+        args = match.group('args') or ""
+        status = "skeleton" if "Skip" in args else "logic"
+        matches.append((f"CONTRACTS.{section}.{name}", status))
+    return matches
 
 def apply_custom_rules(rules: list, references: dict) -> tuple:
     """Apply project-specific rules extracted from L1."""
@@ -124,6 +221,8 @@ def parse_spec_file(spec_file: Path) -> dict:
             current_h2, current_h3 = hid, None
             if re.match(r'^[A-Z0-9_.]+$', hid) or layer == 3: # Only export if it looks like an ID (or L3)
                 full_id = f"{spec_id}.{hid}" if not hid.startswith(spec_id) else hid
+                if layer == 1 and hid.startswith('NOTES.'):
+                    full_id = hid
                 if layer == 3: full_id = hid 
                 current_export = full_id
                 exports.append(full_id)
@@ -191,33 +290,45 @@ def parse_spec_file(spec_file: Path) -> dict:
 def scan_existing_tests(tests_root: Path) -> dict:
     """Scan tests and identify implementation phases (Skeleton, Logic, System)."""
     test_metadata = {}
-    extensions = {'.py', '.js', '.ts', '.go', '.rs'}
-    if tests_root.exists():
-        for test_file in tests_root.rglob("*"):
-            if test_file.suffix in extensions:
-                try:
-                    content = test_file.read_text()
-                    # Match @verify_spec("ID") or // @verify_spec("ID", mode="...")
-                    pattern = r'(?:@|//\s*@|#\[)verify_spec\(["\']([^"\']+)["\'](?:,\s*mode=["\']([^"\']+)["\'])?[)\]]*'
-                    for match in re.finditer(pattern, content):
-                        spec_id = match.group(1)
-                        mode = match.group(2) or "logic"
-                        
-                        start_pos = match.end()
-                        next_block = content[start_pos : start_pos + 500]
-                        is_skeleton = "self.skipTest" in next_block or "pytest.skip" in next_block or "#[ignore" in next_block or "todo!(" in next_block
-                        
-                        status = "skeleton" if is_skeleton else mode
-                        
-                        # Phase 3 (system) > Phase 2 (logic) > Phase 1 (skeleton)
-                        if spec_id not in test_metadata:
-                            test_metadata[spec_id] = status
-                        else:
-                            order = {"skeleton": 1, "logic": 2, "system": 3}
-                            if order[status] > order[test_metadata[spec_id]]:
-                                test_metadata[spec_id] = status
-                except Exception: continue
+    for test_file in iter_test_files(tests_root, SUPPORTED_TEST_EXTENSIONS):
+        content = read_text_if_possible(test_file)
+        if content is None:
+            continue
+
+        for spec_id, status in scan_verify_spec_annotations(content):
+            merge_test_status(test_metadata, spec_id, status)
+
+        if test_file.suffix.lower() == '.cs':
+            for spec_id, status in scan_csharp_contract_methods(content):
+                merge_test_status(test_metadata, spec_id, status)
     return test_metadata
+
+def collect_verify_spec_refs(tests_root: Path) -> dict:
+    """Collect all @verify_spec references and their source files."""
+    refs = {}
+    for test_file in iter_test_files(tests_root, SUPPORTED_TEST_EXTENSIONS):
+        content = read_text_if_possible(test_file)
+        if content is None:
+            continue
+        patterns = [
+            r'(?m)^\s*(?://|#)\s*@verify_spec\(["\']([^"\']+)["\']',
+            r'(?m)^\s*#\[\s*verify_spec\(["\']([^"\']+)["\']',
+        ]
+        for pattern in patterns:
+            for match in re.finditer(pattern, content):
+                refs.setdefault(match.group(1), set()).add(test_file.name)
+    return refs
+
+def collect_csharp_contract_method_refs(tests_root: Path) -> dict:
+    """Collect inferred L1 contract references from C# xUnit naming convention."""
+    refs = {}
+    for test_file in iter_test_files(tests_root, {'.cs'}):
+        content = read_text_if_possible(test_file)
+        if content is None:
+            continue
+        for spec_id, _status in scan_csharp_contract_methods(content):
+            refs.setdefault(spec_id, set()).add(test_file.name)
+    return refs
 
 def validate_references(references_dir: Path, tests_dir: Path = None, project_prefix: str = None, allowed_imports: str = None) -> tuple:
     errors, warnings = [], []
@@ -247,7 +358,12 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
                     testable_ids.add(item_id)
 
     if tests_dir:
-        test_metadata = scan_existing_tests(tests_dir)
+        effective_tests_dir, discovery_warnings = resolve_tests_root(references_dir, tests_dir)
+        warnings.extend(discovery_warnings)
+        coverage['tests_dir'] = str(effective_tests_dir)
+        test_metadata = scan_existing_tests(effective_tests_dir)
+        verify_refs = collect_verify_spec_refs(effective_tests_dir)
+        inferred_contract_refs = collect_csharp_contract_method_refs(effective_tests_dir)
         
         system_ids = {sid for sid, status in test_metadata.items() if status == "system"}
         logic_ids = {sid for sid, status in test_metadata.items() if status == "logic"}
@@ -265,6 +381,20 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
             'skeletons': len(actual_skel),
             'missing_ids': miss_ids
         })
+
+        for ref_id, filenames in sorted(verify_refs.items()):
+            if ref_id not in testable_ids:
+                names = ", ".join(sorted(filenames))
+                errors.append(
+                    f"Orphan @verify_spec: `{ref_id}` is referenced in {names} but no active L1 contract exports that ID."
+                )
+
+        for ref_id, filenames in sorted(inferred_contract_refs.items()):
+            if ref_id not in testable_ids:
+                names = ", ".join(sorted(filenames))
+                errors.append(
+                    f"Orphan C# contract test: `{ref_id}` is inferred from {names} but no active L1 contract exports that ID."
+                )
 
     # Structural L1-L0 Traceability (Section Level)
     for file_path, data in references.items():
@@ -334,11 +464,11 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
         errors.extend(ce); warnings.extend(cw)
         
     if tests_dir and project_prefix and allowed_imports:
-        extensions = {'.py', '.js', '.ts', '.go', '.rs'}
-        for test_file in tests_dir.rglob("*"):
-            if test_file.suffix not in extensions: continue
-            try: content = test_file.read_text(encoding='utf-8', errors='ignore')
-            except Exception: continue
+        effective_tests_dir, _ = resolve_tests_root(references_dir, tests_dir)
+        for test_file in iter_test_files(effective_tests_dir, IMPORT_CHECK_EXTENSIONS):
+            content = read_text_if_possible(test_file)
+            if content is None:
+                continue
             
             imports = []
             imports.extend(re.findall(r'^\s*use\s+([a-zA-Z0-9_:]+)', content, re.MULTILINE))
@@ -357,7 +487,10 @@ def main():
     parser.add_argument('specs_dir', nargs='?', default='./specs'); parser.add_argument('--tests-dir', default='./tests/specs')
     parser.add_argument('--project-prefix', help='Prefix of project modules for black-box test enforcement (e.g. datanix)')
     parser.add_argument('--allowed-imports', help='Regex pattern for allowed project imports in L1 tests')
-    args = parser.parse_args(); specs_p, tests_p = Path(args.specs_dir), Path(args.tests_dir)
+    args = parser.parse_args()
+    specs_p = Path(args.specs_dir)
+    raw_tests_p = Path(args.tests_dir)
+    tests_p = raw_tests_p if raw_tests_p.is_absolute() else specs_p.parent / raw_tests_p
     if not specs_p.exists(): return 1
     
     print(f"=== Vibespec Unified Validator ===\n")
@@ -378,6 +511,8 @@ def main():
         pct_logic = (logic / total * 100)
         pct_traced = ((system + logic + skel) / total * 100)
         
+        if coverage.get('tests_dir'):
+            print(f"   Tests Dir: {coverage['tests_dir']}")
         print(f"   Traceability (Phase 1): {system + logic + skel}/{total} ({pct_traced:.1f}%)")
         print(f"   Logic Verif  (Phase 2): {logic}/{total} ({pct_logic:.1f}%)")
         print(f"   System Verif (Phase 3): {system}/{total} ({pct_system:.1f}%)")

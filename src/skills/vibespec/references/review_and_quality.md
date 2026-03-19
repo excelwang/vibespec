@@ -59,7 +59,7 @@ When performing self-audit during refinement or review, apply these checks in or
 ### 2. Exclusions
 - **OUT**: User does NOT want vibespec to generate code...
 ```
-*Note: Substantive vision requirements (e.g. `IN`, `OUT`, `VAL`) MUST ONLY be placed under H3 (`###`) headings, OR exist directly under top-level Scope lists. H2 (`##`) headings are strictly for short chapter titles. **CRITICAL: Every substantive item listed under an H3 MUST have a corresponding L1 contract that provides verification coverage for that specific vision item.** *
+*Note: Substantive vision requirements (e.g. `IN`, `OUT`, `VAL`) MUST ONLY be placed under H3 (`###`) headings. H2 (`##`) headings are strictly for short chapter titles. **CRITICAL: Every substantive item listed under an H3 MUST have a corresponding L1 contract that provides verification coverage for that specific vision item.** *
 
 ### L1-CONTRACTS Format
 ```markdown

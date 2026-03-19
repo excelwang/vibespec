@@ -83,7 +83,7 @@ Complete project workflow orchestrating components and roles.
 **Steps**:
 1. [Role] `{{ROLE_NAME}}.{{ACTION}}` → {{RESULT}}
 2. `{{COMPONENT_NAME}}.{{METHOD}}({{RESULT}})`
-3. **Human Approval**: `notify_user({{OUTCOME}})`
+3. **Human Approval**: Present `{{OUTCOME}}` to the user and wait for approval.
 
 ```mermaid
 flowchart TD

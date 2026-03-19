@@ -34,7 +34,7 @@ These triggers rely on the agent's ability to infer intent from the environment,
 
 #### `vibespec` (no arguments)
 1. **Interactive Menu**:
-   - Present a list of available workflows (`ingest`, `test`, `bug`, `reflect`, `distill`, `review`, `idea`).
+   - Present a list of available workflows (`ingest`, `test`, `bug`, `reflect`, `distill`, `review`, `idea`, `plan`).
    - Ask user to select or provide a new idea.
 
 #### `vibespec ingest`
@@ -121,6 +121,30 @@ Explicit commands for specific, targeted actions.
 #### `vibespec distill`
 - **DistillWorkflow**: Scan `src/` to update L3 specs when code has drifted ahead.
 
+#### `vibespec plan`
+- **PlanWorkflow (Autonomous Hard-Cut Loop)**: Generate and execute `specs/build/<timestamp>/todo.md` for hierarchy/spec/code drift elimination without pause.
+- **Primary outputs**:
+  - `specs/build/<timestamp>/todo.md`
+  - `specs/build/<timestamp>/auto-decisions.md`
+- **todo.md MUST include at least these workstreams**:
+  1. `SPECS_L1_PHASE`: all module-hierarchy and layer violations that must be fixed at L1 contract level first.
+  2. `SPECS_L2_PHASE`: remaining architecture-boundary violations after L1 convergence.
+  3. `SPECS_L3_PHASE`: remaining mechanism/workflow violations after L2 convergence.
+  4. `SRC_PHASE`: `src` violations of `specs` (only after specs phases are empty).
+  5. Final item (mandatory): continuous iteration loop item that forces re-scan and refill after every repair round.
+- **Execution order (hard requirement)**:
+  1. Fix specs before code.
+  2. Within specs, always fix `L1 -> L2 -> L3` in strict order.
+  3. Enter `SRC_PHASE` only when `SPECS_L1/L2/L3` are empty for the round.
+- **Task extraction quality (hard requirement)**:
+  1. Do not treat format/lint/anchor checks as sufficient.
+  2. For every extracted specs task, perform semantic upward-check: lower module/layer clause vs upper module/layer clause (Responsibility + Verification).
+  3. If lower clause weakens, contradicts, or bypasses upper constraints, create an explicit violation task with file path + contract ID + contradiction reason.
+  4. Semantic contradiction tasks must be prioritized ahead of pure formatting tasks in each phase.
+- **Autonomy rule (hard requirement)**:
+  - Do not stop to ask user confirmation while `todo.md` has any non-empty actionable item.
+  - If a decision is needed, auto-decide with "perfect orthogonality / no legacy retention" as tie-breaker, and record in `specs/build/<timestamp>/auto-decisions.md`.
+
 ---
 
 ## BootstrapWorkflow (First-Time Setup)
@@ -133,10 +157,10 @@ Explicit commands for specific, targeted actions.
    - Rewrite the user's input into **clear, unambiguous statements**.
    - Split into **In-Scope** (target capabilities) and **Out-of-Scope** (non-goals).
    - Use declarative, machine-verifiable language (e.g., "The system SHALL..." / "The system SHALL NOT...").
-3. **Present for Review**: Use `notify_user` to show the reformulated scope. **STOP** and wait for approval.
+3. **Present for Review**: Present the reformulated scope to the user in the active conversation. **STOP** and wait for approval.
 4. **Create L0-VISION.md**: Upon approval, create `specs/L0-VISION.md` using the template from `assets/L0-VISION.md`.
 5. **Initialize Ideas Folder**: Create `ideas/` directory.
-6. **Validate Readiness**: Run `Validator.validate()` → ReadinessReport.
+6. **Validate Readiness**: Run `python3 scripts/validate.py specs/` → ReadinessReport.
 
 ---
 
@@ -157,7 +181,7 @@ Explicit commands for specific, targeted actions.
 4.  **Consolidated Decision**:
     - Synthesize all in-scope ideas into a single logical change set.
     - Determine the *highest* applicable layer (L0, L1, L2, or L3) for the entire batch.
-    - **L0 Generation Rules**: When generating/updating L0, all substantive vision content MUST be formatted as explicitly ID'd list items under H3 (`###`) headings. For each generated bullet item (unless marked `(Context)`), the Agent MUST ensure there is or will be a direct mapping to an L1 contract that provides verification coverage for that specific vision item.
+    - **L0 Generation Rules**: When generating/updating L0, all substantive vision content MUST be formatted as explicitly ID'd list items under H3 (`###`) headings. For each generated list item (unless marked `(Context)`), the Agent MUST ensure there is or will be a direct mapping to an L1 contract that provides verification coverage for that specific vision item.
     - **Decomposition**: If the batch contains mixed levels (e.g., L1 contract + L3 implementation), decompose into sequential segments.
 5.  **Queueing**: Order segments by layer (Highest -> Lowest).
 
@@ -171,7 +195,7 @@ Process the specific layer L(N) identified in Phase 2:
 ┌───────────────────────────────────────────┐
 │ 1. Agent.design(): Analyze L(N) changes   │
 │ 2. Agent.refine(): Draft updates for L(N) │
-│ 3. Validator.validate(): Run validation   │
+│ 3. Run `python3 scripts/validate.py specs/` │
 │    ├─ FAIL (<3x) → Self-audit, then fix   │
 │    ├─ FAIL (>3x) → REVERT & STOP          │
 │    └─ PASS → Step 4                       │
@@ -179,7 +203,7 @@ Process the specific layer L(N) identified in Phase 2:
 │    See review_and_quality.md for full      │
 │    checklist (8 checks in order).          │
 │ 5. ⛔ MANDATORY STOP ⛔                   │
-│    - notify_user with findings             │
+│    - present findings to the user          │
 │    - REJECT → REVERT & Re-plan            │
 │    - APPROVE →                            │
 │         IF layers remain: Proceed to L(N+1)│
@@ -244,6 +268,47 @@ Process the specific layer L(N) identified in Phase 2:
 
 ---
 
+## PlanWorkflow (Autonomous Hard-Cut Loop)
+
+**Trigger**: `vibespec plan`
+
+1. Ensure directories exist: `specs/build/`.
+2. Create a new run folder under build using timestamp format `YYYYMMDD-HHMMSS`:
+   - `RUN_DIR=specs/build/<timestamp>/`
+   - Every `vibespec plan` invocation MUST use a new `RUN_DIR`; reuse is forbidden.
+3. All plan artifacts for this run MUST be written only inside `RUN_DIR`:
+   - `RUN_DIR/todo.md`
+   - `RUN_DIR/auto-decisions.md`
+4. Run two-pass extraction before writing todo:
+   - Pass A (structural): format/ID/traceability/anchor checks.
+   - Pass B (semantic, mandatory): clause-content analysis for lower-vs-upper violations across module hierarchy and L1/L2/L3 hierarchy.
+   - Rule: todo population MUST be driven primarily by Pass B semantic violations; Pass A-only issues are secondary.
+5. Create or refresh `RUN_DIR/todo.md` with explicit checklist items under:
+   - `SPECS_L1_PHASE`: module hierarchy violations + layer violations requiring L1 contract fixes.
+   - `SPECS_L2_PHASE`: remaining hierarchy/layer violations requiring L2 architecture fixes.
+   - `SPECS_L3_PHASE`: remaining hierarchy/layer violations requiring L3 implementation-spec fixes.
+   - `SRC_PHASE`: source vs specs violations (code behavior or structure violating declared contracts).
+6. For each specs task entry, include a short `violation_note` describing which upper contract/layer is violated and why.
+7. Append and keep the final mandatory todo item:
+   - `ITERATION_LOOP_GUARD`: "After each repair round, rerun audits and repopulate todo. Continue automatically while any todo item remains non-empty. Only complete this item when todo is empty after re-scan."
+8. Execute todo in rounds with strict order:
+   - fix `SPECS_L1_PHASE`,
+   - then `SPECS_L2_PHASE`,
+   - then `SPECS_L3_PHASE`,
+   - then `SRC_PHASE`,
+   - then verification and drift re-scan.
+9. If any ambiguity/choice appears:
+   - auto-decide immediately (no user prompt),
+   - log a decision entry to `RUN_DIR/auto-decisions.md` including: timestamp, context, options, chosen option, rationale, affected files/spec IDs.
+10. At end of each round:
+   - rerun validations/tests relevant to changed scope,
+   - regenerate `RUN_DIR/todo.md` from fresh findings,
+   - continue automatically if any actionable item remains.
+11. Stop condition:
+   - only stop when `RUN_DIR/todo.md` has no actionable items left after a full re-scan.
+
+---
+
 ## Tools
 
 Use standalone scripts for mechanical operations:
@@ -263,7 +328,7 @@ Load precisely when the workflow step requires domain knowledge:
 | `references/layer_system.md` | **Phase 2** (Layer Classification), **DistillWorkflow** | L0-L3 subjects, L3 types, classification rules, call direction |
 | `references/review_and_quality.md` | **Phase 3** (Self-Audit), **vibespec review** | REVIEW_PROTOCOL checklist, format rules, quality principles |
 | `references/testing_protocol.md` | **CertificationWorkflow** | Two-phase test generation, test rules, invariant testing |
-| `references/concepts.md` | User unfamiliar with vibespec terms | Plain-language concept explanations |
+| `references/CONCEPTS.md` | User unfamiliar with vibespec terms | Plain-language concept explanations |
 
 ---
 
@@ -280,7 +345,10 @@ Load precisely when the workflow step requires domain knowledge:
 - **L0-L1 Coverage**: Every individual substantive bullet item in L0 (except those marked `(Context)`) MUST be covered by at least one corresponding L1 Contract.
 - **Validate-Before-Review**: Human sees only passing specs.
 - **Strict Sequencing**: L(N) approved before L(N+1) begins. Multi-layer edits FORBIDDEN.
-- **Traceability**: Numbered lists (`1. `) only in spec bodies. Bullets (`- `) forbidden.
+- **Traceability**: Spec assertions MUST use explicit IDs and follow the format rules in `references/review_and_quality.md` and the templates under `assets/`.
 - **Automation-First**: Use CLI tools, not raw LLM output.
 - **Deletion Justification**: Document reason for L1-L3 deletions, request review.
 - **Hot-Reload**: Re-read relevant specs when user provides new context.
+- **Plan Loop Enforcement**: Under `vibespec plan`, never pause for user confirmation while `specs/build/<timestamp>/todo.md` contains actionable items; auto-decide and log to `specs/build/<timestamp>/auto-decisions.md`.
+- **Plan Order Enforcement**: Under `vibespec plan`, repair order is mandatory: `SPECS_L1 -> SPECS_L2 -> SPECS_L3 -> SRC`; do not skip forward while earlier phases are non-empty.
+- **Semantic-First Planning**: Under `vibespec plan`, prioritize semantic clause-violation analysis (lower violates upper) over formatting checks when extracting specs repair tasks.

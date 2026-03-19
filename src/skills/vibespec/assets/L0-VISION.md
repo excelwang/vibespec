@@ -4,7 +4,7 @@ version: 1.0.0
 
 # L0: {{PROJECT_NAME}} Vision
 
-> **CRITICAL AGENT INSTRUCTION**: Substantive vision requirements (statements with IDs like **VAL**, **TRACE**, **COMPLIANCE**) MUST ONLY be placed as a listed item (with a id as the short name) under H3 (`###`) headings (e.g. `### VISION.SECURITY`). H2 (`##`) headings are strictly for short chapter titles (e.g., `## Context`, `## Security`). Do NOT place any bullet points or substantive text directly under an H2 heading.
+> **CRITICAL AGENT INSTRUCTION**: Substantive vision requirements (statements with IDs like **VAL**, **TRACE**, **COMPLIANCE**) MUST ONLY be placed as listed items (with an ID as the short name) under H3 (`###`) headings (e.g. `### Feature Set`, `### Exclusions`, `### VISION.SECURITY`). H2 (`##`) headings are strictly for short chapter titles (e.g., `## Context`, `## Security`). Do NOT place any bullet points or substantive text directly under an H2 heading.
 > **COVERAGE INSTRUCTION**: Every substantive bullet MUST directly map to an L1 contract using the same ID. High-level or purely philosophical points that do not map to verified contracts MUST be appended with `(Context)` (e.g., `- **ID** (Context): ...`) so the validator ignores them.
 
 > **Core Purpose**: Define the strategic vision that guides all lower layers (L1-L3).
@@ -13,10 +13,12 @@ version: 1.0.0
 {{PROJECT_NAME}} is a [describe what it IS].
 
 ## In-Scope
+### Feature Set
 - **VAL**: User wants {{PROJECT_NAME}} to [core capability 1]
 - **TRACE**: User wants {{PROJECT_NAME}} to [core capability 2]
 
 ## Out-of-Scope
+### Exclusions
 - **NON_GOAL**: User does NOT want {{PROJECT_NAME}} to [explicit non-goal]
 
 ## Code Quality
