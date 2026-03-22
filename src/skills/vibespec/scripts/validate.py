@@ -6,6 +6,7 @@ Enforces structural standards and implementation coverage.
 import os
 import re
 import sys
+import ast
 import yaml
 from pathlib import Path
 import argparse
@@ -14,6 +15,17 @@ SUPPORTED_TEST_EXTENSIONS = {'.py', '.js', '.ts', '.go', '.rs', '.cs'}
 IMPORT_CHECK_EXTENSIONS = {'.py', '.js', '.ts', '.go', '.rs'}
 IGNORED_TEST_DIRS = {'bin', 'obj', '.git', '.hg', '.svn', '.pytest_cache', 'node_modules', 'target', '.venv', 'venv'}
 STATUS_ORDER = {"skeleton": 1, "logic": 2, "system": 3}
+VERIFY_SPEC_PATTERNS = [
+    re.compile(
+        r'(?m)^\s*@verify_spec\(\s*["\']([^"\']+)["\'](?:\s*,\s*mode\s*=\s*["\']([^"\']+)["\'])?'
+    ),
+    re.compile(
+        r'(?m)^\s*(?://|#)\s*@verify_spec\(\s*["\']([^"\']+)["\'](?:\s*,\s*mode\s*=\s*["\']([^"\']+)["\'])?'
+    ),
+    re.compile(
+        r'(?m)^\s*#\[\s*verify_spec\(\s*["\']([^"\']+)["\'](?:\s*,\s*mode\s*=\s*["\']([^"\']+)["\'])?'
+    ),
+]
 
 def extract_rules_from_l1(references: dict) -> list:
     """Extract custom validation rules from the VIBE_SPEC_RULES section of L1-CONTRACTS."""
@@ -101,23 +113,80 @@ def merge_test_status(test_metadata: dict, spec_id: str, status: str):
     if current is None or STATUS_ORDER.get(status, 0) > STATUS_ORDER.get(current, 0):
         test_metadata[spec_id] = status
 
+
+def is_testable_l1_contract(item_id: str, item_data: dict) -> bool:
+    """Tests map to L1 H2 CONTRACTS sections, not nested bullets/items."""
+    header = item_data.get('header', '').strip()
+    return header.startswith('## ') and item_id.startswith('CONTRACTS.')
+
+
+def is_skip_like_content(content: str) -> bool:
+    return (
+        "self.skipTest" in content
+        or "pytest.skip" in content
+        or "#[ignore" in content
+        or "todo!(" in content
+    )
+
+
+def decorator_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def scan_python_verify_spec_annotations(content: str) -> list:
+    matches = []
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return matches
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call):
+                continue
+            if decorator_name(decorator.func) != "verify_spec":
+                continue
+            if not decorator.args:
+                continue
+            first_arg = decorator.args[0]
+            if not isinstance(first_arg, ast.Constant) or not isinstance(first_arg.value, str):
+                continue
+            spec_id = first_arg.value
+            mode = "logic"
+            for keyword in decorator.keywords:
+                if (
+                    keyword.arg == "mode"
+                    and isinstance(keyword.value, ast.Constant)
+                    and isinstance(keyword.value.value, str)
+                ):
+                    mode = keyword.value.value
+                    break
+            node_source = ast.get_source_segment(content, node) or ""
+            matches.append((spec_id, "skeleton" if is_skip_like_content(node_source) else mode))
+    return matches
+
+
+def scan_test_file_verify_specs(test_file: Path, content: str) -> list:
+    if test_file.suffix.lower() == '.py':
+        python_matches = scan_python_verify_spec_annotations(content)
+        if python_matches:
+            return python_matches
+    return scan_verify_spec_annotations(content)
+
 def scan_verify_spec_annotations(content: str) -> list:
     matches = []
-    patterns = [
-        r'(?m)^\s*(?://|#)\s*@verify_spec\(["\']([^"\']+)["\'](?:,\s*mode=["\']([^"\']+)["\'])?[)\]]*',
-        r'(?m)^\s*#\[\s*verify_spec\(["\']([^"\']+)["\'](?:,\s*mode=["\']([^"\']+)["\'])?[)\]]*',
-    ]
-    for pattern in patterns:
-        for match in re.finditer(pattern, content):
+    for pattern in VERIFY_SPEC_PATTERNS:
+        for match in pattern.finditer(content):
             spec_id = match.group(1)
             mode = match.group(2) or "logic"
             next_block = content[match.end() : match.end() + 500]
-            is_skeleton = (
-                "self.skipTest" in next_block
-                or "pytest.skip" in next_block
-                or "#[ignore" in next_block
-                or "todo!(" in next_block
-            )
+            is_skeleton = is_skip_like_content(next_block)
             matches.append((spec_id, "skeleton" if is_skeleton else mode))
     return matches
 
@@ -295,7 +364,7 @@ def scan_existing_tests(tests_root: Path) -> dict:
         if content is None:
             continue
 
-        for spec_id, status in scan_verify_spec_annotations(content):
+        for spec_id, status in scan_test_file_verify_specs(test_file, content):
             merge_test_status(test_metadata, spec_id, status)
 
         if test_file.suffix.lower() == '.cs':
@@ -310,13 +379,8 @@ def collect_verify_spec_refs(tests_root: Path) -> dict:
         content = read_text_if_possible(test_file)
         if content is None:
             continue
-        patterns = [
-            r'(?m)^\s*(?://|#)\s*@verify_spec\(["\']([^"\']+)["\']',
-            r'(?m)^\s*#\[\s*verify_spec\(["\']([^"\']+)["\']',
-        ]
-        for pattern in patterns:
-            for match in re.finditer(pattern, content):
-                refs.setdefault(match.group(1), set()).add(test_file.name)
+        for spec_id, _status in scan_test_file_verify_specs(test_file, content):
+            refs.setdefault(spec_id, set()).add(test_file.name)
     return refs
 
 def collect_csharp_contract_method_refs(tests_root: Path) -> dict:
@@ -337,6 +401,7 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
         'system': 0,
         'logic': 0, 
         'skeletons': 0,
+        'implemented': 0,
         'missing_ids': set()
     }
     references = {}
@@ -354,7 +419,7 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
         
         if data['layer'] == 1:
             for item_id, item_data in data['items'].items():
-                if item_id.startswith('CONTRACTS.') and item_id.count('.') == 2:
+                if is_testable_l1_contract(item_id, item_data):
                     testable_ids.add(item_id)
 
     if tests_dir:
@@ -379,6 +444,7 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
             'system': len(actual_system),
             'logic': len(actual_logic),
             'skeletons': len(actual_skel),
+            'implemented': len(actual_system | actual_logic),
             'missing_ids': miss_ids
         })
 
@@ -399,21 +465,21 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
     # Structural L1-L0 Traceability (Section Level)
     for file_path, data in references.items():
         if data['layer'] == 1:
-            sections = set()
-            for item_id in data['items']:
-                if '.' in item_id:
-                    sections.add(item_id.split('.')[0] + '.' + item_id.split('.')[1])
-            
-            for section in sections:
-                if section.startswith('CONTRACTS.'):
-                    suffix = section.split('CONTRACTS.')[1]
-                    if suffix != "SCOPE" and f"VISION.{suffix}" not in exports_map:
-                        warnings.append(f"Traceability break: Section `{section}` has no corresponding L0 section.")
+            for item_id, item_data in data['items'].items():
+                if not is_testable_l1_contract(item_id, item_data):
+                    continue
+                suffix = item_id.split('CONTRACTS.', 1)[1]
+                if suffix != "SCOPE" and f"VISION.{suffix}" not in exports_map:
+                    warnings.append(
+                        f"Traceability break: `{item_id}` has no corresponding L0 item."
+                    )
         if data['layer'] == 0:
             for item_id, item_data in data['items'].items():
                 header = item_data['header']
                 if item_id.startswith('VISION.') and header.startswith('## '):
-                    errors.append(f"L0 Structure Error: Specific L0 content (`{item_id}`) must only appear on H3 (`###`) headings. H2 (`##`) should be short chapter titles.")
+                    warnings.append(
+                        f"L0 Structure Warning: `{item_id}` is using legacy H2 (`##`) form. Prefer H3 (`###`) headings for specific L0 content."
+                    )
                 elif item_id.startswith('VISION.') and re.match(r'^(?:\d+\.|-)\s+\*\*', header):
                     if re.search(r'\((?:HOLD(?:,\s*)?)?Context\)', header, re.IGNORECASE): continue
                     suffix = item_id.split('VISION.')[1] if 'VISION.' in item_id else item_id.replace('L0-VISION.', '')

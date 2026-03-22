@@ -32,35 +32,36 @@ version: 3.0.0
 
 > Rationale: Unified reasoning entity ensures architectural coherence and eliminates role-coordination overhead in agentic workflows.
 
-### Roles.DevSession
+### Roles.FixSession
 
-> The implementation-facing session responsible for producing the next reviewable artifact set.
+> The implementation-facing session responsible for executing the latest triage-generated repair plan and producing the next triageable artifact set.
 
-#### DevSession
+#### FixSession
 
-**Role**: Resolves open defects, validates changes, and publishes frozen submissions.
+**Role**: Executes frozen repair tasks, validates changes, and publishes frozen submissions.
 
-- **Observes**: Coordination state, open defect ledger, repository baseline, and local validation results.
-- **Decides**: Fix scope, defect dispositions, and readiness to submit.
+- **Observes**: Coordination state, open defect ledger, frozen repair plan, repository baseline, and local validation results.
+- **Decides**: How to execute the published repair logic, whether released work is available, and whether the round is ready to submit.
 - **Acts**:
-    - **Implementing**: Edits `src/`, `specs/`, and tests during `dev_turn`.
+    - **Implementing**: Edits `src/`, `specs/`, and tests during `fix_turn` or while released work is available.
     - **Validating**: Runs validation before handoff.
-    - **Publishing**: Writes submission manifests and defect responses.
+    - **Publishing**: Writes submission manifests and repair responses.
 
-### Roles.ReviewSession
+### Roles.TriageSession
 
-> The audit-facing session responsible for deciding whether another development round is required.
+> The automated audit-facing session responsible for deciding whether another repair round is required.
 
-#### ReviewSession
+#### TriageSession
 
-**Role**: Audits the latest frozen submission and reports acceptance or defects.
+**Role**: Audits the latest frozen baseline or submission, identifies all supported defect classes in priority order, and reports acceptance or a frozen repair plan.
 
 - **Observes**: Coordination state, latest submission manifest, repository diff, and validation evidence.
-- **Decides**: Acceptance vs rejection, defect severity, and completion of the review round.
+- **Decides**: Acceptance vs rejection, defect classification, repair logic, release timing for Fix, and completion of the triage round.
 - **Acts**:
-    - **Reviewing**: Examines the frozen submission only.
-    - **Reporting**: Writes defect IDs and findings.
-    - **HandingOff**: Returns control to Dev or marks completion.
+    - **Triaging**: Examines the frozen baseline or submission only, in class order `spec-drift -> src-drift -> quality`.
+    - **Reporting**: Writes defect IDs, defect types, and repair logic.
+    - **Releasing**: Opens the Fix gate after each classified batch with repair work.
+    - **HandingOff**: Returns control to Fix or marks completion.
 
 ---
 
@@ -110,6 +111,6 @@ version: 3.0.0
 
 **Component**: Stores shared turn state and immutable round artifacts for multi-agent coordination
 
-- Input: Turn claims, submission manifests, review reports, recovery markers
-- Output: Current coordination state, round history, open defects
-- Input: Gate kind (`defect`, `spec-drift`, `src-drift`) and optional defect focus item ID
+- Input: Turn claims, submission manifests, triage reports, recovery markers
+- Output: Current coordination state, round history, open defects, frozen repair plan
+- Input: Unified `fix`/`triage` gate state

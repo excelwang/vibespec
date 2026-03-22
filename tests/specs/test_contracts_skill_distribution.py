@@ -22,5 +22,35 @@ class TestContractsSkillDistribution(unittest.TestCase):
         self.assertIn("vibespec reflect", content)
         self.assertIn("vibespec distill", content)
 
+    @verify_spec("CONTRACTS.SKILL_DISTRIBUTION")
+    def test_workflow_references_exist(self):
+        """CONTRACTS.SKILL_DISTRIBUTION.PROGRESSIVE_DISCLOSURE: SKILL.md SHOULD route to references."""
+        skill_root = Path(__file__).parent.parent.parent / "src" / "skills" / "vibespec"
+        skill_content = (skill_root / "SKILL.md").read_text()
+
+        references = [
+            "references/ingest_workflows.md",
+            "references/review_workflows.md",
+            "references/gate_workflows.md",
+        ]
+
+        for ref in references:
+            self.assertTrue((skill_root / ref).exists(), f"{ref} MUST exist")
+            self.assertIn(ref, skill_content, f"SKILL.md MUST reference {ref}")
+
+    @verify_spec("CONTRACTS.SKILL_DISTRIBUTION")
+    def test_fix_gate_absorbs_plan_design_points(self):
+        """CONTRACTS.SKILL_DISTRIBUTION.PROGRESSIVE_DISCLOSURE: Fix gate SHOULD absorb repair-loop design points without a separate PlanWorkflow reference."""
+        skill_root = Path(__file__).parent.parent.parent / "src" / "skills" / "vibespec"
+        skill_content = (skill_root / "SKILL.md").read_text()
+        gate_reference = (skill_root / "references" / "gate_workflows.md").read_text()
+
+        self.assertNotIn("#### `vibespec plan`", skill_content)
+        self.assertNotIn("references/plan_workflow.md", skill_content)
+        self.assertFalse((skill_root / "references" / "plan_workflow.md").exists())
+        self.assertIn("scope boundary", gate_reference)
+        self.assertIn("auto-decisions.md", gate_reference)
+        self.assertIn("rerunning validation", gate_reference)
+
 if __name__ == "__main__":
     unittest.main()

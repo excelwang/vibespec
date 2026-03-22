@@ -11,14 +11,14 @@ interface System {
 
 ## [interface] CoordinationStore
 
-**Rationale**: Provide a shared coordination surface for multi-agent Dev/Review loops without long-held locks or mandatory heartbeats.
+**Rationale**: Provide a shared coordination surface for multi-agent Fix/Triage loops without long-held locks or mandatory heartbeats.
 
 ```code
 interface CoordinationStore {
   readState(gate: GateKind, focusId?: string): CoordinationState
-  tryClaimTurn(gate: GateKind, actor: "dev" | "review", turnId: int, focusId?: string): ClaimResult
+  tryClaimTurn(gate: GateKind, actor: "fix" | "triage", turnId: int, focusId?: string): ClaimResult
   publishSubmission(gate: GateKind, manifest: SubmissionManifest, focusId?: string): CoordinationState
-  publishReview(gate: GateKind, report: ReviewReport, focusId?: string): CoordinationState
+  publishTriage(gate: GateKind, report: TriageReport, focusId?: string): CoordinationState
   markBlocked(gate: GateKind, reason: string, focusId?: string): CoordinationState
 }
 ```
@@ -28,22 +28,25 @@ interface CoordinationStore {
 
 ## [workflow] TurnCoordinationWorkflow
 
-**Purpose**: Coordinate two agent sessions so `dev` and `review` alternate until Review reports no defects.
+**Purpose**: Coordinate two agent sessions so `triage` classifies and releases work while `fix` executes released repairs until Triage reports no defects.
 
-**Rationale**: Enforce strict turn-taking, frozen review targets, and non-terminal waiting across `defect`, `spec-drift`, and `src-drift` gates without heartbeat overhead.
+**Rationale**: Enforce staged triage, frozen triage targets, and non-terminal waiting in one unified defect gate without heartbeat overhead.
 
 **Steps**:
-1. Agent resolves `gate` from `vibespec dev|review gate defect|spec-drift|src-drift`.
-2. For `defect`, Agent loads the project's dedicated quality detection item; for `spec-drift` and `src-drift`, Agent uses built-in script workflows.
-3. `DevSession` reads shared coordination state and confirms `status = active` and `expected_actor = dev`.
-4. `CoordinationStore.tryClaimTurn()` grants a short lock only for turn validation and artifact publication.
-5. `DevSession` resolves open defects, edits `src/` or `specs/`, and runs validation without holding the lock.
-6. `CoordinationStore.publishSubmission()` writes `submission_id`, changed files, validation results, and defect dispositions, then sets `phase = review_turn`.
-7. `ReviewSession` reads shared coordination state and loads the latest frozen `submission_id`.
-8. `ReviewSession` audits only the frozen submission manifest and associated diff using the active gate checklist.
-9. If defects remain, `CoordinationStore.publishReview()` writes defect IDs and sets `phase = dev_turn`; otherwise it sets `status = done`.
-10. Waiting sessions reload shared state until they observe a non-wait condition; they do not terminate while `status = active`.
-11. If the no-progress window is exceeded, `CoordinationStore.markBlocked()` records manual recovery instead of automatic takeover.
+1. Agent resolves the unified gate from `vibespec triage gate` or `vibespec fix gate`.
+2. Triage automatically includes the project's `VISION.QUALITY_DETECTION` item plus built-in spec-drift and src/spec-drift checks.
+3. `CoordinationStore.readState()` exposes triage and fix workflow metadata for the active gate.
+4. Triage/Fix sessions load `references/gate_workflows.md` and select the mapped phase prompt from coordination state.
+5. The gate starts at `triage_turn`, and the Fix gate is closed until Triage releases work.
+6. `CoordinationStore.tryClaimTurn()` grants a short lock only for turn validation and artifact publication.
+7. `TriageSession` audits the latest baseline or frozen submission in order `spec-drift -> src-drift -> quality`.
+8. After each classified batch, `CoordinationStore.publishTriage()` appends released repair items and may open the Fix gate immediately.
+9. `FixSession` waits while the Fix gate remains closed; once opened, it loads the latest released repair items and may begin work locally even while Triage continues scanning later classes.
+10. When released work requires repeated repair rounds, `FixSession` creates fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, derives repair tasks from the released scope, grounds auto-decisions in triage logic plus validation evidence, and iterates repair -> validate -> re-scan until no actionable item remains.
+11. After the final class is classified, `CoordinationStore.publishTriage()` either sets `status = done` or hands off final turn ownership with `phase = fix_turn`.
+12. `FixSession` validates the fully repaired state and `CoordinationStore.publishSubmission()` writes `submission_id`, changed files, validation results, and repair responses, then resets the Fix gate and returns to `triage_turn`.
+13. Waiting sessions reload shared state until they observe a non-wait condition; they do not terminate while `status = active`.
+14. If the no-progress window is exceeded, `CoordinationStore.markBlocked()` records manual recovery instead of automatic takeover.
 
 ---
 

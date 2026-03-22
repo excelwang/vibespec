@@ -1,29 +1,27 @@
 # Dual-Agent Coordination Reference
 
-> **Load when**: User wants `dev` and `review` agent sessions to run `vibespec dev|review gate defect|spec-drift|src-drift` without an external orchestrator.
+> **Load when**: User wants `fix` and `triage` agent sessions to run `vibespec fix gate` / `vibespec triage gate` without an external orchestrator.
 
 ## Coordination Goal
 
-Keep two sessions in a strict baton-pass loop for one selected gate:
+Keep two sessions in one unified gate where Triage owns classification and Fix waits for released work:
 
 ```text
-DEV_TURN -> REVIEW_TURN -> DEV_TURN -> ... -> DONE
+TRIAGE_TURN -> FIX_TURN -> TRIAGE_TURN -> ... -> DONE
 ```
 
-- `dev` works whenever Review has open defects.
-- `review` works whenever Dev has published a new frozen submission.
+- `triage` works first and is solely responsible for identifying all defect classes.
+- `triage` scans in priority order: `spec-drift -> src-drift -> quality`.
+- after each class is classified, `triage` may release work immediately to the waiting `fix` session.
+- `triage` freezes both the defect list and the repair logic for the next round.
+- `fix` executes only the latest triage-generated repair plan.
 - Waiting is not completion.
-
-## Gate Types
-
-- `defect`: Uses the project's dedicated quality detection item from `specs/L0-VISION.md`.
-- `spec-drift`: Built-in workflow for eliminating drift inside `specs/`.
-- `src-drift`: Built-in workflow for eliminating drift between `specs/` and `src/`.
+- Human-reviewed flows stay outside this gate: `vibespec review [SPEC_ID]`, `vibespec bug`, and `vibespec test` are separate workflows.
 
 ## Entry Commands
 
-- Dev session: `vibespec dev gate defect|spec-drift|src-drift`
-- Review session: `vibespec review gate defect|spec-drift|src-drift`
+- Fix session: `vibespec fix gate`
+- Triage session: `vibespec triage gate`
 
 ## Minimal Protocol
 
@@ -33,25 +31,24 @@ Store shared coordination state outside the tracked work tree, for example:
 
 ```text
 .git/agent-sync/
-  gates/
-    defect/<focus-id>/
-    spec-drift/
-    src-drift/
+  gate/
+    all-defects/
 ```
 
 Suggested `current.json` fields:
 
 ```json
 {
-  "gate": "defect",
-  "focus_id": "VISION.QUALITY_DETECTION",
+  "gate": "all-defects",
+  "quality_target_id": "VISION.QUALITY_DETECTION",
   "status": "active",
-  "phase": "dev_turn",
-  "expected_actor": "dev",
-  "turn_id": 7,
-  "submission_id": 3,
-  "review_of_submission_id": 2,
-  "open_defects": ["R2-1", "R2-2"]
+  "phase": "triage_turn",
+  "expected_actor": "triage",
+  "fix_gate_open": false,
+  "next_triage_class_index": 0,
+  "submission_id": 0,
+  "open_defects": [],
+  "active_repair_plan": []
 }
 ```
 
@@ -61,26 +58,44 @@ Use a short lock only for shared-state transitions:
 
 1. Claim current turn ownership.
 2. Publish `submission.json`.
-3. Publish `review-report.json`.
+3. Publish `triage-report.json`.
 4. Switch `phase` / `expected_actor` / `status`.
 
-Do **not** hold the lock during the actual Dev or Review work.
+Do not hold the lock during the actual Fix or Triage work.
 
-### Frozen Review Target
+The fix gate starts closed by default. Only Triage opens it by publishing a classified defect batch.
 
-Before handing off, Dev publishes an immutable submission manifest containing at least:
+### Triage Responsibilities
+
+Triage audits the latest baseline or frozen submission across all supported defect classes:
+
+- spec drift
+- src/spec drift
+- quality defects from `VISION.QUALITY_DETECTION`
+
+For every rejected triage item, Triage must publish:
+
+- `id`
+- `defect_type`
+- evidence summary
+- repair summary
+- explicit `repair_logic`
+
+Fix must treat the released repair items as the only in-scope work for the current cycle.
+Fix may start work as soon as Triage releases any classified batch, even if Triage is still classifying later classes.
+
+### Frozen Triage Target
+
+Before handing off, Fix publishes an immutable submission manifest containing at least:
 
 - `submission_id`
 - `base_rev`
-- `head_rev` or equivalent tree identifier
+- `head_rev`
 - changed file list
 - validation results
-- disposition for every previously open defect
+- response for every previously open defect
 
-Review must audit that exact `submission_id`, not a moving work tree.
-
-For `defect`, the checklist comes from the resolved project quality detection item.
-For `spec-drift` and `src-drift`, the checklist is built into the coordination script.
+Triage must audit that exact baseline or `submission_id`, not a moving work tree.
 
 ### Waiting Semantics
 
@@ -88,8 +103,9 @@ When an agent observes:
 
 - `expected_actor != self`
 - lock unavailable
+- for Fix: `fix_gate_open = false`
 
-it enters `WAIT`, then reloads state later. It does **not** decide the loop is complete.
+it enters `WAIT`, then reloads state later. It does not decide the loop is complete.
 
 Terminal states are explicit:
 
@@ -102,12 +118,7 @@ Terminal states are explicit:
 This protocol intentionally supports:
 
 - no mandatory heartbeat files
-- no fixed execution budget for Dev or Review work
-
-Tradeoff:
-
-- lower token and I/O overhead
-- no automatic proof that the peer is still alive
+- no fixed execution budget for Fix or Triage work
 
 Use this mode when manual recovery is acceptable.
 
@@ -119,30 +130,28 @@ Without heartbeats, stale detection should be conservative:
 - mark `blocked` or `suspect_stale`
 - require human intervention unless a separate takeover policy is defined
 
-Do **not** auto-takeover by default.
+Do not auto-takeover by default.
 
 ## ReAct Loop Template
 
-### Dev Session
+### Triage Session
 
 1. Read shared state.
 2. If terminal, exit.
-3. If not `dev_turn`, wait and reload later.
-4. Claim short turn lock.
-5. Execute the active gate workflow:
-   - `defect`: fix quality defects
-   - `spec-drift`: eliminate specs drift
-   - `src-drift`: eliminate source drift
-6. Validate.
-7. Publish frozen submission.
-8. Switch to `review_turn`.
+3. If not `triage_turn`, wait and reload later.
+4. Load `references/gate_workflows.md`.
+5. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
+6. Continue with `src-drift`, then `quality`, publishing each batch in order.
+7. After the final class is classified, switch to `fix_turn` if any defects remain.
 
-### Review Session
+### Fix Session
 
 1. Read shared state.
 2. If terminal, exit.
-3. If not `review_turn`, wait and reload later.
-4. Claim short turn lock.
-5. Audit latest frozen submission only.
-6. Publish defect report or mark `done`.
-7. Switch to `dev_turn` if defects remain.
+3. If no released work exists yet, wait on the fix gate and reload later.
+4. Load `references/gate_workflows.md`.
+5. Execute only the latest released repair items within the released scope boundary.
+6. If the repair needs multiple rounds, create fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, then iterate repair -> validate -> re-scan until no actionable item remains.
+7. If Triage is still classifying later classes, keep working locally and do not publish yet.
+8. After Triage completes and hands off final turn ownership, validate and publish the frozen submission.
+9. Switch to `triage_turn`.

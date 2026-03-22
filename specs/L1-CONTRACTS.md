@@ -297,12 +297,13 @@ invariants:
   > Responsibility: Agility — reduce upfront friction for experimental features.
   > Verification: L1 items allowed to have no L3 children during `Pending` status.
 
-- **DISTILLATION**: Agent MUST distill L2/L3 specs from source code before verifying feature completion.
-  > Responsibility: Accuracy — specs reflect actual code reality.
-  > Verification: `vibespec distill` run before final Verified status.
+- **DISTILLATION**: Agent MUST use `DistillWorkflow` to extract missing specs or unreasonable design choices from source code before verifying feature completion.
+  > Responsibility: Accuracy — specs reflect code-discovered design decisions and omissions, not just pre-existing intent.
+  > Verification: `vibespec distill` proposes concrete spec updates grounded in current code.
 
-  > Responsibility: Focus — hide noise from work-in-progress features.
-  > Verification: No "missing L3" warnings for Pending items.
+- **DISTILL_REVIEW**: Agent MUST route distilled spec changes through human review before persisting them.
+  > Responsibility: Human gate — keep code-discovered spec changes user-approved.
+  > Verification: Distilled spec updates are presented for approval before write.
 
 ---
 
@@ -438,6 +439,10 @@ invariants:
   > Responsibility: Natural interaction.
   > Verification: "vibe spec", "refine specs" listed.
 
+- **PROGRESSIVE_DISCLOSURE**: `SKILL.md` SHOULD keep workflow routing concise and load detailed procedures from `references/` only when the active command requires them.
+  > Responsibility: Context efficiency — minimize fixed token overhead while preserving detailed guidance.
+  > Verification: Major workflow details live in reference files that are directly linked from `SKILL.md`.
+
 ---
 
 ## CONTRACTS.METADATA
@@ -471,9 +476,9 @@ invariants:
   > Responsibility: Human gate — verify AI insights.
   > Verification: Approval requested before file creation.
 
-- **CODE_TO_SPEC**: Agent in `DistillWorkflow` MUST prioritize Source Code over existing Specs if discrepancy found.
-  > Responsibility: Reality — code is the executable truth.
-  > Verification: Spec updated to match code behavior.
+- **CODE_TO_SPEC**: Agent in `DistillWorkflow` MUST treat Source Code as evidence for missing or unreasonable design, then propose spec updates for review.
+  > Responsibility: Reality — code is the executable truth for discovered behavior, but spec changes still require explicit approval.
+  > Verification: Distill output identifies the code evidence and the proposed spec correction before persisting changes.
 
 ---
 
@@ -653,62 +658,106 @@ standard_terms:
 
 ## CONTRACTS.DUAL_AGENT_GATE
 
-- **TURN_TAKING**: System MUST encode `phase` and `expected_actor` in shared coordination state.
-  > Responsibility: Baton ownership — guarantee exactly one active actor per round.
-  > Verification: State transitions alternate `dev_turn` and `review_turn` until `done` or `blocked`.
+- **STAGED_COORDINATION**: System MUST encode `phase`, `expected_actor`, and fix-gate release state in shared coordination state.
+  > Responsibility: Baton ownership — separate Triage classification authority from Fix execution authority.
+  > Verification: State transitions start at `triage_turn`, may expose released repair work while `expected_actor = triage`, and end only at `done` or `blocked`.
+
+- **TRIAGE_FIRST**: System MUST start the unified gate at `triage_turn`.
+  > Responsibility: Planning order — ensure Triage defines repair work before Fix acts.
+  > Verification: Initialized coordination state sets `phase = triage_turn` and `expected_actor = triage`.
 
 - **SHORT_LOCKS**: System MUST hold synchronization locks only while claiming turn ownership or publishing shared artifacts.
   > Responsibility: Throughput — prevent long lock holds during reasoning work.
-  > Verification: No protocol step requires lock retention during fix or review execution.
+  > Verification: No protocol step requires lock retention during fix or triage execution.
 
 - **WAIT_NON_TERMINAL**: Agent MUST treat `lock_unavailable` and `peer_turn` as WAIT states, not completion.
   > Responsibility: Liveness — keep the loop active until an explicit terminal state exists.
   > Verification: Agent exits only on `done`, `aborted`, or `blocked`.
 
-- **SUBMISSION_FREEZE**: Dev Agent MUST publish an immutable submission record before yielding to Review.
-  > Responsibility: Review stability — ensure Review targets a frozen artifact set.
-  > Verification: Each review references a concrete `submission_id` and manifest.
+- **SUBMISSION_FREEZE**: Fix Agent MUST publish an immutable submission record before yielding to Triage.
+  > Responsibility: Triage stability — ensure Triage targets a frozen artifact set.
+  > Verification: Each triage report references a concrete `submission_id` and manifest.
 
-- **DEFECT_CLOSURE**: Dev Agent MUST respond to every open defect before publishing the next submission.
+- **DEFECT_CLOSURE**: Fix Agent MUST respond to every open defect before publishing the next submission.
   > Responsibility: Closure — prevent silent carry-over of unresolved findings.
   > Verification: Submission records include a disposition for each prior defect ID.
 
-- **STALE_REPORT_REJECT**: Review Agent MUST reject or discard reports against superseded submissions.
+- **REPAIR_PLAN_PUBLICATION**: Triage Agent MUST publish explicit repair logic for every rejected defect item.
+  > Responsibility: Execution clarity — keep repair strategy owned by Triage, not reinvented by Fix.
+  > Verification: Rejected triage artifacts include per-defect `repair_logic`.
+
+- **TRIAGE_PRIORITY**: Triage Agent MUST classify the unified gate in strict order `spec-drift -> src-drift -> quality`.
+  > Responsibility: Determinism — ensure higher-priority structural drift is released before lower-priority quality scans.
+  > Verification: Triage batch publication order follows the configured class order.
+
+- **EARLY_FIX_RELEASE**: System MUST allow Triage to release Fix work immediately after each classified defect class instead of waiting for the full triage pass to complete.
+  > Responsibility: Parallelism — overlap Fix execution with later Triage classification work.
+  > Verification: Shared state can expose released repair items while Triage remains the expected actor.
+
+- **FIX_GATE_DEFAULT_LOCKED**: System MUST keep the Fix gate closed when no released repair work exists.
+  > Responsibility: Discipline — prevent Fix from inventing work before Triage publishes it.
+  > Verification: Initialized or empty-triage state keeps `fix_gate_open = false`.
+
+- **TRIAGE_OPENS_FIX_GATE**: Only Triage MUST be able to open the Fix gate by publishing a classified defect batch.
+  > Responsibility: Ownership — keep repair intake controlled by Triage findings.
+  > Verification: Fix wait becomes actionable only after Triage updates shared state with released work.
+
+- **STALE_REPORT_REJECT**: Triage Agent MUST reject or discard reports against superseded submissions.
   > Responsibility: Freshness — prevent stale findings from reopening closed rounds.
-  > Verification: Review report `submission_id` matches the latest published submission.
+  > Verification: Triage report `submission_id` matches the latest published submission.
 
 - **NO_HEARTBEAT**: System MAY omit heartbeat files if round state is explicit and stale recovery is manual.
   > Responsibility: Efficiency — avoid unnecessary token and I/O overhead.
   > Verification: Protocol remains valid when no heartbeat artifacts are present.
 
-- **NO_WORK_BUDGET**: System MUST NOT require fixed per-round work budgets for Dev or Review turns.
+- **NO_WORK_BUDGET**: System MUST NOT require fixed per-round work budgets for Fix or Triage turns.
   > Responsibility: Flexibility — allow variable effort per round.
   > Verification: No required state field caps execution duration of active work.
+
+- **HUMAN_REVIEW_OUTSIDE_GATE**: Agent MUST keep human-reviewed workflows outside the unified gate.
+  > Responsibility: Command clarity — avoid overloading gate commands with manual review semantics.
+  > Verification: `vibespec review [SPEC_ID]`, `vibespec bug`, `vibespec test`, and `vibespec distill` remain standalone workflows.
+
+- **GATE_COMMAND**: Agent MUST interpret `vibespec triage gate` and `vibespec fix gate` as the canonical trigger shape for paired gate loops.
+  > Responsibility: Usability — keep loop activation predictable and scriptable.
+  > Verification: Documentation and workflow examples use `vibespec triage gate` and `vibespec fix gate`.
+
+- **WORKFLOW_MAPPING**: System MUST expose unified Triage and Fix workflow metadata in coordination state.
+  > Responsibility: Routing — prevent the Agent from re-deciding the phase workflow after trigger.
+  > Verification: Gate state includes triage workflow name/phase and fix workflow name/phase.
+
+- **UNIFIED_DEFECT_SCOPE**: System MUST let Triage identify spec drift, src/spec drift, and quality defects in a single unified gate.
+  > Responsibility: Coverage — avoid splitting repair intake across multiple user-facing gate commands.
+  > Verification: Triage artifacts classify defects across all supported defect classes.
+
+- **FIX_EXECUTES_TRIAGE_PLAN**: Fix Agent MUST execute the latest triage-generated repair plan rather than inventing new gate-specific repair logic.
+  > Responsibility: Scope control — keep repair work bounded to triaged findings.
+  > Verification: Fix workflow instructions reference only the latest frozen repair plan.
+
+- **AUTO_DECISION_BASIS**: Fix Agent MUST ground automatic repair decisions in the latest triage-generated repair plan, the released scope boundary, relevant upper-layer contracts, and the most recent validation or re-scan findings.
+  > Responsibility: Decision quality — keep autonomous execution evidence-based and bounded.
+  > Verification: Gate repair workflow defines these sources as the basis for auto-decisions.
+
+- **AUTO_DECISION_PRIORITY**: When multiple compliant repair options exist, Fix Agent MUST prioritize explicit triage repair logic, then scope preservation, then L0-L3 traceability preservation, then the smallest safe behavioral delta.
+  > Responsibility: Consistency — make autonomous choices predictable and reviewable.
+  > Verification: Gate repair workflow defines a stable priority order for tie-breaking.
+
+- **AUTO_DECISION_LOG**: Fix Agent MUST log auto-decisions with the triggering context, options considered, chosen option, rationale, and affected files or spec IDs.
+  > Responsibility: Auditability — make autonomous repair choices reviewable after the fact.
+  > Verification: Gate repair workflow requires `auto-decisions.md` entries with these fields.
 
 - **MANUAL_RECOVERY**: System MUST expose `blocked` or `suspect_stale` state after prolonged no-progress, and MUST NOT auto-takeover without explicit policy.
   > Responsibility: Safety — avoid false recovery on long but valid work.
   > Verification: Recovery path requires human intervention or a separately specified takeover policy.
 
-- **GATE_COMMAND**: Agent MUST interpret `vibespec review|dev gate defect|spec-drift|src-drift` as the canonical trigger shape for paired gate loops.
-  > Responsibility: Usability — keep loop activation predictable and scriptable.
-  > Verification: Documentation and workflow examples use `vibespec <actor> gate <gate>`.
-
-- **BUILTIN_SPEC_DRIFT**: System MUST treat `spec-drift` as a built-in gate workflow, not as a required project-specific L0 item.
-  > Responsibility: Standardization — provide a reusable specs drift elimination flow.
-  > Verification: Coordination script exposes `spec-drift` as a fixed gate type.
-
-- **BUILTIN_SRC_DRIFT**: System MUST treat `src-drift` as a built-in gate workflow, not as a required project-specific L0 item.
-  > Responsibility: Standardization — provide a reusable source drift elimination flow.
-  > Verification: Coordination script exposes `src-drift` as a fixed gate type.
-
 ---
 
 ## CONTRACTS.QUALITY_DETECTION
 
-- **DEFECT_GATE_TARGET**: Agent MUST resolve `vibespec dev gate defect` and `vibespec review gate defect` against the project's dedicated L0 quality detection item.
-  > Responsibility: Scope clarity — tie defect review to an explicit user-approved quality target.
-  > Verification: Defect gate initialization records the selected quality detection item ID.
+- **QUALITY_GATE_TARGET**: Agent MUST resolve `vibespec triage gate` against the project's dedicated `VISION.QUALITY_DETECTION` item when auditing quality defects.
+  > Responsibility: Scope clarity — tie quality triage to an explicit user-approved target without requiring extra user parameters.
+  > Verification: Unified gate state records `VISION.QUALITY_DETECTION` as the quality target ID.
 
-- **DEFECT_GATE_SCOPE**: Review Agent MUST audit `src/` for workaround logic, legacy logic, concurrency bottlenecks, deadlocks, dead waits, and blind waits when executing the defect gate.
+- **QUALITY_GATE_SCOPE**: Triage Agent MUST audit `src/` for workaround logic, legacy logic, concurrency bottlenecks, deadlocks, dead waits, and blind waits when executing the unified gate triage phase.
   > Responsibility: Defect finding — keep the quality gate focused and repeatable.
-  > Verification: Defect gate checklist includes all six defect classes.
+  > Verification: Unified gate checklist includes all six quality defect classes.

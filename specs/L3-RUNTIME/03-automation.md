@@ -39,18 +39,31 @@
 |-----------|---------|--------|
 | `status` in `{done, aborted, blocked}` | EXIT | Stop the loop |
 | `expected_actor != self` and `status = active` | WAIT | Sleep or back off, then reload shared state |
+| `self = fix` and `fix_gate_open = false` | WAIT | Keep waiting; no released repair work exists yet |
 | Turn lock unavailable | WAIT | Retry later without ending the loop |
 | No-progress window exceeded | ESCALATE | Mark `blocked` or `suspect_stale` and request manual recovery |
 | `expected_actor = self` and lock acquired | ACT | Execute the current turn |
+| `self = fix` and `fix_gate_open = true` | ACT | Start executing released repair work even if Triage is still classifying later defect classes |
+
+## [decision] AutoDecisionPriority
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| Candidate contradicts explicit triage repair logic | REJECT | Do not choose it |
+| Candidate expands beyond the released scope boundary | REJECT | Do not choose it |
+| Candidate breaks relevant L0-L3 traceability or introduces unrelated behavior | REJECT | Do not choose it |
+| Multiple valid candidates remain | PRIORITIZE | Choose the one with the smallest safe behavioral and file delta |
+| Tie remains after delta check | PRIORITIZE | Choose the option best supported by latest validation or re-scan evidence |
+| No candidate is clearly valid | ESCALATE | Mark ambiguity in `auto-decisions.md` and request human guidance |
 
 ## [decision] GateSelection
 
 **Rules**:
 | Input | Gate | Action |
 |-------|------|--------|
-| `vibespec dev gate defect` or `vibespec review gate defect` | `defect` | Load project quality detection item, then enter paired defect loop |
-| `vibespec dev gate spec-drift` or `vibespec review gate spec-drift` | `spec-drift` | Run built-in specs drift elimination loop |
-| `vibespec dev gate src-drift` or `vibespec review gate src-drift` | `src-drift` | Run built-in src drift elimination loop |
+| `vibespec triage gate` | `all-defects` | Triage uses `UnifiedGateTriageWorkflow.DetectAndPlan`, scans `spec-drift -> src-drift -> quality`, and may release Fix after each classified batch |
+| `vibespec fix gate` | `all-defects` | Fix uses `UnifiedGateFixWorkflow.ExecuteRepairPlan`, keeps repair scope bounded to the released plan, and iterates repair -> validate -> re-scan until the released work is clear |
 ---
 
 ## [workflow] IdeaToSpecWorkflow
@@ -85,15 +98,16 @@ graph TD
 
 ## [workflow] DistillWorkflow
 
-**Purpose**: Sync specifications when code-first changes occur.
+**Purpose**: Extract missing specs or unreasonable design from code and propose spec improvements for review.
 
-**Rationale**: Ensures the "Law" (Specs) eventually reflects the "Truth" (Code).
+**Rationale**: Uses code as a discovery surface for spec omissions or bad assumptions, while keeping final spec changes under human approval.
 
 **Steps**:
-1. [Role] `Agent.parse("src/")` → Identify structural changes
-2. [Role] `Agent.document()` → Proposed DraftSpecs
+1. [Role] `Agent.parse("src/")` → Identify code evidence for missing specs or unreasonable design.
+2. [Role] `Agent.document()` → Proposed DraftSpecs with explicit evidence and rationale.
 3. `Validator.validate(DraftSpecs)`
-4. `System.patch("specs/")` → Update L3-RUNTIME items
+4. **Human Approval**: `notify_user(DraftSpecs)`
+5. `System.patch("specs/")` → Apply approved spec improvements
 
 ---
 
