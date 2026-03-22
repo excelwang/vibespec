@@ -61,6 +61,9 @@ Manage the refinement of raw thoughts into traceable specifications.
 - If `state` or `wait` is called anyway, treat their output as a warning that they are debug-only and not authorization to bypass blocking.
 - A `vibespec fix gate` session is role-bound to `fix`; it must not switch into triage, run `run-triage-pass`, or call `publish-triage`.
 - A `vibespec triage gate` session is role-bound to `triage`; it must not switch into fix, run `run-fix-pass`, or call `publish-submission` except as directed by the workflow.
+- Under `vibespec triage gate`, treat probe output as signals only; do not classify drift or defects from text matches, regex hits, path overlap, or file-name similarity alone.
+- Under `vibespec triage gate`, fully read every `specs/` file and source code file listed by the triage runner before publishing any defect.
+- Under `vibespec triage gate`, publish a defect only after the full-file read confirms a semantic inconsistency or real quality issue.
 - Use low-level mutating commands only after reasoning over the runner output:
   - `python3 scripts/agent_sync.py publish-triage ...`
   - `python3 scripts/agent_sync.py publish-submission ...`

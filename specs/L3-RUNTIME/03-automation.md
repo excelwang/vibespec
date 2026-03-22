@@ -70,6 +70,9 @@
 **Rules**:
 | Condition | Verdict | Action |
 |-----------|---------|--------|
+| Probe output is only a text/regex/path match signal | REQUIRE | Read surrounding code/spec context before classifying any defect |
+| Triage has not fully read the listed `specs/` and source files | REJECT | Do not publish any defect yet |
+| No semantic contradiction or real quality problem is confirmed | REJECT | Do not publish a defect from the probe result alone |
 | Triage publishes any class report | REQUIRE | Persist non-empty `checks_run` and `evidence_summary` |
 | Triage rejects defects | REQUIRE | Persist per-defect evidence plus explicit `repair_logic` |
 | Triage accepts a class | ALLOW | Keep `defects = []`, but still write audit evidence |

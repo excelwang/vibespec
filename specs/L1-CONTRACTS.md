@@ -746,6 +746,18 @@ standard_terms:
   > Responsibility: Coverage — avoid splitting repair intake across multiple user-facing gate commands.
   > Verification: Triage artifacts classify defects across all supported defect classes.
 
+- **SEMANTIC_TRIAGE_REQUIRED**: Triage Agent MUST confirm a semantic inconsistency before publishing drift or quality defects.
+  > Responsibility: Judgment quality — prevent heuristic probes from turning into false-positive defect reports.
+  > Verification: Gate workflow instructions require reading surrounding code/spec context before defect publication.
+
+- **PROBES_SIGNALS_ONLY**: Probe output MUST be treated as evidence input only, not as defect classification by itself.
+  > Responsibility: Signal hygiene — keep keyword hits, regex matches, file overlap, and path mismatches from substituting for semantic review.
+  > Verification: Runner output and gate workflow docs explicitly warn against classifying defects from text/path matches alone.
+
+- **FULL_FILE_TRIAGE_REVIEW**: Triage Agent MUST fully read the listed `specs/` files and source code files before publishing any defect.
+  > Responsibility: Context completeness — prevent snippet-anchored or grep-anchored judgments from replacing full semantic review.
+  > Verification: Triage runner output includes explicit full-file review requirements and the file lists to read before defect publication.
+
 - **FIX_EXECUTES_TRIAGE_PLAN**: Fix Agent MUST execute the latest triage-generated repair plan rather than inventing new gate-specific repair logic.
   > Responsibility: Scope control — keep repair work bounded to triaged findings.
   > Verification: Fix workflow instructions reference only the latest frozen repair plan.

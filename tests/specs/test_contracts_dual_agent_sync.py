@@ -160,6 +160,9 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("## Unified Gate", reference_content)
         self.assertIn("UnifiedGateTriageWorkflow", reference_content)
         self.assertIn("UnifiedGateFixWorkflow", reference_content)
+        self.assertIn("Treat probe output as signals only", reference_content)
+        self.assertIn("fully read every listed `specs/` file", reference_content)
+        self.assertIn("confirm an actual semantic contradiction", reference_content)
 
         skill_content = skill_path.read_text()
         self.assertIn("vibespec fix gate", skill_content)
@@ -169,6 +172,9 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("references/gate_workflows.md", skill_content)
         self.assertIn("run-triage-pass", skill_content)
         self.assertIn("run-fix-pass", skill_content)
+        self.assertIn("signals only", skill_content)
+        self.assertIn("fully read every `specs/` file", skill_content)
+        self.assertIn("semantic inconsistency", skill_content)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_fix_auto_decision_basis_and_priority_are_explicit(self):
@@ -362,10 +368,43 @@ class TestContractsDualAgentSync(unittest.TestCase):
             result["blocking_contract"]["normal_entrypoint"], "run-triage-pass"
         )
         self.assertIn("state", result["blocking_contract"]["must_not_bypass_with"])
+        self.assertTrue(result["semantic_review_contract"]["signals_only"])
+        self.assertTrue(result["semantic_review_contract"]["must_confirm_semantically"])
+        self.assertTrue(result["semantic_review_contract"]["must_read_full_files"])
+        self.assertTrue(result["semantic_review_contract"]["must_not_judge_from_snippets_only"])
+        self.assertTrue(
+            result["semantic_review_contract"]["must_not_classify_from_text_match_only"]
+        )
+        self.assertTrue(result["full_file_review_contract"]["must_read_full_files"])
         self.assertEqual(result["defect_class"], "spec-drift")
         self.assertEqual(result["submission_id"], 0)
         self.assertEqual(result["checks_run"], ["probe: stub"])
         self.assertEqual(result["evidence_summary"], "stub evidence")
+
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_triage_runner_lists_full_file_reads(self):
+        """CONTRACTS.DUAL_AGENT_GATE.FULL_FILE_TRIAGE_REVIEW: Triage runner MUST list spec and source files for full-file review."""
+        specs_dir = self.root / "specs"
+        specs_dir.mkdir(parents=True)
+        (specs_dir / "L0-VISION.md").write_text("# vision\n", encoding="utf-8")
+        (specs_dir / "L1-CONTRACTS.md").write_text("# contracts\n", encoding="utf-8")
+        src_dir = self.root / "src"
+        src_dir.mkdir(parents=True)
+        (src_dir / "example.py").write_text("print('x')\n", encoding="utf-8")
+
+        store = CoordinationStore(self.root)
+        store._run_probe_suite = lambda defect_class, submission_id: {
+            "checks_run": ["probe: stub"],
+            "evidence_summary": "stub evidence",
+            "notes": ["stub note"],
+        }
+
+        result = store.run_triage_pass(timeout=0.0)
+
+        self.assertIn("specs/L0-VISION.md", result["full_file_review_contract"]["spec_files"])
+        self.assertIn("specs/L1-CONTRACTS.md", result["full_file_review_contract"]["spec_files"])
+        self.assertIn("src/example.py", result["full_file_review_contract"]["source_files"])
+        self.assertIn("Do not anchor on isolated text fragments", result["full_file_review_contract"]["warning"])
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_run_fix_pass_returns_wait_while_gate_is_closed(self):
@@ -555,6 +594,7 @@ class TestContractsDualAgentSync(unittest.TestCase):
         notes_text = "\n".join(probe["notes"])
         self.assertIn("workaround", notes_text)
         self.assertIn("time.sleep(", notes_text)
+        self.assertIn("keyword or regex hits alone", notes_text)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_src_drift_probe_reports_deterministic_path_classes(self):
@@ -575,6 +615,7 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("src/example.py", notes_text)
         self.assertIn("specs/example.md", notes_text)
         self.assertIn("tests/test_example.py", notes_text)
+        self.assertIn("path-class or file-presence mismatch alone", notes_text)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_publish_triage_requires_audit_fields_and_persists_accept_reports(self):

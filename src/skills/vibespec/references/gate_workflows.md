@@ -24,20 +24,23 @@ Requirements:
    - `spec-drift`
    - `src-drift`
    - `quality`
-2. Do not repair anything in this phase.
-3. After each defect class is classified, immediately publish that batch through scripts/agent_sync.py.
-4. If the published batch contains defects, release the waiting fix session without waiting for later classes to finish.
-5. For every defect, generate:
+2. Treat probe output as signals only. Do not classify defects from keyword hits, regex matches, string similarity, file-name overlap, or path-class mismatch alone.
+3. Before publishing any defect, fully read every listed `specs/` file and source file from the triage runner packet; do not judge from snippets or anchor fragments.
+4. After the full-file read, confirm an actual semantic contradiction, omission, weakened requirement, or quality problem.
+5. Do not repair anything in this phase.
+6. After each defect class is classified, immediately publish that batch through scripts/agent_sync.py.
+7. If the published batch contains defects, release the waiting fix session without waiting for later classes to finish.
+8. For every defect, generate:
    - stable ID
    - defect type
    - evidence
    - summary
    - explicit repair logic for the fix session
-6. Every triage report, including `accept`, must persist:
+9. Every triage report, including `accept`, must persist:
    - `checks_run`
    - `evidence_summary`
    - optional audit `notes`
-7. Accept only when no defects remain after all three classes are classified.
+10. Accept only when no defects remain after all three classes are classified.
 ```
 
 ### Fix Phase

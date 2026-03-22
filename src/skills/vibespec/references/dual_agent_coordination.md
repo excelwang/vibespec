@@ -166,9 +166,12 @@ Do not auto-takeover by default.
 1. Load `references/gate_workflows.md`.
 2. Start with `python3 scripts/agent_sync.py run-triage-pass` and let it block the session until triage becomes actionable or the gate is terminal.
 3. If the last cycle is `done`, `run-triage-pass` may reopen a fresh `triage_turn` cycle automatically.
-4. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
-5. Continue with `src-drift`, then `quality`, publishing each batch in order.
-6. After the final class is classified, switch to `fix_turn` if any defects remain.
+4. Treat the returned probe packet as signals only; do not classify defects from text matches, regex hits, file-name overlap, or path-class mismatch alone.
+5. Fully read every `specs/` file and source file listed by the triage runner before publishing any defect.
+6. Confirm a semantic inconsistency only after the full-file read; do not judge from snippets or anchor fragments.
+7. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
+8. Continue with `src-drift`, then `quality`, publishing each batch in order.
+9. After the final class is classified, switch to `fix_turn` if any defects remain.
 
 ### Fix Session
 

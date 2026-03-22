@@ -79,6 +79,18 @@ QUALITY_PROBES = {
         "blind wait",
     ],
 }
+QUALITY_PROBE_EXTENSIONS = (".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go", ".cs")
+QUALITY_PROBE_IGNORED_PARTS = {
+    ".git",
+    ".hg",
+    ".svn",
+    ".pytest_cache",
+    "node_modules",
+    "target",
+    ".venv",
+    "venv",
+    "__pycache__",
+}
 DEBUG_ONLY_WARNING = (
     "Debug-only command. Do not bypass gate blocking with `state` or `wait`. "
     "Normal gate sessions must start from the blocking runner entrypoints "
@@ -220,6 +232,53 @@ def blocking_contract(actor: str) -> dict:
             f"invoke {', '.join(forbidden_actions)} from this session."
         ),
     }
+
+
+def semantic_review_contract(defect_class: str | None) -> dict:
+    class_specific = {
+        "spec-drift": [
+            "Read the affected spec items and their parent/child traceability chain.",
+            "Confirm an actual semantic contradiction, omission, or weakening before publishing drift.",
+        ],
+        "src-drift": [
+            "Inspect changed code/spec context and confirm a real behavior-spec mismatch.",
+            "Treat path-class or file-presence mismatches as signals only, not defects by themselves.",
+        ],
+        "quality": [
+            "Inspect surrounding control flow and intent before classifying a quality defect.",
+            "Treat keyword or regex hits as heuristic signals only, not defects by themselves.",
+        ],
+    }
+    return {
+        "signals_only": True,
+        "must_confirm_semantically": True,
+        "must_read_full_files": True,
+        "must_not_judge_from_snippets_only": True,
+        "must_not_classify_from_text_match_only": True,
+        "must_not_classify_from_path_match_only": True,
+        "warning": (
+            "Probe output is evidence input only. Do not publish drift or defects solely from "
+            "keyword hits, regex matches, file-name/path overlap, or path-class mismatches. "
+            "Read complete spec and source files, then confirm a semantic inconsistency first."
+        ),
+        "required_review_actions": list(class_specific.get(defect_class, [])),
+    }
+
+
+def discover_specs_review_files(root: Path) -> list[str]:
+    specs_root = root / "specs"
+    if not specs_root.is_dir():
+        return []
+
+    discovered: list[str] = []
+    for path in sorted(specs_root.rglob("*.md")):
+        if "build" in path.parts:
+            continue
+        try:
+            discovered.append(str(path.relative_to(root)))
+        except ValueError:
+            discovered.append(str(path))
+    return discovered
 
 
 def summarize_text(text: str, limit: int = 12) -> list[str]:
@@ -737,12 +796,17 @@ class CoordinationStore:
 
         evidence_summary = (
             f"Spec drift probes completed: validate.py exit={validate_code}, "
-            f"spec tests exit={unittest_code}."
+            f"spec tests exit={unittest_code}. These results are structural signals only "
+            "and require semantic traceability review before publishing a drift defect."
         )
         return {
             "checks_run": checks_run,
             "evidence_summary": evidence_summary,
-            "notes": notes,
+            "notes": notes
+            + [
+                "Do not classify spec-drift from validator/test output alone.",
+                "Confirm an actual semantic contradiction, omission, or weakened requirement first.",
+            ],
         }
 
     def _resolve_validator_probe_command(self) -> tuple[list[str], Path]:
@@ -844,17 +908,38 @@ class CoordinationStore:
         notes.extend(mismatch_notes)
 
         evidence_summary = (
-            "Src drift probes summarized frozen path-class changes and src/specs mismatch signals."
+            "Src drift probes summarized frozen path-class changes and src/specs mismatch "
+            "signals. These are heuristic signals only and require semantic comparison before "
+            "publishing a drift defect."
         )
         return {
             "checks_run": checks_run,
             "evidence_summary": evidence_summary,
-            "notes": notes,
+            "notes": notes
+            + [
+                "Do not classify src-drift from path-class or file-presence mismatch alone.",
+                "Confirm a real behavior-spec mismatch in surrounding context first.",
+            ],
         }
 
     def _probe_quality(self) -> dict:
         checks_run: list[str] = []
         notes: list[str] = []
+        source_roots = self._discover_quality_source_roots()
+
+        if source_roots:
+            checks_run.append("quality source roots: " + ", ".join(source_roots))
+            notes.append("Quality source roots: " + ", ".join(source_roots))
+        else:
+            checks_run.append("quality source roots: none discovered")
+            notes.append("Quality source roots: none discovered")
+            return {
+                "checks_run": checks_run,
+                "evidence_summary": (
+                    "Quality probes could not discover any supported source roots for this repository."
+                ),
+                "notes": notes,
+            }
 
         for checklist_item, patterns in QUALITY_PROBES.items():
             for pattern in patterns:
@@ -863,20 +948,16 @@ class CoordinationStore:
                     "-n",
                     "-F",
                     "--hidden",
-                    "-g",
-                    "*.py",
-                    "-g",
-                    "*.js",
-                    "-g",
-                    "*.ts",
-                    "-g",
-                    "*.tsx",
-                    "-g",
-                    "*.jsx",
-                    pattern,
-                    "src/",
                 ]
-                checks_run.append(f"rg -n {pattern!r} src/")
+                for extension in QUALITY_PROBE_EXTENSIONS:
+                    command.extend(["-g", f"*{extension}"])
+                command.extend(
+                    [
+                    pattern,
+                    *source_roots,
+                ]
+                )
+                checks_run.append(shell_join(command))
                 code, stdout, stderr = run_command(command, self.root)
                 if code not in {0, 1}:
                     raise CoordinationError(
@@ -891,13 +972,75 @@ class CoordinationStore:
 
         evidence_summary = (
             "Quality probes scanned src/ for built-in checklist terms covering workaround, "
-            "legacy, concurrency, deadlock, dead-wait, and blind-wait signals."
+            "legacy, concurrency, deadlock, dead-wait, and blind-wait signals. These hits are "
+            "heuristic only and require semantic review of surrounding code intent before "
+            "publishing a quality defect."
         )
         return {
             "checks_run": checks_run,
             "evidence_summary": evidence_summary,
-            "notes": notes,
+            "notes": notes
+            + [
+                "Do not classify quality defects from keyword or regex hits alone.",
+                "Confirm the surrounding control flow and intent before publishing a defect.",
+            ],
         }
+
+    def _discover_source_review_files(self) -> list[str]:
+        discovered: list[str] = []
+        for source_root in self._discover_quality_source_roots():
+            root_path = self.root / source_root
+            if not root_path.is_dir():
+                continue
+            for path in sorted(root_path.rglob("*")):
+                if not path.is_file():
+                    continue
+                if any(part in QUALITY_PROBE_IGNORED_PARTS for part in path.parts):
+                    continue
+                if path.suffix.lower() not in QUALITY_PROBE_EXTENSIONS:
+                    continue
+                try:
+                    discovered.append(str(path.relative_to(self.root)))
+                except ValueError:
+                    discovered.append(str(path))
+        return discovered
+
+    def _discover_quality_source_roots(self) -> list[str]:
+        candidate_roots: list[Path] = []
+        root_src = self.root / "src"
+        if root_src.is_dir():
+            candidate_roots.append(root_src)
+
+        for candidate in sorted(self.root.rglob("src")):
+            if candidate == root_src or not candidate.is_dir():
+                continue
+            try:
+                rel = candidate.relative_to(self.root)
+            except ValueError:
+                continue
+            if any(part in QUALITY_PROBE_IGNORED_PARTS for part in rel.parts):
+                continue
+            candidate_roots.append(candidate)
+
+        discovered: list[str] = []
+        seen: set[str] = set()
+        for candidate in sorted(candidate_roots, key=lambda path: (len(path.parts), str(path))):
+            rel = str(candidate.relative_to(self.root))
+            if rel in seen:
+                continue
+            if not self._source_root_has_supported_files(candidate):
+                continue
+            discovered.append(rel)
+            seen.add(rel)
+        return discovered
+
+    def _source_root_has_supported_files(self, source_root: Path) -> bool:
+        for path in source_root.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() in QUALITY_PROBE_EXTENSIONS:
+                return True
+        return False
 
     def _validate_repair_artifacts(self, artifact_dir: str) -> Path:
         artifact_root = (self.root / artifact_dir).resolve()
@@ -930,10 +1073,23 @@ class CoordinationStore:
     def _triage_runner_packet(
         self, state: dict, result: str, probe: dict | None = None
     ) -> dict:
+        full_file_review_contract = {
+            "must_read_full_files": True,
+            "must_not_judge_from_snippets_only": True,
+            "spec_files": discover_specs_review_files(self.root),
+            "source_files": self._discover_source_review_files(),
+            "warning": (
+                "Before publishing any triage defect, read the complete contents of every listed "
+                "spec file and source file. Do not anchor on isolated text fragments, grep hits, "
+                "or short snippets."
+            ),
+        }
         packet = {
             "result": result,
             "actor": "triage",
             "blocking_contract": blocking_contract("triage"),
+            "semantic_review_contract": semantic_review_contract(None),
+            "full_file_review_contract": full_file_review_contract,
             "state_version": state.get("state_version"),
             "submission_id": state.get("submission_id"),
             "defect_class": None,
@@ -948,6 +1104,7 @@ class CoordinationStore:
             defect_class = self._expected_triage_class(state)
             packet.update(
                 {
+                    "semantic_review_contract": semantic_review_contract(defect_class),
                     "defect_class": defect_class,
                     "quality_target_id": (
                         state.get("quality_target_id") if defect_class == "quality" else None
