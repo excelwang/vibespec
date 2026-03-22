@@ -648,3 +648,67 @@ standard_terms:
 - **BUILD_BEFORE_TEST**: System MUST execute validation and audits before manual test execution.
   > Responsibility: Correctness — verify against latest artifacts.
   > Verification: Workflow sequence is Refine → Validate & Audit → Test.
+
+---
+
+## CONTRACTS.DUAL_AGENT_GATE
+
+- **TURN_TAKING**: System MUST encode `phase` and `expected_actor` in shared coordination state.
+  > Responsibility: Baton ownership — guarantee exactly one active actor per round.
+  > Verification: State transitions alternate `dev_turn` and `review_turn` until `done` or `blocked`.
+
+- **SHORT_LOCKS**: System MUST hold synchronization locks only while claiming turn ownership or publishing shared artifacts.
+  > Responsibility: Throughput — prevent long lock holds during reasoning work.
+  > Verification: No protocol step requires lock retention during fix or review execution.
+
+- **WAIT_NON_TERMINAL**: Agent MUST treat `lock_unavailable` and `peer_turn` as WAIT states, not completion.
+  > Responsibility: Liveness — keep the loop active until an explicit terminal state exists.
+  > Verification: Agent exits only on `done`, `aborted`, or `blocked`.
+
+- **SUBMISSION_FREEZE**: Dev Agent MUST publish an immutable submission record before yielding to Review.
+  > Responsibility: Review stability — ensure Review targets a frozen artifact set.
+  > Verification: Each review references a concrete `submission_id` and manifest.
+
+- **DEFECT_CLOSURE**: Dev Agent MUST respond to every open defect before publishing the next submission.
+  > Responsibility: Closure — prevent silent carry-over of unresolved findings.
+  > Verification: Submission records include a disposition for each prior defect ID.
+
+- **STALE_REPORT_REJECT**: Review Agent MUST reject or discard reports against superseded submissions.
+  > Responsibility: Freshness — prevent stale findings from reopening closed rounds.
+  > Verification: Review report `submission_id` matches the latest published submission.
+
+- **NO_HEARTBEAT**: System MAY omit heartbeat files if round state is explicit and stale recovery is manual.
+  > Responsibility: Efficiency — avoid unnecessary token and I/O overhead.
+  > Verification: Protocol remains valid when no heartbeat artifacts are present.
+
+- **NO_WORK_BUDGET**: System MUST NOT require fixed per-round work budgets for Dev or Review turns.
+  > Responsibility: Flexibility — allow variable effort per round.
+  > Verification: No required state field caps execution duration of active work.
+
+- **MANUAL_RECOVERY**: System MUST expose `blocked` or `suspect_stale` state after prolonged no-progress, and MUST NOT auto-takeover without explicit policy.
+  > Responsibility: Safety — avoid false recovery on long but valid work.
+  > Verification: Recovery path requires human intervention or a separately specified takeover policy.
+
+- **GATE_COMMAND**: Agent MUST interpret `vibespec review|dev gate defect|spec-drift|src-drift` as the canonical trigger shape for paired gate loops.
+  > Responsibility: Usability — keep loop activation predictable and scriptable.
+  > Verification: Documentation and workflow examples use `vibespec <actor> gate <gate>`.
+
+- **BUILTIN_SPEC_DRIFT**: System MUST treat `spec-drift` as a built-in gate workflow, not as a required project-specific L0 item.
+  > Responsibility: Standardization — provide a reusable specs drift elimination flow.
+  > Verification: Coordination script exposes `spec-drift` as a fixed gate type.
+
+- **BUILTIN_SRC_DRIFT**: System MUST treat `src-drift` as a built-in gate workflow, not as a required project-specific L0 item.
+  > Responsibility: Standardization — provide a reusable source drift elimination flow.
+  > Verification: Coordination script exposes `src-drift` as a fixed gate type.
+
+---
+
+## CONTRACTS.QUALITY_DETECTION
+
+- **DEFECT_GATE_TARGET**: Agent MUST resolve `vibespec dev gate defect` and `vibespec review gate defect` against the project's dedicated L0 quality detection item.
+  > Responsibility: Scope clarity — tie defect review to an explicit user-approved quality target.
+  > Verification: Defect gate initialization records the selected quality detection item ID.
+
+- **DEFECT_GATE_SCOPE**: Review Agent MUST audit `src/` for workaround logic, legacy logic, concurrency bottlenecks, deadlocks, dead waits, and blind waits when executing the defect gate.
+  > Responsibility: Defect finding — keep the quality gate focused and repeatable.
+  > Verification: Defect gate checklist includes all six defect classes.

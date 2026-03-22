@@ -31,6 +31,26 @@
 3. **Refine**: Apply RFC2119 keywords for L1 and type signatures for L3.
 4. **Verify**: Perform self-audit against parent layers and standards.
 5. **Human Gate**: Present drafts to user and wait for explicit approval.
+
+## [decision] WaitStateHandling
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| `status` in `{done, aborted, blocked}` | EXIT | Stop the loop |
+| `expected_actor != self` and `status = active` | WAIT | Sleep or back off, then reload shared state |
+| Turn lock unavailable | WAIT | Retry later without ending the loop |
+| No-progress window exceeded | ESCALATE | Mark `blocked` or `suspect_stale` and request manual recovery |
+| `expected_actor = self` and lock acquired | ACT | Execute the current turn |
+
+## [decision] GateSelection
+
+**Rules**:
+| Input | Gate | Action |
+|-------|------|--------|
+| `vibespec dev gate defect` or `vibespec review gate defect` | `defect` | Load project quality detection item, then enter paired defect loop |
+| `vibespec dev gate spec-drift` or `vibespec review gate spec-drift` | `spec-drift` | Run built-in specs drift elimination loop |
+| `vibespec dev gate src-drift` or `vibespec review gate src-drift` | `src-drift` | Run built-in src drift elimination loop |
 ---
 
 ## [workflow] IdeaToSpecWorkflow

@@ -1,6 +1,6 @@
 ---
 name: vibespec
-description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates. Use when user says "vibespec", "vibe spec", "vibe-spec", "refine specs", wants to capture a new idea, or wants to validate existing specifications.
+description: Spec-driven development workflow. Distills raw ideas into traceable L0-L3 specifications with human approval gates, validates existing specifications, and coordinates paired dev/review gate loops through bundled scripts. Use when user says "vibespec", "vibe spec", "vibe-spec", "refine specs", wants to capture a new idea, wants to validate existing specifications, or uses trigger phrases like "vibespec dev gate defect", "vibespec review gate defect", "vibespec dev gate spec-drift", "vibespec review gate spec-drift", "vibespec dev gate src-drift", or "vibespec review gate src-drift".
 ---
 
 # Vibespec Skill
@@ -144,6 +144,31 @@ Explicit commands for specific, targeted actions.
 - **Autonomy rule (hard requirement)**:
   - Do not stop to ask user confirmation while `todo.md` has any non-empty actionable item.
   - If a decision is needed, auto-decide with "perfect orthogonality / no legacy retention" as tie-breaker, and record in `specs/build/<timestamp>/auto-decisions.md`.
+
+#### `vibespec dev|review gate defect|spec-drift|src-drift`
+- **Skill trigger**: Treat these as user prompt phrases that activate this skill, not as a requirement that a top-level `vibespec` binary already exists.
+- **GateWorkflow**: Load `references/dual_agent_coordination.md`, then enter the paired `dev` + `review` gate loop.
+- **`defect` gate**: Resolve the user project's dedicated quality detection item from `specs/L0-VISION.md`, then audit `src/` against that quality target.
+- **`spec-drift` gate**: Run the built-in specs drift elimination workflow from the coordination script.
+- **`src-drift` gate**: Run the built-in source drift elimination workflow from the coordination script.
+- **Execution rule**: After the trigger fires, the Agent SHOULD execute `python3 scripts/agent_sync.py ...` directly to manage the shared gate state.
+- **Execution skeleton**:
+  1. Parse actor from the trigger phrase: `dev` or `review`.
+  2. Parse gate from the trigger phrase: `defect`, `spec-drift`, or `src-drift`.
+  3. For `defect`, resolve `focus_id` from the project's dedicated L0 quality detection item. For built-in gates, omit `focus_id`.
+  4. If the gate state does not exist yet, initialize it:
+     - `python3 scripts/agent_sync.py init --gate <gate> [--focus-id <focus_id>] --initial-actor dev`
+  5. Wait for turn ownership:
+     - `python3 scripts/agent_sync.py wait --gate <gate> [--focus-id <focus_id>] --actor <actor>`
+  6. If actor is `dev`, perform the gate repair work, validate locally, then publish:
+     - `python3 scripts/agent_sync.py publish-submission --gate <gate> [--focus-id <focus_id>] --base-rev <base_rev> --head-rev <head_rev> --file <changed_file> --validation-note <note> [--defect-response <id=status>]`
+  7. If actor is `review`, audit the latest frozen submission only, then publish:
+     - `python3 scripts/agent_sync.py state --gate <gate> [--focus-id <focus_id>]`
+     - `python3 scripts/agent_sync.py publish-review --gate <gate> [--focus-id <focus_id>] --submission-id <id> --decision accept|reject [--defect <id=summary>]`
+  8. If manual recovery is required, stop the loop explicitly:
+     - `python3 scripts/agent_sync.py mark-blocked --gate <gate> [--focus-id <focus_id>] --reason <reason>`
+  9. Repeat until the shared state becomes `done` or `blocked`.
+- **Default policy**: Use short lock claims around shared state transitions, frozen submissions for review, non-terminal wait states, no mandatory heartbeats, and manual recovery on prolonged no-progress unless the user specifies takeover policy.
 
 ---
 
@@ -314,6 +339,7 @@ Process the specific layer L(N) identified in Phase 2:
 Use standalone scripts for mechanical operations:
 - `python3 scripts/validate.py specs/` — Structural validation, section-level traceability, and three-phase coverage auditing.
   - **Black-Box Testing Enforcement**: When running validation on projects with test code, ALWAYS pass `--project-prefix <prefix>` and `--allowed-imports <pattern>`. Set prefix to the project's root namespace (e.g., `datanix`), and pattern to specify public interfaces (e.g., `^datanix_api::|^datanix_core::syscall::SyscallDispatcher`). Any test importing a project module outside this allowed pattern will trigger a violation.
+- `python3 scripts/agent_sync.py --help` — Minimal shared-state coordination for paired `dev` + `review` loops using short lock windows.
 
 **IMPORTANT**: Run `python3 scripts/validate.py` IMMEDIATELY after each refinement cycle.
 
@@ -328,6 +354,7 @@ Load precisely when the workflow step requires domain knowledge:
 | `references/layer_system.md` | **Phase 2** (Layer Classification), **DistillWorkflow** | L0-L3 subjects, L3 types, classification rules, call direction |
 | `references/review_and_quality.md` | **Phase 3** (Self-Audit), **vibespec review** | REVIEW_PROTOCOL checklist, format rules, quality principles |
 | `references/testing_protocol.md` | **CertificationWorkflow** | Two-phase test generation, test rules, invariant testing |
+| `references/dual_agent_coordination.md` | Multi-agent `dev` + `review` synchronization design | Turn state, short-lock protocol, wait semantics, manual recovery |
 | `references/CONCEPTS.md` | User unfamiliar with vibespec terms | Plain-language concept explanations |
 
 ---

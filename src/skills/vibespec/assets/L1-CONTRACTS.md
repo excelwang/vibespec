@@ -90,6 +90,18 @@ invariants:
 
 ---
 
+## CONTRACTS.QUALITY_DETECTION
+
+- **DEFECT_GATE_TARGET**: Agent MUST resolve `vibespec dev gate defect` and `vibespec review gate defect` against the project's dedicated L0 quality detection item.
+  > Responsibility: Scope clarity — tie defect review to explicit user intent.
+  > Verification: Defect gate records the selected quality detection item ID.
+
+- **DEFECT_GATE_SCOPE**: Review Agent MUST audit `src/` for workaround logic, legacy logic, concurrency bottlenecks, deadlocks, dead waits, and blind waits.
+  > Responsibility: Quality detection — make the defect gate concrete and repeatable.
+  > Verification: Review checklist contains all six defect classes.
+
+---
+
 ## CONTRACTS.SYSTEM_FIRST
 
 - **TARGET**: System MUST handle file I/O, validation, archival, formatting.
