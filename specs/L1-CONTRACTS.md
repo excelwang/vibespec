@@ -750,9 +750,13 @@ standard_terms:
   > Responsibility: Judgment quality — prevent heuristic probes from turning into false-positive defect reports.
   > Verification: Gate workflow instructions require reading surrounding code/spec context before defect publication.
 
-- **PROBES_SIGNALS_ONLY**: Probe output MUST be treated as evidence input only, not as defect classification by itself.
-  > Responsibility: Signal hygiene — keep keyword hits, regex matches, file overlap, and path mismatches from substituting for semantic review.
-  > Verification: Runner output and gate workflow docs explicitly warn against classifying defects from text/path matches alone.
+- **PROBES_SIGNALS_ONLY**: Probe output MUST be treated as structured review input only, not as defect classification by itself.
+  > Responsibility: Signal hygiene — keep lexical, naming, repository-inventory, and changed-file hints from substituting for semantic review.
+  > Verification: Runner output and gate workflow docs explicitly describe probe packets as review scope and comparison anchors rather than defect findings.
+
+- **NO_KEYWORD_PROBES**: System MUST NOT use keyword, regex, or naming scans as triage probes for defect publication.
+  > Responsibility: Judgment rigor — prevent self-descriptive terminology from masquerading as semantic evidence.
+  > Verification: Probe implementations and gate workflow docs avoid lexical-scan probes and instead provide structured review packets.
 
 - **FULL_FILE_TRIAGE_REVIEW**: Triage Agent MUST fully read the listed `specs/` files and source code files before publishing any defect.
   > Responsibility: Context completeness — prevent snippet-anchored or grep-anchored judgments from replacing full semantic review.
@@ -769,6 +773,10 @@ standard_terms:
 - **STRUCTURED_SRC_DRIFT_REVIEW**: When classifying `src-drift`, Triage Agent MUST compare relevant src modules against `L2` architecture boundaries and src components against key `L3` mechanisms.
   > Responsibility: Architecture fidelity — prevent source review from collapsing into path-diff inspection or broad whole-repo intuition.
   > Verification: Triage runner output and gate workflow instructions define module/component review requirements plus explicit L2/L3 comparison anchors for src-drift.
+
+- **STRUCTURED_QUALITY_REVIEW**: When classifying `quality`, Triage Agent MUST review source modules/components semantically against the quality target categories, `L2` architecture, and key `L3` mechanisms.
+  > Responsibility: Quality rigor — prevent workaround/legacy/concurrency findings from collapsing into terminology scans.
+  > Verification: Triage runner output and gate workflow instructions define semantic quality review requirements without lexical probes.
 
 - **FIX_EXECUTES_TRIAGE_PLAN**: Fix Agent MUST execute the latest triage-generated repair plan rather than inventing new gate-specific repair logic.
   > Responsibility: Scope control — keep repair work bounded to triaged findings.
@@ -811,5 +819,5 @@ standard_terms:
   > Verification: Stored triage artifacts always include non-empty check and evidence fields.
 
 - **DETERMINISTIC_PROBES**: System MUST provide deterministic built-in probe suites for `spec-drift`, `src-drift`, and `quality`.
-  > Responsibility: Repeatability — anchor triage in stable scripted evidence before human-like reasoning classifies defects.
-  > Verification: High-level triage runner outputs `checks_run`, `evidence_summary`, and notes for each supported defect class.
+  > Responsibility: Repeatability — anchor triage in stable scripted review packets before human-like reasoning classifies defects.
+  > Verification: High-level triage runner outputs `checks_run`, `evidence_summary`, review contracts, and notes for each supported defect class.

@@ -50,36 +50,6 @@ AUTO_DECISION_REQUIRED_FIELDS = [
     "Rationale:",
     "Affected:",
 ]
-QUALITY_PROBES = {
-    "no workaround logic": [
-        "workaround",
-        "temporary fix",
-        "hack",
-    ],
-    "no legacy logic": [
-        "legacy",
-        "deprecated path",
-        "old behavior",
-    ],
-    "no concurrency bottlenecks": [
-        "global lock",
-        "serialized queue",
-        "bottleneck",
-    ],
-    "no deadlocks": [
-        "deadlock",
-        "lock inversion",
-    ],
-    "no dead waits": [
-        "wait forever",
-        "dead wait",
-    ],
-    "no blind waits": [
-        "sleep(",
-        "time.sleep(",
-        "blind wait",
-    ],
-}
 QUALITY_PROBE_EXTENSIONS = (".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go", ".cs")
 QUALITY_PROBE_IGNORED_PARTS = {
     ".git",
@@ -109,7 +79,12 @@ SRC_DRIFT_REVIEW_CHECKS = [
     "Review src drift module by module and component by component instead of relying on changed-path summaries alone.",
     "Compare each relevant src module against the L2 component/module architecture and flag broadened ownership, collapsed boundaries, or missing components.",
     "Compare each relevant src component against key L3 workflows, interfaces, and fixed mechanisms before accepting semantic alignment.",
-    "Treat changed paths, file-presence mismatch, and source-root discovery as intake signals only; publish src drift only after confirming an actual implementation-vs-architecture or implementation-vs-mechanism mismatch.",
+    "Treat changed files and repository inventory as review-scope hints only; publish src drift only after confirming an actual implementation-vs-architecture or implementation-vs-mechanism mismatch.",
+]
+QUALITY_REVIEW_CHECKS = [
+    "Review source modules and components semantically against the quality target categories instead of scanning for self-descriptive keywords.",
+    "Infer workaround, legacy, concurrency bottleneck, deadlock, dead-wait, and blind-wait defects from design intent, control flow, and cross-file behavior rather than terminology alone.",
+    "Compare the reviewed implementation against L2 architecture boundaries and the key mechanisms fixed in L3 before classifying a quality defect.",
 ]
 DEBUG_ONLY_WARNING = (
     "Debug-only command. Do not bypass gate blocking with `state` or `wait`. "
@@ -266,11 +241,12 @@ def semantic_review_contract(defect_class: str | None) -> dict:
         "src-drift": [
             "Inspect changed code/spec context and confirm a real implementation-vs-architecture or implementation-vs-mechanism mismatch.",
             "Compare src module by module against L2 architecture and component by component against key L3 mechanisms.",
-            "Treat path-class or file-presence mismatches as signals only, not defects by themselves.",
+            "Treat changed-file scope and repository inventory as review scope only, not as defects by themselves.",
         ],
         "quality": [
-            "Inspect surrounding control flow and intent before classifying a quality defect.",
-            "Treat keyword or regex hits as heuristic signals only, not defects by themselves.",
+            "Inspect implementation intent, control flow, and design tradeoffs before classifying a quality defect.",
+            "Do not use keyword or regex matching as a quality probe or as quality evidence.",
+            "Review source modules/components against L2 architecture, key L3 mechanisms, and the quality target categories.",
         ],
     }
     return {
@@ -284,10 +260,12 @@ def semantic_review_contract(defect_class: str | None) -> dict:
         "must_apply_structured_spec_drift_checks": defect_class == "spec-drift",
         "must_compare_module_by_module": defect_class == "src-drift",
         "must_compare_component_by_component": defect_class == "src-drift",
+        "must_not_use_keyword_probe": defect_class == "quality",
         "warning": (
-            "Probe output is evidence input only. Do not publish drift or defects solely from "
-            "keyword hits, regex matches, file-name/path overlap, or path-class mismatches. "
-            "Read complete spec and source files, then confirm a semantic inconsistency first."
+            "Probe output is review-scope input only. Do not publish drift or defects solely from "
+            "lexical matches, naming overlap, file-name/path similarity, repository inventory, "
+            "or changed-file summaries. Read complete spec and source files, then confirm a "
+            "semantic inconsistency first."
         ),
         "required_review_actions": list(class_specific.get(defect_class, [])),
         "mandatory_checks": list(
@@ -1072,7 +1050,7 @@ class CoordinationStore:
     def _probe_src_drift(self, submission_id: int) -> dict:
         checks_run: list[str] = []
         notes: list[str] = []
-        source = "repo status"
+        source = "repository inventory"
         changed_paths: list[str] = []
 
         if submission_id > 0:
@@ -1091,7 +1069,7 @@ class CoordinationStore:
             git_code, git_out, git_err = run_command(
                 ["git", "status", "--short", "--untracked-files=all"], self.root
             )
-            checks_run.append("git status --short --untracked-files=all")
+            checks_run.append("git status --short --untracked-files=all (review scope only)")
             if git_code != 0:
                 raise CoordinationError(
                     "Unable to inspect git status for src-drift probe: "
@@ -1101,18 +1079,14 @@ class CoordinationStore:
 
         buckets = detect_changed_path_classes(changed_paths)
         notes.append(f"Evidence source: {source}")
+        notes.append(
+            "Changed files and repository inventory define review entry points only; they are not src-drift findings by themselves."
+        )
         for bucket, paths in buckets.items():
             if paths:
                 notes.append(f"{bucket}: {', '.join(paths)}")
             else:
                 notes.append(f"{bucket}: none")
-
-        mismatch_notes = []
-        if buckets["src"] and not buckets["specs"]:
-            mismatch_notes.append("src changes exist without matching specs changes")
-        if buckets["specs"] and not buckets["src"]:
-            mismatch_notes.append("specs changes exist without matching src changes")
-        notes.extend(mismatch_notes)
         module_review_order = self._discover_source_component_review_order()
         if module_review_order:
             notes.append(
@@ -1126,17 +1100,17 @@ class CoordinationStore:
             notes.append("source modules/components: none discovered")
 
         evidence_summary = (
-            "Src drift probes summarized frozen path-class changes and src/specs mismatch "
-            "signals. These are heuristic signals only and require module-by-module comparison "
-            "against L2 plus component-by-component comparison against key L3 mechanisms before "
-            "publishing a drift defect."
+            "Src drift probe prepared a deterministic review packet: repository delta scope, "
+            "source module inventory, and architecture/mechanism comparison anchors. Publish "
+            "src drift only after module-by-module review against L2 and component-by-component "
+            "review against key L3 mechanisms."
         )
         return {
             "checks_run": checks_run,
             "evidence_summary": evidence_summary,
             "notes": notes
             + [
-                "Do not classify src-drift from path-class or file-presence mismatch alone.",
+                "Do not classify src-drift from changed-file summaries, path overlap, or repository inventory alone.",
                 "Compare src modules against L2 architecture and src components against key L3 mechanisms before publishing a defect.",
             ],
         }
@@ -1145,63 +1119,58 @@ class CoordinationStore:
         checks_run: list[str] = []
         notes: list[str] = []
         source_roots = self._discover_quality_source_roots()
+        module_review_order = self._discover_source_component_review_order()
+        architecture_files = spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md")
+        key_mechanism_files = discover_l3_runtime_files(self.root)
 
         if source_roots:
-            checks_run.append("quality source roots: " + ", ".join(source_roots))
+            checks_run.append("quality source root discovery")
             notes.append("Quality source roots: " + ", ".join(source_roots))
         else:
-            checks_run.append("quality source roots: none discovered")
+            checks_run.append("quality source root discovery: none")
             notes.append("Quality source roots: none discovered")
-            return {
-                "checks_run": checks_run,
-                "evidence_summary": (
-                    "Quality probes could not discover any supported source roots for this repository."
-                ),
-                "notes": notes,
-            }
 
-        for checklist_item, patterns in QUALITY_PROBES.items():
-            for pattern in patterns:
-                command = [
-                    "rg",
-                    "-n",
-                    "-F",
-                    "--hidden",
-                ]
-                for extension in QUALITY_PROBE_EXTENSIONS:
-                    command.extend(["-g", f"*{extension}"])
-                command.extend(
-                    [
-                    pattern,
-                    *source_roots,
-                ]
+        checks_run.append("quality target categories")
+        notes.append(
+            "Quality target categories: " + ", ".join(GATE_PROFILE["quality_checklist"])
+        )
+
+        if architecture_files:
+            checks_run.append("quality architecture anchor discovery")
+            notes.append("L2 architecture anchors: " + ", ".join(architecture_files))
+        else:
+            notes.append("L2 architecture anchors: none discovered")
+
+        if key_mechanism_files:
+            checks_run.append("quality L3 mechanism discovery")
+            notes.append("L3 mechanism anchors: " + ", ".join(key_mechanism_files))
+        else:
+            notes.append("L3 mechanism anchors: none discovered")
+
+        if module_review_order:
+            notes.append(
+                "source modules/components: "
+                + "; ".join(
+                    f"{entry['source_root']} => {', '.join(entry['components'])}"
+                    for entry in module_review_order
                 )
-                checks_run.append(shell_join(command))
-                code, stdout, stderr = run_command(command, self.root)
-                if code not in {0, 1}:
-                    raise CoordinationError(
-                        "Quality probe failed for pattern "
-                        f"{pattern!r}: {(stderr or stdout).strip()}"
-                    )
-                matches = summarize_text(stdout, limit=6)
-                if matches:
-                    notes.append(f"{checklist_item} / {pattern}: {' | '.join(matches)}")
-                else:
-                    notes.append(f"{checklist_item} / {pattern}: no matches")
+            )
+        else:
+            notes.append("source modules/components: none discovered")
 
         evidence_summary = (
-            "Quality probes scanned src/ for built-in checklist terms covering workaround, "
-            "legacy, concurrency, deadlock, dead-wait, and blind-wait signals. These hits are "
-            "heuristic only and require semantic review of surrounding code intent before "
-            "publishing a quality defect."
+            "Quality probe prepared a deterministic semantic review packet: source roots, "
+            "module/component inventory, quality target categories, and L2/L3 comparison "
+            "anchors. Publish a quality defect only after semantic review of implementation "
+            "intent, control flow, and design against those categories."
         )
         return {
             "checks_run": checks_run,
             "evidence_summary": evidence_summary,
             "notes": notes
             + [
-                "Do not classify quality defects from keyword or regex hits alone.",
-                "Confirm the surrounding control flow and intent before publishing a defect.",
+                "Do not use keyword or regex scanning as a quality probe.",
+                "Infer workaround, legacy, concurrency, deadlock, dead-wait, and blind-wait defects from code behavior and design, not from terminology alone.",
             ],
         }
 
@@ -1271,6 +1240,25 @@ class CoordinationStore:
                 "Src drift review is not complete until the relevant src modules and components "
                 "have been compared against L2 architecture boundaries and the key mechanisms "
                 "fixed in L3. Changed paths alone are not enough."
+            ),
+        }
+
+    def _build_quality_review_contract(self) -> dict:
+        return {
+            "must_not_use_keyword_probe": True,
+            "must_compare_module_by_module": True,
+            "must_compare_component_by_component": True,
+            "must_compare_against_l2_architecture": True,
+            "must_compare_against_l3_key_mechanisms": True,
+            "quality_target_categories": list(GATE_PROFILE["quality_checklist"]),
+            "architecture_files": spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md"),
+            "key_mechanism_files": discover_l3_runtime_files(self.root),
+            "source_module_review_order": self._discover_source_component_review_order(),
+            "mandatory_checks": list(QUALITY_REVIEW_CHECKS),
+            "warning": (
+                "Quality review is semantic only: do not use keyword, regex, or naming scans. "
+                "Review the listed source modules/components against the quality target "
+                "categories plus L2/L3 architecture and mechanism anchors."
             ),
         }
 
@@ -1388,6 +1376,11 @@ class CoordinationStore:
                         if defect_class == "src-drift"
                         else None
                     ),
+                    "quality_review_contract": (
+                        self._build_quality_review_contract()
+                        if defect_class == "quality"
+                        else None
+                    ),
                     "defect_class": defect_class,
                     "quality_target_id": (
                         state.get("quality_target_id") if defect_class == "quality" else None
@@ -1405,6 +1398,7 @@ class CoordinationStore:
         else:
             packet["spec_drift_review_contract"] = None
             packet["src_drift_review_contract"] = None
+            packet["quality_review_contract"] = None
         return packet
 
     def _fix_runner_packet(self, state: dict, result: str) -> dict:

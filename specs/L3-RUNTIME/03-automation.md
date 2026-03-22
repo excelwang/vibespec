@@ -70,10 +70,12 @@
 **Rules**:
 | Condition | Verdict | Action |
 |-----------|---------|--------|
-| Probe output is only a text/regex/path match signal | REQUIRE | Read surrounding code/spec context before classifying any defect |
+| Probe packet only defines review scope, comparison anchors, or baseline outputs | REQUIRE | Continue with semantic review; do not treat the packet as a defect finding |
 | Triage has not fully read the listed `specs/`, source, and context files | REJECT | Do not publish any defect yet |
 | Active class is `spec-drift` and the ordered parent-layer item review is incomplete | REJECT | Do not publish or accept spec-drift yet |
 | Active class is `src-drift` and the ordered module/component review against `L2` and `L3` is incomplete | REJECT | Do not publish or accept src-drift yet |
+| Active class is `quality` and the semantic review against quality categories plus `L2`/`L3` is incomplete | REJECT | Do not publish or accept quality defects yet |
+| Review relies on keyword, regex, naming, or changed-file scanning as defect evidence | REJECT | Do not publish any defect yet |
 | No semantic contradiction or real quality problem is confirmed | REJECT | Do not publish a defect from the probe result alone |
 | Triage publishes any class report | REQUIRE | Persist non-empty `checks_run` and `evidence_summary` |
 | Triage rejects defects | REQUIRE | Persist per-defect evidence plus explicit `repair_logic` |
@@ -98,8 +100,17 @@
 | Reviewing `src-drift` | REQUIRE | Compare relevant src modules against `L2` architecture before accepting semantic alignment |
 | Reviewing a src module | REQUIRE | Compare its owned responsibilities against the matching `L2` component or boundary |
 | Reviewing a src component | REQUIRE | Check it against the key `L3` workflow/interface/mechanism files that define current behavior |
-| Changed paths or missing sibling files are the only signal | REJECT | Do not publish src drift from path evidence alone |
+| Changed files or repository inventory are the only signal | REJECT | Do not publish src drift from delta evidence alone |
 | Module/component review reveals broadened ownership, collapsed boundaries, or missing mechanisms | FLAG | Treat the mismatch as candidate src drift and decide explicitly |
+
+## [decision] QualitySemanticReviewAxes
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| Reviewing `quality` | REQUIRE | Compare relevant source modules/components against quality target categories plus `L2` architecture and key `L3` mechanisms |
+| Proposed evidence is only a keyword, regex, naming, or comment hit | REJECT | Do not publish a quality defect from lexical evidence alone |
+| Source review reveals workaround, legacy, concurrency, or waiting defects in behavior/design | FLAG | Treat the mismatch as candidate quality drift and decide explicitly |
 
 ## [decision] SubmissionArtifactRequirements
 

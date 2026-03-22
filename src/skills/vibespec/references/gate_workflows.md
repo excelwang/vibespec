@@ -24,7 +24,7 @@ Requirements:
    - `spec-drift`
    - `src-drift`
    - `quality`
-2. Treat probe output as signals only. Do not classify defects from keyword hits, regex matches, string similarity, file-name overlap, or path-class mismatch alone.
+2. Treat probe output as a structured review packet only. It may define review scope, comparison anchors, and baseline checks, but it does not classify defects by itself.
 3. Before publishing any defect, fully read every listed `specs/` file, source file, and context file from the triage runner packet; do not judge from snippets or anchor fragments.
 4. When the active class is `spec-drift`, execute the runner-provided structured review checklist:
    - compare the reviewed layer against its immediate parent layer item by item in order `L1<-L0`, `L2<-L1`, `L3<-L2`
@@ -35,22 +35,27 @@ Requirements:
 5. When the active class is `src-drift`, execute the runner-provided structured implementation review checklist:
    - compare relevant `src` modules against `L2` component/module boundaries
    - compare relevant `src` components against the key mechanisms fixed in `L3`
-   - do not treat changed paths, missing sibling files, or root discovery as sufficient by themselves
-6. After the full-file read and structured comparison, confirm an actual semantic contradiction, omission, weakened requirement, architectural drift, or quality problem.
-7. Do not repair anything in this phase.
-8. After each defect class is classified, immediately publish that batch through scripts/agent_sync.py.
-9. If the published batch contains defects, release the waiting fix session without waiting for later classes to finish.
-10. For every defect, generate:
+   - do not treat changed files, repository inventory, or file-presence mismatch as sufficient by themselves
+6. When the active class is `quality`, execute the runner-provided semantic quality review checklist:
+   - review source modules and components against the quality target categories
+   - infer workaround, legacy, concurrency bottleneck, deadlock, dead-wait, and blind-wait issues from design intent and control flow
+   - compare the reviewed implementation against `L2` architecture and the key mechanisms fixed in `L3`
+   - do not use keyword, regex, or naming scans as a quality probe
+7. After the full-file read and structured comparison, confirm an actual semantic contradiction, omission, weakened requirement, architectural drift, or quality problem.
+8. Do not repair anything in this phase.
+9. After each defect class is classified, immediately publish that batch through scripts/agent_sync.py.
+10. If the published batch contains defects, release the waiting fix session without waiting for later classes to finish.
+11. For every defect, generate:
    - stable ID
    - defect type
    - evidence
    - summary
    - explicit repair logic for the fix session
-11. Every triage report, including `accept`, must persist:
+12. Every triage report, including `accept`, must persist:
    - `checks_run`
    - `evidence_summary`
    - optional audit `notes`
-12. Accept only when no defects remain after all three classes are classified.
+13. Accept only when no defects remain after all three classes are classified.
 ```
 
 ### Fix Phase

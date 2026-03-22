@@ -160,12 +160,13 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("## Unified Gate", reference_content)
         self.assertIn("UnifiedGateTriageWorkflow", reference_content)
         self.assertIn("UnifiedGateFixWorkflow", reference_content)
-        self.assertIn("Treat probe output as signals only", reference_content)
+        self.assertIn("structured review packet only", reference_content)
         self.assertIn("fully read every listed `specs/` file", reference_content)
         self.assertIn("confirm an actual semantic contradiction", reference_content)
         self.assertIn("item by item in order `L1<-L0`, `L2<-L1`, `L3<-L2`", reference_content)
         self.assertIn("relevant `src` modules against `L2`", reference_content)
         self.assertIn("components against the key mechanisms fixed in `L3`", reference_content)
+        self.assertIn("do not use keyword, regex, or naming scans as a quality probe", reference_content)
 
         skill_content = skill_path.read_text()
         self.assertIn("vibespec fix gate", skill_content)
@@ -175,11 +176,12 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("references/gate_workflows.md", skill_content)
         self.assertIn("run-triage-pass", skill_content)
         self.assertIn("run-fix-pass", skill_content)
-        self.assertIn("signals only", skill_content)
+        self.assertIn("structured review packet", skill_content)
         self.assertIn("fully read every `specs/` file", skill_content)
         self.assertIn("semantic inconsistency", skill_content)
         self.assertIn("item by item", skill_content)
         self.assertIn("module by module", skill_content)
+        self.assertIn("do not use keyword/regex matching", skill_content)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_fix_auto_decision_basis_and_priority_are_explicit(self):
@@ -503,6 +505,50 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("src/engine", module_text)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_quality_runner_returns_semantic_review_contract(self):
+        """CONTRACTS.DUAL_AGENT_GATE.STRUCTURED_QUALITY_REVIEW: Quality review MUST expose semantic module/component review requirements without lexical probes."""
+        store = CoordinationStore(self.root)
+        store.init_task()
+        store.publish_triage(**self._triage_kwargs())
+        store.publish_triage(
+            **self._triage_kwargs(
+                defect_class="src-drift",
+                evidence_summary="No src drift was found in the reviewed scope.",
+                checks_run=["probe: src-drift"],
+            )
+        )
+        (self.root / "src").mkdir(parents=True)
+        (self.root / "src" / "engine.py").write_text("print('x')\n", encoding="utf-8")
+        (self.root / "specs").mkdir(exist_ok=True)
+        (self.root / "specs" / "L2-ARCHITECTURE.md").write_text("# arch\n", encoding="utf-8")
+        (self.root / "specs" / "L3-RUNTIME").mkdir(exist_ok=True)
+        (self.root / "specs" / "L3-RUNTIME" / "03-automation.md").write_text("# l3\n", encoding="utf-8")
+        store._run_probe_suite = lambda defect_class, submission_id: {
+            "checks_run": ["probe: quality"],
+            "evidence_summary": "stub quality packet",
+            "notes": ["stub quality note"],
+        }
+
+        result = store.run_triage_pass(timeout=0.0)
+
+        self.assertEqual(result["defect_class"], "quality")
+        self.assertTrue(result["semantic_review_contract"]["must_not_use_keyword_probe"])
+        self.assertIsNotNone(result["quality_review_contract"])
+        self.assertTrue(result["quality_review_contract"]["must_not_use_keyword_probe"])
+        self.assertIn(
+            "no workaround logic",
+            result["quality_review_contract"]["quality_target_categories"],
+        )
+        self.assertIn(
+            "specs/L2-ARCHITECTURE.md",
+            result["quality_review_contract"]["architecture_files"],
+        )
+        self.assertIn(
+            "specs/L3-RUNTIME/03-automation.md",
+            result["quality_review_contract"]["key_mechanism_files"],
+        )
+
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_run_fix_pass_returns_wait_while_gate_is_closed(self):
         """CONTRACTS.DUAL_AGENT_GATE.FIX_GATE_DEFAULT_LOCKED: Fix runner MUST report wait while no released work exists."""
         store = CoordinationStore(self.root)
@@ -675,26 +721,27 @@ class TestContractsDualAgentSync(unittest.TestCase):
 
     @verify_spec("CONTRACTS.QUALITY_DETECTION")
     def test_quality_probe_reports_deterministic_matches(self):
-        """CONTRACTS.QUALITY_DETECTION.DETERMINISTIC_PROBE_SUITES: Quality probes MUST emit scripted checklist evidence."""
+        """CONTRACTS.QUALITY_DETECTION.DETERMINISTIC_PROBE_SUITES: Quality probes MUST emit a semantic review packet without lexical scanning."""
         (self.root / "src").mkdir(parents=True)
-        (self.root / "src" / "example.py").write_text(
-            "def demo():\n    # workaround\n    time.sleep(1)\n",
-            encoding="utf-8",
-        )
+        (self.root / "src" / "example.py").write_text("def demo():\n    pass\n", encoding="utf-8")
+        (self.root / "specs").mkdir(parents=True)
+        (self.root / "specs" / "L2-ARCHITECTURE.md").write_text("# arch\n", encoding="utf-8")
+        (self.root / "specs" / "L3-RUNTIME").mkdir(exist_ok=True)
+        (self.root / "specs" / "L3-RUNTIME" / "03-automation.md").write_text("# l3\n", encoding="utf-8")
         store = CoordinationStore(self.root)
 
         probe = store._probe_quality()
 
         self.assertTrue(probe["checks_run"])
-        self.assertIn("Quality probes scanned src/", probe["evidence_summary"])
+        self.assertIn("deterministic semantic review packet", probe["evidence_summary"])
         notes_text = "\n".join(probe["notes"])
-        self.assertIn("workaround", notes_text)
-        self.assertIn("time.sleep(", notes_text)
-        self.assertIn("keyword or regex hits alone", notes_text)
+        self.assertIn("Quality target categories:", notes_text)
+        self.assertIn("source modules/components:", notes_text)
+        self.assertIn("Do not use keyword or regex scanning as a quality probe.", notes_text)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_src_drift_probe_reports_deterministic_path_classes(self):
-        """CONTRACTS.DUAL_AGENT_GATE.DETERMINISTIC_PROBE_SUITES: Src-drift probes MUST summarize deterministic path-class evidence."""
+        """CONTRACTS.DUAL_AGENT_GATE.DETERMINISTIC_PROBE_SUITES: Src-drift probes MUST emit deterministic review scope without classifying from path evidence."""
         self._init_git_repo()
         (self.root / "src").mkdir(parents=True)
         (self.root / "specs").mkdir(parents=True)
@@ -706,12 +753,16 @@ class TestContractsDualAgentSync(unittest.TestCase):
 
         probe = store._probe_src_drift(submission_id=0)
 
-        self.assertIn("git status --short --untracked-files=all", probe["checks_run"])
+        self.assertIn(
+            "git status --short --untracked-files=all (review scope only)",
+            probe["checks_run"],
+        )
         notes_text = "\n".join(probe["notes"])
         self.assertIn("src/example.py", notes_text)
         self.assertIn("specs/example.md", notes_text)
         self.assertIn("tests/test_example.py", notes_text)
-        self.assertIn("path-class or file-presence mismatch alone", notes_text)
+        self.assertIn("repository delta scope", probe["evidence_summary"])
+        self.assertIn("changed-file summaries, path overlap, or repository inventory alone", notes_text)
         self.assertIn("source modules/components:", notes_text)
         self.assertIn("against L2 architecture", notes_text)
 
