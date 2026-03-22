@@ -36,7 +36,7 @@ interface CoordinationStore {
 
 **Steps**:
 1. Agent resolves the unified gate from `vibespec triage gate` or `vibespec fix gate`.
-2. Triage automatically includes the project's `VISION.QUALITY_DETECTION` item plus built-in spec-drift and src/spec-drift checks.
+2. Triage automatically resolves `VISION.QUALITY_DETECTION`, preferring the project-defined item when present and otherwise falling back to the vibespec template default, plus built-in spec-drift and src/spec-drift checks.
 3. `CoordinationStore.readState()` exposes triage and fix workflow metadata for the active gate.
 4. Triage/Fix sessions load `references/gate_workflows.md` and select the mapped phase prompt from coordination state.
 5. The gate starts at `triage_turn`, and the Fix gate is closed until Triage releases work.

@@ -12,7 +12,8 @@ Validate the framework using its own bootstrap specifications:
 
 ```bash
 # Validate the bootstrap specs
-python3 src/skills/vibespec/scripts/validate.py specs/
+cd src/skills/vibespec
+python3 scripts/validate.py ../../../specs/
 
 # Ingest new ideas or pending changes
 vibespec ingest

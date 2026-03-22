@@ -730,6 +730,10 @@ standard_terms:
   > Responsibility: Operational safety — reduce misuse of shared-state transitions during live gate execution.
   > Verification: `agent_sync.py --help` includes `run-triage-pass` and `run-fix-pass`.
 
+- **BLOCKING_RUNNERS**: `run-triage-pass` and `run-fix-pass` MUST be the normal blocking entrypoints for gate sessions, while `state` and `wait` remain debug-only helpers.
+  > Responsibility: Session discipline — keep waiting semantics inside `agent_sync.py` instead of reimplemented ad hoc by the Agent.
+  > Verification: Skill and protocol documentation route `vibespec fix gate` and `vibespec triage gate` through the blocking runner commands, label `state`/`wait` as debug-only, and debug command output warns agents not to bypass blocking with them.
+
 - **WORKFLOW_MAPPING**: System MUST expose unified Triage and Fix workflow metadata in coordination state.
   > Responsibility: Routing — prevent the Agent from re-deciding the phase workflow after trigger.
   > Verification: Gate state includes triage workflow name/phase and fix workflow name/phase.
@@ -766,9 +770,9 @@ standard_terms:
 
 ## CONTRACTS.QUALITY_DETECTION
 
-- **QUALITY_GATE_TARGET**: Agent MUST resolve `vibespec triage gate` against the project's dedicated `VISION.QUALITY_DETECTION` item when auditing quality defects.
-  > Responsibility: Scope clarity — tie quality triage to an explicit user-approved target without requiring extra user parameters.
-  > Verification: Unified gate state records `VISION.QUALITY_DETECTION` as the quality target ID.
+- **QUALITY_GATE_TARGET**: Agent MUST resolve `vibespec triage gate` against `VISION.QUALITY_DETECTION`, using the project-defined item when present and otherwise falling back to the vibespec template default.
+  > Responsibility: Scope clarity — keep quality triage available without forcing every project to duplicate the template vision item.
+  > Verification: Unified gate state records `VISION.QUALITY_DETECTION` as the quality target ID plus a source marker showing `project-specs` or `vibespec-template`.
 
 - **QUALITY_GATE_SCOPE**: Triage Agent MUST audit `src/` for workaround logic, legacy logic, concurrency bottlenecks, deadlocks, dead waits, and blind waits when executing the unified gate triage phase.
   > Responsibility: Defect finding — keep the quality gate focused and repeatable.

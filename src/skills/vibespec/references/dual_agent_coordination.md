@@ -41,6 +41,7 @@ Suggested `current.json` fields:
 {
   "gate": "all-defects",
   "quality_target_id": "VISION.QUALITY_DETECTION",
+  "quality_target_source": "project-specs | vibespec-template",
   "status": "active",
   "phase": "triage_turn",
   "expected_actor": "triage",
@@ -63,15 +64,18 @@ Use a short lock only for shared-state transitions:
 
 Do not hold the lock during the actual Fix or Triage work.
 
-Default to the safe runner commands first:
+Default to the blocking runner commands first:
 
 - `python3 scripts/agent_sync.py run-triage-pass`
 - `python3 scripts/agent_sync.py run-fix-pass`
 
+Do not inspect `state` or use `wait` as the normal entry sequence for `vibespec fix gate` / `vibespec triage gate`.
 Use low-level mutating commands only after reasoning over runner output:
 
 - `python3 scripts/agent_sync.py publish-triage ...`
 - `python3 scripts/agent_sync.py publish-submission ...`
+
+If `state` or `wait` is called anyway, their output must be treated as a debug-only warning, not as permission to bypass the blocking runners.
 
 The fix gate starts closed by default. Only Triage opens it by publishing a classified defect batch.
 
@@ -81,7 +85,7 @@ Triage audits the latest baseline or frozen submission across all supported defe
 
 - spec drift
 - src/spec drift
-- quality defects from `VISION.QUALITY_DETECTION`
+- quality defects from `VISION.QUALITY_DETECTION`, using the project item when present and otherwise the vibespec template default
 
 For every rejected triage item, Triage must publish:
 
@@ -155,24 +159,19 @@ Do not auto-takeover by default.
 
 ### Triage Session
 
-1. Read shared state.
-2. If the last cycle is `done`, `run-triage-pass` may reopen a fresh `triage_turn` cycle automatically.
-3. If not `triage_turn`, wait and reload later.
-4. Load `references/gate_workflows.md`.
-5. Start with `python3 scripts/agent_sync.py run-triage-pass` to collect the next deterministic probe packet.
-6. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
-7. Continue with `src-drift`, then `quality`, publishing each batch in order.
-8. After the final class is classified, switch to `fix_turn` if any defects remain.
+1. Load `references/gate_workflows.md`.
+2. Start with `python3 scripts/agent_sync.py run-triage-pass` and let it block the session until triage becomes actionable or the gate is terminal.
+3. If the last cycle is `done`, `run-triage-pass` may reopen a fresh `triage_turn` cycle automatically.
+4. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
+5. Continue with `src-drift`, then `quality`, publishing each batch in order.
+6. After the final class is classified, switch to `fix_turn` if any defects remain.
 
 ### Fix Session
 
-1. Read shared state.
-2. If terminal, exit.
-3. If no released work exists yet, wait on the fix gate and reload later.
-4. Load `references/gate_workflows.md`.
-5. Start with `python3 scripts/agent_sync.py run-fix-pass` to collect the latest released repair packet.
-6. Execute only the latest released repair items within the released scope boundary.
-7. If the repair needs multiple rounds, create fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, then iterate repair -> validate -> re-scan until no actionable item remains.
-8. If Triage is still classifying later classes, keep working locally and do not publish yet.
-9. After Triage completes and hands off final turn ownership, validate and publish the frozen submission.
-10. Switch to `triage_turn`.
+1. Load `references/gate_workflows.md`.
+2. Start with `python3 scripts/agent_sync.py run-fix-pass` and let it block the session until released repair work exists or the gate is terminal.
+3. Execute only the latest released repair items within the released scope boundary.
+4. If the repair needs multiple rounds, create fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, then iterate repair -> validate -> re-scan until no actionable item remains.
+5. If Triage is still classifying later classes, keep working locally and do not publish yet.
+6. After Triage completes and hands off final turn ownership, validate and publish the frozen submission.
+7. Switch to `triage_turn`.

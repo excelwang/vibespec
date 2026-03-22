@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,8 @@ TERMINAL_STATUSES = {"done", "aborted", "blocked"}
 ACTORS = {"fix", "triage"}
 GATE_NAME = "all-defects"
 QUALITY_TARGET_ID = "VISION.QUALITY_DETECTION"
+QUALITY_TARGET_SOURCE_PROJECT = "project-specs"
+QUALITY_TARGET_SOURCE_TEMPLATE = "vibespec-template"
 DEFECT_CLASSES = ["spec-drift", "src-drift", "quality"]
 GATE_PROFILE = {
     "description": (
@@ -76,6 +79,11 @@ QUALITY_PROBES = {
         "blind wait",
     ],
 }
+DEBUG_ONLY_WARNING = (
+    "Debug-only command. Do not bypass gate blocking with `state` or `wait`. "
+    "Normal gate sessions must start from the blocking runner entrypoints "
+    "`run-triage-pass` or `run-fix-pass` and let agent_sync.py block the session."
+)
 
 
 class CoordinationError(RuntimeError):
@@ -150,13 +158,33 @@ def parse_defects(entries: list[str] | None) -> list[dict[str, str]]:
     return defects
 
 
-def gate_profile_payload() -> dict:
+def detect_project_quality_target(root: Path) -> bool:
+    candidate = root / "specs" / "L0-VISION.md"
+    if not candidate.exists():
+        return False
+    return "QUALITY_DETECTION" in candidate.read_text(encoding="utf-8")
+
+
+def resolve_quality_target(root: Path) -> dict[str, str]:
+    if detect_project_quality_target(root):
+        return {
+            "quality_target_id": QUALITY_TARGET_ID,
+            "quality_target_source": QUALITY_TARGET_SOURCE_PROJECT,
+        }
+    return {
+        "quality_target_id": QUALITY_TARGET_ID,
+        "quality_target_source": QUALITY_TARGET_SOURCE_TEMPLATE,
+    }
+
+
+def gate_profile_payload(quality_target: dict[str, str]) -> dict:
     return {
         "description": GATE_PROFILE["description"],
         "triage_workflow": dict(GATE_PROFILE["triage_workflow"]),
         "fix_workflow": dict(GATE_PROFILE["fix_workflow"]),
         "defect_classes": list(GATE_PROFILE["defect_classes"]),
-        "quality_target_id": GATE_PROFILE["quality_target_id"],
+        "quality_target_id": quality_target["quality_target_id"],
+        "quality_target_source": quality_target["quality_target_source"],
         "quality_checklist": list(GATE_PROFILE["quality_checklist"]),
     }
 
@@ -172,11 +200,26 @@ def run_command(command: list[str], cwd: Path) -> tuple[int, str, str]:
     return completed.returncode, completed.stdout, completed.stderr
 
 
+def blocking_contract(actor: str) -> dict:
+    normal_entrypoint = "run-triage-pass" if actor == "triage" else "run-fix-pass"
+    return {
+        "must_block_session": True,
+        "normal_entrypoint": normal_entrypoint,
+        "must_not_bypass_with": ["state", "wait"],
+        "debug_only_commands": ["state", "wait"],
+        "warning": DEBUG_ONLY_WARNING,
+    }
+
+
 def summarize_text(text: str, limit: int = 12) -> list[str]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if len(lines) <= limit:
         return lines
     return lines[:limit] + [f"... ({len(lines) - limit} more lines)"]
+
+
+def shell_join(command: list[str]) -> str:
+    return " ".join(shlex.quote(token) for token in command)
 
 
 def detect_changed_path_classes(paths: list[str]) -> dict[str, list[str]]:
@@ -270,6 +313,7 @@ class CoordinationStore:
 
     def __init__(self, root: str | Path):
         self.root = Path(root).resolve()
+        self.skill_root = Path(__file__).resolve().parent.parent
         self.git_dir = resolve_git_dir(self.root)
         self.sync_dir = self.git_dir / "agent-sync"
         self.task_dir = self.sync_dir / "gate" / GATE_NAME
@@ -313,9 +357,11 @@ class CoordinationStore:
         if self.state_file.exists():
             raise CoordinationError("Unified gate is already initialized.")
 
+        quality_target = resolve_quality_target(self.root)
         initial_state = {
             "gate": GATE_NAME,
-            "quality_target_id": QUALITY_TARGET_ID,
+            "quality_target_id": quality_target["quality_target_id"],
+            "quality_target_source": quality_target["quality_target_source"],
             "status": "active",
             "phase": "triage_turn",
             "expected_actor": "triage",
@@ -338,7 +384,7 @@ class CoordinationStore:
                 "work_budget_required": False,
                 "auto_takeover": False,
             },
-            "gate_profile": gate_profile_payload(),
+            "gate_profile": gate_profile_payload(quality_target),
         }
         write_json_atomic(self.state_file, initial_state)
         return initial_state
@@ -517,7 +563,8 @@ class CoordinationStore:
             report_id = int(state["triage_report_id"]) + 1
             report = {
                 "gate": GATE_NAME,
-                "quality_target_id": QUALITY_TARGET_ID,
+                "quality_target_id": state["quality_target_id"],
+                "quality_target_source": state.get("quality_target_source"),
                 "report_id": report_id,
                 "submission_id": submission_id,
                 "turn_id": state["turn_id"],
@@ -661,18 +708,17 @@ class CoordinationStore:
     def _probe_spec_drift(self) -> dict:
         checks_run: list[str] = []
         notes: list[str] = []
-
-        validate_cmd = [sys.executable, "src/skills/vibespec/scripts/validate.py", "specs/"]
-        validate_code, validate_out, validate_err = run_command(validate_cmd, self.root)
-        checks_run.append("python3 src/skills/vibespec/scripts/validate.py specs/")
+        validate_cmd, validate_cwd = self._resolve_validator_probe_command()
+        validate_code, validate_out, validate_err = run_command(validate_cmd, validate_cwd)
+        checks_run.append(shell_join(validate_cmd))
         notes.extend(
             [f"validate.py exit code: {validate_code}"]
             + summarize_text(validate_out or validate_err, limit=8)
         )
 
-        unittest_cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests/specs", "-q"]
-        unittest_code, unittest_out, unittest_err = run_command(unittest_cmd, self.root)
-        checks_run.append("python3 -m unittest discover -s tests/specs -q")
+        spec_test_cmd, spec_test_cwd = self._resolve_spec_test_probe_command()
+        unittest_code, unittest_out, unittest_err = run_command(spec_test_cmd, spec_test_cwd)
+        checks_run.append(shell_join(spec_test_cmd))
         notes.extend(
             [f"spec tests exit code: {unittest_code}"]
             + summarize_text(unittest_out or unittest_err, limit=8)
@@ -687,6 +733,59 @@ class CoordinationStore:
             "evidence_summary": evidence_summary,
             "notes": notes,
         }
+
+    def _resolve_validator_probe_command(self) -> tuple[list[str], Path]:
+        documented = self._read_documented_command(
+            lambda line: "validate.py specs/" in line
+        )
+        if documented is not None:
+            return documented, self.root
+
+        specs_target = os.path.relpath(self.root / "specs", self.skill_root)
+        return [sys.executable, "scripts/validate.py", specs_target], self.skill_root
+
+    def _resolve_spec_test_probe_command(self) -> tuple[list[str], Path]:
+        documented = self._read_documented_command(
+            lambda line: line == "./scripts/test-workflow.sh contracts"
+        )
+        if documented is not None:
+            return documented, self.root
+
+        python_spec_tests = sorted((self.root / "tests" / "specs").glob("*.py"))
+        if python_spec_tests:
+            return (
+                [sys.executable, "-m", "unittest", "discover", "-s", "tests/specs", "-q"],
+                self.root,
+            )
+
+        fallback_script = self.root / "scripts" / "test-workflow.sh"
+        if fallback_script.exists():
+            return (["./scripts/test-workflow.sh", "contracts"], self.root)
+
+        return (
+            [
+                sys.executable,
+                "-c",
+                "print('No spec test workflow found; spec test probe skipped')",
+            ],
+            self.root,
+        )
+
+    def _read_documented_command(
+        self, predicate: callable
+    ) -> list[str] | None:
+        specs_readme = self.root / "specs" / "readme.md"
+        if not specs_readme.exists():
+            return None
+
+        for raw_line in specs_readme.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or line.startswith("```"):
+                continue
+            if predicate(line):
+                parsed = shlex.split(line)
+                return [os.path.expanduser(token) for token in parsed]
+        return None
 
     def _probe_src_drift(self, submission_id: int) -> dict:
         checks_run: list[str] = []
@@ -823,10 +922,12 @@ class CoordinationStore:
         packet = {
             "result": result,
             "actor": "triage",
+            "blocking_contract": blocking_contract("triage"),
             "state_version": state.get("state_version"),
             "submission_id": state.get("submission_id"),
             "defect_class": None,
             "quality_target_id": None,
+            "quality_target_source": None,
             "checks_run": [],
             "evidence_summary": None,
             "notes": [],
@@ -838,7 +939,10 @@ class CoordinationStore:
                 {
                     "defect_class": defect_class,
                     "quality_target_id": (
-                        QUALITY_TARGET_ID if defect_class == "quality" else None
+                        state.get("quality_target_id") if defect_class == "quality" else None
+                    ),
+                    "quality_target_source": (
+                        state.get("quality_target_source") if defect_class == "quality" else None
                     ),
                     "checks_run": list(probe.get("checks_run", [])) if probe else [],
                     "evidence_summary": (
@@ -853,6 +957,7 @@ class CoordinationStore:
         return {
             "result": result,
             "actor": "fix",
+            "blocking_contract": blocking_contract("fix"),
             "state_version": state.get("state_version"),
             "active_repair_plan": list(state.get("active_repair_plan", [])),
             "open_defects": list(state.get("open_defects", [])),
@@ -927,11 +1032,13 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("init", help="Initialize the unified coordination gate.")
-    subparsers.add_parser("state", help="Read current coordination state.")
+    subparsers.add_parser(
+        "state", help="Debug-only current coordination state; not the normal gate entrypoint."
+    )
 
     triage_run_parser = subparsers.add_parser(
         "run-triage-pass",
-        help="Initialize if needed, then inspect/wait and collect the next triage probe packet.",
+        help="Blocking triage entrypoint: initialize if needed, then wait until triage can act or the gate reaches a terminal state.",
     )
     triage_run_parser.add_argument("--poll-interval", type=float, default=2.0)
     triage_run_parser.add_argument(
@@ -943,7 +1050,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     fix_run_parser = subparsers.add_parser(
         "run-fix-pass",
-        help="Inspect/wait and collect the next actionable fix packet.",
+        help="Blocking fix entrypoint: wait until released repair work exists or the gate reaches a terminal state.",
     )
     fix_run_parser.add_argument("--poll-interval", type=float, default=2.0)
     fix_run_parser.add_argument(
@@ -954,7 +1061,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     wait_parser = subparsers.add_parser(
-        "wait", help="Block until actor turn, terminal state, or timeout."
+        "wait", help="Debug-only wait helper; normal gate entry should use run-fix-pass or run-triage-pass."
     )
     wait_parser.add_argument("--actor", required=True, choices=sorted(ACTORS))
     wait_parser.add_argument("--poll-interval", type=float, default=2.0)
@@ -1050,6 +1157,19 @@ def print_json(payload: dict) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True))
 
 
+def debug_command_payload(command: str, payload: dict) -> dict:
+    return {
+        "command": command,
+        "debug_only": True,
+        "warning": DEBUG_ONLY_WARNING,
+        "required_entrypoints": {
+            "triage": "run-triage-pass",
+            "fix": "run-fix-pass",
+        },
+        "payload": payload,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1062,7 +1182,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "state":
-            print_json(store.read_state())
+            print_json(debug_command_payload("state", store.read_state()))
             return 0
 
         if args.command == "run-triage-pass":
@@ -1087,7 +1207,7 @@ def main(argv: list[str] | None = None) -> int:
                 poll_interval=args.poll_interval,
                 timeout=args.timeout,
             )
-            print_json(verdict)
+            print_json(debug_command_payload("wait", verdict))
             return 0 if verdict["result"] != "timeout" else 2
 
         if args.command == "publish-submission":

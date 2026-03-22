@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -57,7 +58,47 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("run-triage-pass", result.stdout)
         self.assertIn("run-fix-pass", result.stdout)
         self.assertIn("publish-triage", result.stdout)
+        self.assertIn("Debug-only current coordination state", result.stdout)
         self.assertNotIn("publish-review", result.stdout)
+
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_debug_commands_warn_against_bypassing_blocking(self):
+        """CONTRACTS.DUAL_AGENT_GATE.BLOCKING_RUNNERS: Debug commands MUST warn that normal gate entry must use blocking runners."""
+        CoordinationStore(self.root).init_task()
+        state_result = subprocess.run(
+            [sys.executable, str(self.script_path), "--root", str(self.root), "state"],
+            capture_output=True,
+            text=True,
+        )
+        wait_result = subprocess.run(
+            [
+                sys.executable,
+                str(self.script_path),
+                "--root",
+                str(self.root),
+                "wait",
+                "--actor",
+                "fix",
+                "--timeout",
+                "0",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(state_result.returncode, 0)
+        self.assertEqual(wait_result.returncode, 2)
+        state_payload = json.loads(state_result.stdout)
+        wait_payload = json.loads(wait_result.stdout)
+        self.assertTrue(state_payload["debug_only"])
+        self.assertTrue(wait_payload["debug_only"])
+        self.assertIn("Do not bypass gate blocking", state_payload["warning"])
+        self.assertEqual(
+            state_payload["required_entrypoints"]["triage"], "run-triage-pass"
+        )
+        self.assertEqual(
+            wait_payload["required_entrypoints"]["fix"], "run-fix-pass"
+        )
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_init_defaults_to_active_triage_turn(self):
@@ -159,9 +200,14 @@ class TestContractsDualAgentSync(unittest.TestCase):
         state = store.init_task()
 
         self.assertEqual(state["quality_target_id"], "VISION.QUALITY_DETECTION")
+        self.assertEqual(state["quality_target_source"], "vibespec-template")
         self.assertEqual(
             state["gate_profile"]["quality_target_id"],
             "VISION.QUALITY_DETECTION",
+        )
+        self.assertEqual(
+            state["gate_profile"]["quality_target_source"],
+            "vibespec-template",
         )
         self.assertEqual(
             state["gate_profile"]["defect_classes"],
@@ -178,6 +224,22 @@ class TestContractsDualAgentSync(unittest.TestCase):
                 "no blind waits",
             ],
         )
+
+    @verify_spec("CONTRACTS.QUALITY_DETECTION")
+    def test_quality_gate_prefers_project_defined_target_when_present(self):
+        """CONTRACTS.QUALITY_DETECTION.QUALITY_GATE_TARGET: Unified gate MUST prefer the project-defined quality target when present."""
+        specs_dir = self.root / "specs"
+        specs_dir.mkdir(parents=True)
+        (specs_dir / "L0-VISION.md").write_text(
+            "## Code Quality\n### VISION.QUALITY_GATES\n- **QUALITY_DETECTION**: project-specific gate\n",
+            encoding="utf-8",
+        )
+        store = CoordinationStore(self.root)
+
+        state = store.init_task()
+
+        self.assertEqual(state["quality_target_id"], "VISION.QUALITY_DETECTION")
+        self.assertEqual(state["quality_target_source"], "project-specs")
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_triage_releases_fix_early_by_priority_and_fix_waits_for_final_handoff(self):
@@ -294,6 +356,11 @@ class TestContractsDualAgentSync(unittest.TestCase):
 
         self.assertEqual(result["result"], "actionable")
         self.assertEqual(result["actor"], "triage")
+        self.assertTrue(result["blocking_contract"]["must_block_session"])
+        self.assertEqual(
+            result["blocking_contract"]["normal_entrypoint"], "run-triage-pass"
+        )
+        self.assertIn("state", result["blocking_contract"]["must_not_bypass_with"])
         self.assertEqual(result["defect_class"], "spec-drift")
         self.assertEqual(result["submission_id"], 0)
         self.assertEqual(result["checks_run"], ["probe: stub"])
@@ -307,8 +374,56 @@ class TestContractsDualAgentSync(unittest.TestCase):
         result = store.run_fix_pass(timeout=0.0)
 
         self.assertEqual(result["result"], "wait")
+        self.assertTrue(result["blocking_contract"]["must_block_session"])
+        self.assertEqual(
+            result["blocking_contract"]["normal_entrypoint"], "run-fix-pass"
+        )
         self.assertEqual(result["state"]["expected_actor"], "triage")
         self.assertFalse(result["state"]["fix_gate_open"])
+
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_run_fix_pass_blocks_process_until_work_is_released(self):
+        """CONTRACTS.DUAL_AGENT_GATE.BLOCKING_RUNNERS: Fix runner MUST block the process until released work exists."""
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                str(self.script_path),
+                "--root",
+                str(self.root),
+                "run-fix-pass",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            time.sleep(0.2)
+            self.assertIsNone(process.poll(), "run-fix-pass should still be blocking")
+
+            store = CoordinationStore(self.root)
+            state = store.read_state()
+            self.assertEqual(state["expected_actor"], "triage")
+            self.assertFalse(state["fix_gate_open"])
+
+            store.publish_triage(
+                **self._triage_kwargs(
+                    decision="reject",
+                    defects=[{"id": "R1-1", "summary": "legacy workaround remains"}],
+                    repair_logic={"R1-1": "remove workaround and add regression coverage"},
+                    defect_evidence={"R1-1": "src/example.py:12 contains workaround branch"},
+                )
+            )
+
+            stdout, stderr = process.communicate(timeout=5)
+            self.assertEqual(process.returncode, 0, stderr)
+            payload = json.loads(stdout)
+            self.assertEqual(payload["result"], "actionable")
+            self.assertEqual(payload["actor"], "fix")
+            self.assertEqual(payload["open_defects"], ["R1-1"])
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.communicate()
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_run_triage_pass_auto_resets_completed_gate(self):
@@ -352,6 +467,69 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(result["state"]["expected_actor"], "triage")
         self.assertEqual(result["state"]["published_triage_classes"], [])
         self.assertEqual(result["state"]["open_defects"], [])
+
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_run_triage_pass_blocks_process_until_fix_handoff(self):
+        """CONTRACTS.DUAL_AGENT_GATE.BLOCKING_RUNNERS: Triage runner MUST block the process until triage regains turn ownership."""
+        store = CoordinationStore(self.root)
+        store.init_task()
+        store.publish_triage(
+            **self._triage_kwargs(
+                decision="reject",
+                defects=[{"id": "R1-1", "summary": "legacy workaround remains"}],
+                repair_logic={"R1-1": "remove workaround and add regression coverage"},
+                defect_evidence={"R1-1": "src/example.py:12 contains workaround branch"},
+            )
+        )
+        store.publish_triage(
+            **self._triage_kwargs(
+                defect_class="src-drift",
+                evidence_summary="No frozen src/spec mismatch signals were found.",
+                checks_run=["probe: src-drift"],
+            )
+        )
+        store.publish_triage(
+            **self._triage_kwargs(
+                defect_class="quality",
+                evidence_summary="Quality checklist scans found no actionable matches.",
+                checks_run=["probe: quality"],
+            )
+        )
+
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                str(self.script_path),
+                "--root",
+                str(self.root),
+                "run-triage-pass",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            time.sleep(0.2)
+            self.assertIsNone(process.poll(), "run-triage-pass should still be blocking")
+
+            store.publish_submission(
+                base_rev="base-0",
+                head_rev="head-1",
+                changed_files=["src/example.py"],
+                validation_summary=["validate ok"],
+                repair_responses={"R1-1": "fixed"},
+            )
+
+            stdout, stderr = process.communicate(timeout=10)
+            self.assertEqual(process.returncode, 0, stderr)
+            payload = json.loads(stdout)
+            self.assertEqual(payload["result"], "actionable")
+            self.assertEqual(payload["actor"], "triage")
+            self.assertEqual(payload["defect_class"], "spec-drift")
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.communicate()
 
     @verify_spec("CONTRACTS.QUALITY_DETECTION")
     def test_quality_probe_reports_deterministic_matches(self):

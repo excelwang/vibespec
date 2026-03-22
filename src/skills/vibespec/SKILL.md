@@ -54,9 +54,11 @@ Manage the refinement of raw thoughts into traceable specifications.
 - Treat these as skill trigger phrases, not as a requirement that a top-level `vibespec` binary already exists.
 - Load `references/dual_agent_coordination.md` for the shared-state protocol.
 - Load `references/gate_workflows.md` for the active actor phase.
-- Start from the safe runner commands:
+- Start immediately from the blocking runner commands. Do not preflight with `state` or `wait` during the normal gate flow:
   - `python3 scripts/agent_sync.py run-triage-pass`
   - `python3 scripts/agent_sync.py run-fix-pass`
+- Let the script block the session until the actor becomes actionable or the gate becomes terminal.
+- If `state` or `wait` is called anyway, treat their output as a warning that they are debug-only and not authorization to bypass blocking.
 - Use low-level mutating commands only after reasoning over the runner output:
   - `python3 scripts/agent_sync.py publish-triage ...`
   - `python3 scripts/agent_sync.py publish-submission ...`
