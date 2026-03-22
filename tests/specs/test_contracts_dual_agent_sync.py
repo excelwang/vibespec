@@ -28,15 +28,59 @@ class TestContractsDualAgentSync(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
+    def _write_review_artifact(self, defect_class: str, store: CoordinationStore | None = None):
+        store = store or CoordinationStore(self.root)
+        requirements = store._semantic_review_requirements(defect_class)
+        reviewed_targets = list(requirements["required_targets"])
+        comparison_notes = [
+            {
+                "target": target,
+                "judgment": "aligned",
+                "basis": f"Reviewed semantic alignment for {target}",
+            }
+            for target in reviewed_targets
+        ]
+        if not comparison_notes:
+            comparison_notes = [
+                {
+                    "target": f"{defect_class}:scope",
+                    "judgment": "reviewed",
+                    "basis": "Reviewed the available scope for this class.",
+                }
+            ]
+
+        artifact_dir = self.root / "reviews"
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        relative_path = f"reviews/{defect_class}-review.json"
+        (self.root / relative_path).write_text(
+            json.dumps(
+                {
+                    "defect_class": defect_class,
+                    "summary": f"Semantic review coverage for {defect_class}.",
+                    "reviewed_targets": reviewed_targets,
+                    "reviewed_anchor_files": list(requirements["required_anchor_files"]),
+                    "reviewed_context_files": list(requirements["required_context_files"]),
+                    "comparison_notes": comparison_notes,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return relative_path
+
     def _triage_kwargs(self, **overrides):
+        defect_class = overrides.get("defect_class", "spec-drift")
         payload = {
             "submission_id": 0,
             "decision": "accept",
-            "defect_class": "spec-drift",
+            "defect_class": defect_class,
             "defects": [],
             "evidence_summary": "Deterministic checks found no triaged defects in this class.",
             "checks_run": ["probe: default"],
             "notes": ["default test note"],
+            "review_artifact": self._write_review_artifact(defect_class),
         }
         payload.update(overrides)
         return payload
@@ -383,6 +427,7 @@ class TestContractsDualAgentSync(unittest.TestCase):
             result["semantic_review_contract"]["must_not_classify_from_text_match_only"]
         )
         self.assertTrue(result["full_file_review_contract"]["must_read_full_files"])
+        self.assertTrue(result["review_artifact_contract"]["required"])
         self.assertTrue(
             result["semantic_review_contract"]["must_apply_structured_spec_drift_checks"]
         )
@@ -407,6 +452,7 @@ class TestContractsDualAgentSync(unittest.TestCase):
         src_dir = self.root / "src"
         src_dir.mkdir(parents=True)
         (src_dir / "example.py").write_text("print('x')\n", encoding="utf-8")
+        (src_dir / "service.yaml").write_text("timeout: 30\n", encoding="utf-8")
 
         store = CoordinationStore(self.root)
         store._run_probe_suite = lambda defect_class, submission_id: {
@@ -420,6 +466,7 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("specs/L0-VISION.md", result["full_file_review_contract"]["spec_files"])
         self.assertIn("specs/L1-CONTRACTS.md", result["full_file_review_contract"]["spec_files"])
         self.assertIn("src/example.py", result["full_file_review_contract"]["source_files"])
+        self.assertIn("src/service.yaml", result["full_file_review_contract"]["source_files"])
         self.assertIn("Do not anchor on isolated text fragments", result["full_file_review_contract"]["warning"])
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
@@ -780,6 +827,7 @@ class TestContractsDualAgentSync(unittest.TestCase):
                 defects=[],
                 evidence_summary="",
                 checks_run=["probe: spec-drift"],
+                review_artifact=self._write_review_artifact("spec-drift"),
             )
 
         with self.assertRaises(CoordinationError):
@@ -790,6 +838,7 @@ class TestContractsDualAgentSync(unittest.TestCase):
                 defects=[],
                 evidence_summary="Spec drift checks passed.",
                 checks_run=[],
+                review_artifact=self._write_review_artifact("spec-drift"),
             )
 
         store.publish_triage(**self._triage_kwargs())
@@ -801,6 +850,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
             report["evidence_summary"],
             "Deterministic checks found no triaged defects in this class.",
         )
+        self.assertIn("review_artifact", report)
+        self.assertIn("reviewed_targets", report)
         self.assertEqual(report["defects"], [])
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
@@ -816,6 +867,24 @@ class TestContractsDualAgentSync(unittest.TestCase):
                     defects=[{"id": "R1-1", "summary": "legacy logic remains"}],
                     repair_logic={"R1-1": "remove legacy branch"},
                 )
+            )
+
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_publish_triage_requires_semantic_review_artifact(self):
+        """CONTRACTS.DUAL_AGENT_GATE.REVIEW_ARTIFACT_REQUIRED: Triage reports MUST include validated semantic review coverage."""
+        store = CoordinationStore(self.root)
+        store.init_task()
+
+        with self.assertRaises(CoordinationError):
+            store.publish_triage(
+                submission_id=0,
+                decision="accept",
+                defect_class="spec-drift",
+                defects=[],
+                evidence_summary="Spec drift checks passed.",
+                checks_run=["probe: spec-drift"],
+                notes=["review complete"],
+                review_artifact="",
             )
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")

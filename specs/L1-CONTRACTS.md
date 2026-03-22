@@ -758,7 +758,11 @@ standard_terms:
   > Responsibility: Judgment rigor — prevent self-descriptive terminology from masquerading as semantic evidence.
   > Verification: Probe implementations and gate workflow docs avoid lexical-scan probes and instead provide structured review packets.
 
-- **FULL_FILE_TRIAGE_REVIEW**: Triage Agent MUST fully read the listed `specs/` files and source code files before publishing any defect.
+- **REVIEW_ARTIFACT_REQUIRED**: Triage Agent MUST persist a semantic review artifact before publishing any class report.
+  > Responsibility: Review accountability — prevent `accept` or `reject` from being emitted without explicit coverage of reviewed targets and comparison judgments.
+  > Verification: `publish-triage` rejects reports without a valid review artifact covering required targets, anchors, and comparison notes for the active class.
+
+- **FULL_FILE_TRIAGE_REVIEW**: Triage Agent MUST fully read the listed `specs/` files and all listed readable text files under `src/` before publishing any defect.
   > Responsibility: Context completeness — prevent snippet-anchored or grep-anchored judgments from replacing full semantic review.
   > Verification: Triage runner output includes explicit full-file review requirements and the file lists to read before defect publication.
 

@@ -190,6 +190,16 @@ def scan_verify_spec_annotations(content: str) -> list:
             matches.append((spec_id, "skeleton" if is_skeleton else mode))
     return matches
 
+
+def extract_covers_l0_targets(body: str) -> set[str]:
+    targets = set()
+    for cov_match in re.finditer(r'>\s*Covers\s+L0:\s*(.+)', body or ''):
+        for cov_id in re.split(r'[,;]\s*', cov_match.group(1).strip()):
+            normalized = cov_id.strip().strip('`')
+            if normalized:
+                targets.add(normalized)
+    return targets
+
 def scan_csharp_contract_methods(content: str) -> list:
     matches = []
     pattern = re.compile(
@@ -290,7 +300,7 @@ def parse_spec_file(spec_file: Path) -> dict:
             current_h2, current_h3 = hid, None
             if re.match(r'^[A-Z0-9_.]+$', hid) or layer == 3: # Only export if it looks like an ID (or L3)
                 full_id = f"{spec_id}.{hid}" if not hid.startswith(spec_id) else hid
-                if layer == 1 and hid.startswith('NOTES.'):
+                if layer == 1:
                     full_id = hid
                 if layer == 3: full_id = hid 
                 current_export = full_id
@@ -468,8 +478,20 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
             for item_id, item_data in data['items'].items():
                 if not is_testable_l1_contract(item_id, item_data):
                     continue
-                suffix = item_id.split('CONTRACTS.', 1)[1]
-                if suffix != "SCOPE" and f"VISION.{suffix}" not in exports_map:
+                explicit_targets = extract_covers_l0_targets(item_data.get('body', ''))
+                if explicit_targets:
+                    missing_targets = sorted(
+                        target for target in explicit_targets if target not in exports_map
+                    )
+                    if missing_targets:
+                        warnings.append(
+                            f"Traceability break: `{item_id}` references missing L0 item(s): "
+                            + ", ".join(missing_targets)
+                            + "."
+                        )
+                    continue
+                leaf_name = item_id.rsplit('.', 1)[-1]
+                if leaf_name != "SCOPE" and f"VISION.{leaf_name}" not in exports_map:
                     warnings.append(
                         f"Traceability break: `{item_id}` has no corresponding L0 item."
                     )
@@ -489,15 +511,11 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
                     for l1_file, l1_data in references.items():
                         if l1_data['layer'] == 1:
                             for l1_item_id, l1_item_data in l1_data.get('items', {}).items():
-                                for cov_match in re.finditer(r'>\s*Covers\s+L0:\s*(.+)', l1_item_data.get('body', '')):
-                                    for cov_id in re.split(r'[,;]\s*', cov_match.group(1).strip()):
-                                        cov_id = cov_id.strip().strip('`')
-                                        explicit_l0_coverage.add(cov_id)
+                                explicit_l0_coverage.update(
+                                    extract_covers_l0_targets(l1_item_data.get('body', ''))
+                                )
                             # Also check section-level Traces to annotations for > Covers L0:
-                            for cov_match in re.finditer(r'>\s*Covers\s+L0:\s*(.+)', l1_data.get('body', '')):
-                                for cov_id in re.split(r'[,;]\s*', cov_match.group(1).strip()):
-                                    cov_id = cov_id.strip().strip('`')
-                                    explicit_l0_coverage.add(cov_id)
+                            explicit_l0_coverage.update(extract_covers_l0_targets(l1_data.get('body', '')))
                     if item_id in explicit_l0_coverage or suffix in explicit_l0_coverage:
                         l1_hit = True
                     else:

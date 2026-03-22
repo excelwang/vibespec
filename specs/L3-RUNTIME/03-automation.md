@@ -71,11 +71,12 @@
 | Condition | Verdict | Action |
 |-----------|---------|--------|
 | Probe packet only defines review scope, comparison anchors, or baseline outputs | REQUIRE | Continue with semantic review; do not treat the packet as a defect finding |
-| Triage has not fully read the listed `specs/`, source, and context files | REJECT | Do not publish any defect yet |
+| Triage has not fully read the listed `specs/`, all listed readable `src/` text files, and listed context files | REJECT | Do not publish any defect yet |
 | Active class is `spec-drift` and the ordered parent-layer item review is incomplete | REJECT | Do not publish or accept spec-drift yet |
 | Active class is `src-drift` and the ordered module/component review against `L2` and `L3` is incomplete | REJECT | Do not publish or accept src-drift yet |
 | Active class is `quality` and the semantic review against quality categories plus `L2`/`L3` is incomplete | REJECT | Do not publish or accept quality defects yet |
 | Review relies on keyword, regex, naming, or changed-file scanning as defect evidence | REJECT | Do not publish any defect yet |
+| Semantic review artifact is missing or does not cover the required targets/anchors for the active class | REJECT | Do not publish any class report yet |
 | No semantic contradiction or real quality problem is confirmed | REJECT | Do not publish a defect from the probe result alone |
 | Triage publishes any class report | REQUIRE | Persist non-empty `checks_run` and `evidence_summary` |
 | Triage rejects defects | REQUIRE | Persist per-defect evidence plus explicit `repair_logic` |

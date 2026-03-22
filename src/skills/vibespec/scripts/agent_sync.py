@@ -50,7 +50,6 @@ AUTO_DECISION_REQUIRED_FIELDS = [
     "Rationale:",
     "Affected:",
 ]
-QUALITY_PROBE_EXTENSIONS = (".py", ".js", ".ts", ".tsx", ".jsx", ".rs", ".go", ".cs")
 QUALITY_PROBE_IGNORED_PARTS = {
     ".git",
     ".hg",
@@ -62,6 +61,7 @@ QUALITY_PROBE_IGNORED_PARTS = {
     "venv",
     "__pycache__",
 }
+TEXT_FILE_SNIFF_BYTES = 4096
 DEFAULT_SPEC_CONTEXT_CANDIDATES = (
     "README.md",
     "specs/readme.md",
@@ -207,6 +207,17 @@ def run_command(command: list[str], cwd: Path) -> tuple[int, str, str]:
     return completed.returncode, completed.stdout, completed.stderr
 
 
+def is_reviewable_text_file(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            sample = handle.read(TEXT_FILE_SNIFF_BYTES)
+    except OSError:
+        return False
+    if not sample:
+        return True
+    return b"\x00" not in sample
+
+
 def blocking_contract(actor: str) -> dict:
     normal_entrypoint = "run-triage-pass" if actor == "triage" else "run-fix-pass"
     opposite_actor = "fix" if actor == "triage" else "triage"
@@ -264,7 +275,8 @@ def semantic_review_contract(defect_class: str | None) -> dict:
         "warning": (
             "Probe output is review-scope input only. Do not publish drift or defects solely from "
             "lexical matches, naming overlap, file-name/path similarity, repository inventory, "
-            "or changed-file summaries. Read complete spec and source files, then confirm a "
+            "or changed-file summaries. Read complete spec files and all listed readable `src/` "
+            "text files, then confirm a "
             "semantic inconsistency first."
         ),
         "required_review_actions": list(class_specific.get(defect_class, [])),
@@ -383,6 +395,48 @@ def spec_path_if_exists(root: Path, relative_path: str) -> list[str]:
     return []
 
 
+def dedupe_strings(values: list[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        item = value.strip()
+        if not item or item in seen:
+            continue
+        deduped.append(item)
+        seen.add(item)
+    return deduped
+
+
+def collect_markdown_review_targets(root: Path, relative_path: str) -> list[str]:
+    path = root / relative_path
+    if not path.is_file():
+        return []
+
+    targets: list[str] = []
+    seen: set[str] = set()
+    patterns = [
+        re.compile(r"^\s*\d+\.\s+\*\*([^*]+)\*\*:"),
+        re.compile(r"^##\s+\[(?:workflow|interface|decision|algorithm)\]\s+(.+)$"),
+        re.compile(r"^###\s+([A-Z0-9][A-Z0-9_.-]+)\s*$"),
+    ]
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        for pattern in patterns:
+            match = pattern.match(line)
+            if not match:
+                continue
+            target = f"{relative_path}::{match.group(1).strip()}"
+            if target not in seen:
+                targets.append(target)
+                seen.add(target)
+            break
+
+    return targets or [relative_path]
+
+
 def discover_l3_runtime_files(root: Path) -> list[str]:
     l3_dir = root / "specs" / "L3-RUNTIME"
     discovered: list[str] = []
@@ -405,6 +459,7 @@ def discover_spec_layer_review_order(root: Path) -> list[dict[str, object]]:
             "parent_layer": "L0",
             "reviewed_files": spec_path_if_exists(root, "specs/L1-CONTRACTS.md"),
             "parent_files": spec_path_if_exists(root, "specs/L0-VISION.md"),
+            "review_targets": collect_markdown_review_targets(root, "specs/L1-CONTRACTS.md"),
             "comparison_rule": (
                 "Check every L1 contract item against explicit L0 intent and traceability "
                 "targets before accepting semantic alignment."
@@ -415,6 +470,7 @@ def discover_spec_layer_review_order(root: Path) -> list[dict[str, object]]:
             "parent_layer": "L1",
             "reviewed_files": spec_path_if_exists(root, "specs/L2-ARCHITECTURE.md"),
             "parent_files": spec_path_if_exists(root, "specs/L1-CONTRACTS.md"),
+            "review_targets": collect_markdown_review_targets(root, "specs/L2-ARCHITECTURE.md"),
             "comparison_rule": (
                 "Check every L2 architecture item against the L1 contracts it consumes, and "
                 "flag any broadened ownership, new authority, or implementation-detail leakage."
@@ -425,6 +481,13 @@ def discover_spec_layer_review_order(root: Path) -> list[dict[str, object]]:
             "parent_layer": "L2",
             "reviewed_files": l3_files,
             "parent_files": spec_path_if_exists(root, "specs/L2-ARCHITECTURE.md"),
+            "review_targets": dedupe_strings(
+                [
+                    target
+                    for relative_path in l3_files
+                    for target in collect_markdown_review_targets(root, relative_path)
+                ]
+            ),
             "comparison_rule": (
                 "Check each L3 workflow/interface file item by item against the L2 boundary; "
                 "do not let runtime, package, or helper detail escape beyond approved architecture."
@@ -435,13 +498,28 @@ def discover_spec_layer_review_order(root: Path) -> list[dict[str, object]]:
 
 def build_spec_drift_review_contract(root: Path) -> dict:
     context_files, unresolved_context_refs = discover_spec_context_files(root)
+    layer_review_order = discover_spec_layer_review_order(root)
     return {
         "must_apply_structured_checks": True,
         "must_read_context_files_when_listed": True,
         "must_compare_layer_by_layer": True,
         "must_compare_item_by_item": True,
         "mandatory_checks": list(SPEC_DRIFT_REVIEW_CHECKS),
-        "layer_review_order": discover_spec_layer_review_order(root),
+        "layer_review_order": layer_review_order,
+        "required_review_targets": dedupe_strings(
+            [
+                target
+                for entry in layer_review_order
+                for target in entry.get("review_targets", [])
+            ]
+        ),
+        "required_anchor_files": dedupe_strings(
+            [
+                anchor
+                for entry in layer_review_order
+                for anchor in entry.get("parent_files", [])
+            ]
+        ),
         "context_files": context_files,
         "unresolved_context_refs": unresolved_context_refs,
         "warning": (
@@ -509,6 +587,14 @@ def normalize_evidence_summary(summary: str | None) -> str:
     if not summary or not summary.strip():
         raise CoordinationError("Triage reports must include `--evidence-summary`.")
     return summary.strip()
+
+
+def normalize_review_artifact_path(path: str | None) -> str:
+    if not path or not path.strip():
+        raise CoordinationError(
+            "Triage reports must include `--review-artifact` with semantic review coverage."
+        )
+    return path.strip()
 
 
 def parse_defect_evidence(entries: list[str] | None) -> dict[str, str]:
@@ -753,6 +839,7 @@ class CoordinationStore:
         checks_run: list[str] | None = None,
         notes: list[str] | None = None,
         defect_evidence: dict[str, str] | None = None,
+        review_artifact: str | None = None,
     ) -> dict:
         defects = list(defects or [])
         defect_evidence = dict(defect_evidence or {})
@@ -765,6 +852,8 @@ class CoordinationStore:
         evidence_summary = normalize_evidence_summary(evidence_summary)
         checks_run = normalize_checks_run(checks_run)
         notes = normalize_notes(notes)
+        review_artifact = normalize_review_artifact_path(review_artifact)
+        review_coverage = self._validate_review_artifact(defect_class, review_artifact)
 
         with self._short_lock():
             state = self.read_state()
@@ -817,6 +906,12 @@ class CoordinationStore:
                 "checks_run": checks_run,
                 "evidence_summary": evidence_summary,
                 "notes": notes,
+                "review_artifact": review_coverage["path"],
+                "review_summary": review_coverage["summary"],
+                "reviewed_targets": review_coverage["reviewed_targets"],
+                "reviewed_anchor_files": review_coverage["reviewed_anchor_files"],
+                "reviewed_context_files": review_coverage["reviewed_context_files"],
+                "comparison_notes": review_coverage["comparison_notes"],
                 "defects": repair_plan if decision == "reject" else [],
             }
             write_json_atomic(self.triage_dir / f"triage-{report_id:04d}.json", report)
@@ -1185,7 +1280,7 @@ class CoordinationStore:
                     continue
                 if any(part in QUALITY_PROBE_IGNORED_PARTS for part in path.parts):
                     continue
-                if path.suffix.lower() not in QUALITY_PROBE_EXTENSIONS:
+                if not is_reviewable_text_file(path):
                     continue
                 try:
                     discovered.append(str(path.relative_to(self.root)))
@@ -1204,7 +1299,7 @@ class CoordinationStore:
             for child in sorted(root_path.iterdir()):
                 if any(part in QUALITY_PROBE_IGNORED_PARTS for part in child.parts):
                     continue
-                if child.is_file() and child.suffix.lower() not in QUALITY_PROBE_EXTENSIONS:
+                if child.is_file() and not is_reviewable_text_file(child):
                     continue
                 try:
                     components.append(str(child.relative_to(self.root)))
@@ -1227,6 +1322,7 @@ class CoordinationStore:
         return review_order
 
     def _build_src_drift_review_contract(self) -> dict:
+        source_module_review_order = self._discover_source_component_review_order()
         return {
             "must_compare_module_by_module": True,
             "must_compare_component_by_component": True,
@@ -1234,7 +1330,18 @@ class CoordinationStore:
             "must_compare_against_l3_key_mechanisms": True,
             "architecture_files": spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md"),
             "key_mechanism_files": discover_l3_runtime_files(self.root),
-            "source_module_review_order": self._discover_source_component_review_order(),
+            "source_module_review_order": source_module_review_order,
+            "required_review_targets": dedupe_strings(
+                [
+                    target
+                    for entry in source_module_review_order
+                    for target in entry.get("components", [])
+                ]
+            ),
+            "required_anchor_files": dedupe_strings(
+                spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md")
+                + discover_l3_runtime_files(self.root)
+            ),
             "mandatory_checks": list(SRC_DRIFT_REVIEW_CHECKS),
             "warning": (
                 "Src drift review is not complete until the relevant src modules and components "
@@ -1244,6 +1351,7 @@ class CoordinationStore:
         }
 
     def _build_quality_review_contract(self) -> dict:
+        source_module_review_order = self._discover_source_component_review_order()
         return {
             "must_not_use_keyword_probe": True,
             "must_compare_module_by_module": True,
@@ -1253,7 +1361,18 @@ class CoordinationStore:
             "quality_target_categories": list(GATE_PROFILE["quality_checklist"]),
             "architecture_files": spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md"),
             "key_mechanism_files": discover_l3_runtime_files(self.root),
-            "source_module_review_order": self._discover_source_component_review_order(),
+            "source_module_review_order": source_module_review_order,
+            "required_review_targets": dedupe_strings(
+                [
+                    target
+                    for entry in source_module_review_order
+                    for target in entry.get("components", [])
+                ]
+            ),
+            "required_anchor_files": dedupe_strings(
+                spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md")
+                + discover_l3_runtime_files(self.root)
+            ),
             "mandatory_checks": list(QUALITY_REVIEW_CHECKS),
             "warning": (
                 "Quality review is semantic only: do not use keyword, regex, or naming scans. "
@@ -1295,7 +1414,9 @@ class CoordinationStore:
         for path in source_root.rglob("*"):
             if not path.is_file():
                 continue
-            if path.suffix.lower() in QUALITY_PROBE_EXTENSIONS:
+            if any(part in QUALITY_PROBE_IGNORED_PARTS for part in path.parts):
+                continue
+            if is_reviewable_text_file(path):
                 return True
         return False
 
@@ -1327,6 +1448,161 @@ class CoordinationStore:
                 )
         return artifact_root
 
+    def _resolve_review_artifact_path(self, artifact_path: str) -> Path:
+        raw = Path(artifact_path)
+        candidates = [self.root / raw, self.git_dir / raw]
+        root_resolved = self.root.resolve()
+        git_resolved = self.git_dir.resolve()
+        for candidate in candidates:
+            try:
+                resolved = candidate.resolve()
+            except FileNotFoundError:
+                continue
+            if not resolved.is_file():
+                continue
+            try:
+                resolved.relative_to(root_resolved)
+                return resolved
+            except ValueError:
+                pass
+            try:
+                resolved.relative_to(git_resolved)
+                return resolved
+            except ValueError:
+                pass
+        raise CoordinationError(
+            "Review artifact must point to an existing file under the repo root or `.git/`."
+        )
+
+    def _semantic_review_requirements(self, defect_class: str) -> dict:
+        if defect_class == "spec-drift":
+            contract = build_spec_drift_review_contract(self.root)
+            return {
+                "required_targets": dedupe_strings(contract.get("required_review_targets", [])),
+                "required_anchor_files": dedupe_strings(contract.get("required_anchor_files", [])),
+                "required_context_files": dedupe_strings(contract.get("context_files", [])),
+            }
+        if defect_class == "src-drift":
+            contract = self._build_src_drift_review_contract()
+            return {
+                "required_targets": dedupe_strings(
+                    [
+                        target
+                        for entry in contract.get("source_module_review_order", [])
+                        for target in entry.get("components", [])
+                    ]
+                ),
+                "required_anchor_files": dedupe_strings(
+                    contract.get("architecture_files", [])
+                    + contract.get("key_mechanism_files", [])
+                ),
+                "required_context_files": [],
+            }
+        if defect_class == "quality":
+            contract = self._build_quality_review_contract()
+            return {
+                "required_targets": dedupe_strings(
+                    [
+                        target
+                        for entry in contract.get("source_module_review_order", [])
+                        for target in entry.get("components", [])
+                    ]
+                ),
+                "required_anchor_files": dedupe_strings(
+                    contract.get("architecture_files", [])
+                    + contract.get("key_mechanism_files", [])
+                ),
+                "required_context_files": [],
+            }
+        raise CoordinationError(f"Unsupported defect class `{defect_class}`.")
+
+    def _validate_review_artifact(self, defect_class: str, artifact_path: str) -> dict:
+        resolved = self._resolve_review_artifact_path(artifact_path)
+        try:
+            payload = json.loads(resolved.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise CoordinationError("Review artifact must be valid JSON.") from exc
+        if not isinstance(payload, dict):
+            raise CoordinationError("Review artifact must be a JSON object.")
+        if payload.get("defect_class") != defect_class:
+            raise CoordinationError(
+                "Review artifact `defect_class` must match the published triage defect class."
+            )
+        summary = str(payload.get("summary", "")).strip()
+        if not summary:
+            raise CoordinationError("Review artifact must include a non-empty `summary`.")
+
+        reviewed_targets = dedupe_strings(
+            [str(value) for value in payload.get("reviewed_targets", []) if value]
+        )
+        reviewed_anchor_files = dedupe_strings(
+            [str(value) for value in payload.get("reviewed_anchor_files", []) if value]
+        )
+        reviewed_context_files = dedupe_strings(
+            [str(value) for value in payload.get("reviewed_context_files", []) if value]
+        )
+        comparison_notes = payload.get("comparison_notes", [])
+        if not isinstance(comparison_notes, list) or not comparison_notes:
+            raise CoordinationError(
+                "Review artifact must include non-empty `comparison_notes`."
+            )
+
+        note_targets: set[str] = set()
+        for note in comparison_notes:
+            if not isinstance(note, dict):
+                raise CoordinationError("Each review comparison note must be a JSON object.")
+            target = str(note.get("target", "")).strip()
+            judgment = str(note.get("judgment", "")).strip()
+            basis = str(note.get("basis", "")).strip()
+            if not target or not judgment or not basis:
+                raise CoordinationError(
+                    "Each comparison note must include non-empty `target`, `judgment`, and `basis`."
+                )
+            note_targets.add(target)
+
+        requirements = self._semantic_review_requirements(defect_class)
+        missing_targets = sorted(set(requirements["required_targets"]) - set(reviewed_targets))
+        if missing_targets:
+            raise CoordinationError(
+                "Review artifact is missing reviewed targets: " + ", ".join(missing_targets) + "."
+            )
+        missing_anchor_files = sorted(
+            set(requirements["required_anchor_files"]) - set(reviewed_anchor_files)
+        )
+        if missing_anchor_files:
+            raise CoordinationError(
+                "Review artifact is missing reviewed anchor files: "
+                + ", ".join(missing_anchor_files)
+                + "."
+            )
+        missing_context_files = sorted(
+            set(requirements["required_context_files"]) - set(reviewed_context_files)
+        )
+        if missing_context_files:
+            raise CoordinationError(
+                "Review artifact is missing reviewed context files: "
+                + ", ".join(missing_context_files)
+                + "."
+            )
+        missing_notes = sorted(set(requirements["required_targets"]) - note_targets)
+        if missing_notes:
+            raise CoordinationError(
+                "Review artifact is missing per-target comparison notes: "
+                + ", ".join(missing_notes)
+                + "."
+            )
+
+        return {
+            "path": str(resolved.relative_to(self.root))
+            if resolved.is_relative_to(self.root)
+            else str(resolved.relative_to(self.git_dir)),
+            "summary": summary,
+            "reviewed_targets": reviewed_targets,
+            "reviewed_anchor_files": reviewed_anchor_files,
+            "reviewed_context_files": reviewed_context_files,
+            "comparison_notes": comparison_notes,
+        }
+
     def _triage_runner_packet(
         self, state: dict, result: str, probe: dict | None = None
     ) -> dict:
@@ -1341,8 +1617,8 @@ class CoordinationStore:
             "unresolved_context_refs": unresolved_context_refs,
             "warning": (
                 "Before publishing any triage defect, read the complete contents of every listed "
-                "spec file, source file, and listed context file. Do not anchor on isolated text "
-                "fragments, grep hits, or short snippets."
+                "spec file, every listed readable `src/` text file, and every listed context "
+                "file. Do not anchor on isolated text fragments, grep hits, or short snippets."
             ),
         }
         packet = {
@@ -1351,6 +1627,19 @@ class CoordinationStore:
             "blocking_contract": blocking_contract("triage"),
             "semantic_review_contract": semantic_review_contract(None),
             "full_file_review_contract": full_file_review_contract,
+            "review_artifact_contract": {
+                "required": True,
+                "path_hint": ".git/agent-sync/gate/all-defects/reviews/<defect-class>-review.json",
+                "required_fields": [
+                    "defect_class",
+                    "summary",
+                    "reviewed_targets",
+                    "reviewed_anchor_files",
+                    "reviewed_context_files",
+                    "comparison_notes",
+                ],
+                "comparison_note_fields": ["target", "judgment", "basis"],
+            },
             "state_version": state.get("state_version"),
             "submission_id": state.get("submission_id"),
             "defect_class": None,
@@ -1592,6 +1881,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         help="Repeatable KEY=VALUE per-defect evidence entry.",
     )
+    triage_parser.add_argument(
+        "--review-artifact",
+        required=True,
+        help="JSON artifact describing semantic review coverage for this triage class.",
+    )
 
     blocked_parser = subparsers.add_parser(
         "mark-blocked", help="Mark the unified coordination gate as blocked."
@@ -1692,6 +1986,7 @@ def main(argv: list[str] | None = None) -> int:
                     checks_run=args.checks_run,
                     notes=args.notes,
                     defect_evidence=parse_defect_evidence(args.defect_evidence),
+                    review_artifact=args.review_artifact,
                 )
             )
             return 0

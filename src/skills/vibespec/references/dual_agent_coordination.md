@@ -167,14 +167,15 @@ Do not auto-takeover by default.
 2. Start with `python3 scripts/agent_sync.py run-triage-pass` and let it block the session until triage becomes actionable or the gate is terminal.
 3. If the last cycle is `done`, `run-triage-pass` may reopen a fresh `triage_turn` cycle automatically.
 4. Treat the returned probe packet as a structured review packet only; it defines scope and comparison anchors, but does not classify defects by itself.
-5. Fully read every `specs/` file, source file, and listed context file from the triage runner before publishing any defect.
+5. Fully read every `specs/` file, every listed readable text file under `src/`, and every listed context file from the triage runner before publishing any defect.
 6. For `spec-drift`, compare the reviewed layer against its immediate parent layer item by item in the runner-provided order before deciding `accept`.
 7. For `src-drift`, compare the relevant src modules against `L2` architecture and src components against key `L3` mechanisms before deciding `accept`.
 8. For `quality`, review the relevant source modules/components semantically against the quality target categories, `L2`, and key `L3` mechanisms; do not use keyword or regex scanning.
-9. Confirm a semantic inconsistency only after the full-file read and structured comparison; do not judge from snippets or anchor fragments.
-10. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
-11. Continue with `src-drift`, then `quality`, publishing each batch in order.
-12. After the final class is classified, switch to `fix_turn` if any defects remain.
+9. Write the class review artifact with reviewed targets, anchor/context coverage, and per-target comparison notes before publishing any batch.
+10. Confirm a semantic inconsistency only after the full-file read, structured comparison, and review artifact are complete; do not judge from snippets or anchor fragments.
+11. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
+12. Continue with `src-drift`, then `quality`, publishing each batch in order.
+13. After the final class is classified, switch to `fix_turn` if any defects remain.
 
 ### Fix Session
 

@@ -25,7 +25,7 @@ Requirements:
    - `src-drift`
    - `quality`
 2. Treat probe output as a structured review packet only. It may define review scope, comparison anchors, and baseline checks, but it does not classify defects by itself.
-3. Before publishing any defect, fully read every listed `specs/` file, source file, and context file from the triage runner packet; do not judge from snippets or anchor fragments.
+3. Before publishing any defect, fully read every listed `specs/` file, every listed readable text file under `src/`, and every listed context file from the triage runner packet; do not judge from snippets or anchor fragments.
 4. When the active class is `spec-drift`, execute the runner-provided structured review checklist:
    - compare the reviewed layer against its immediate parent layer item by item in order `L1<-L0`, `L2<-L1`, `L3<-L2`
    - resolve `Covers L0` / `Traces to` targets against actual item IDs and address style
@@ -41,21 +41,23 @@ Requirements:
    - infer workaround, legacy, concurrency bottleneck, deadlock, dead-wait, and blind-wait issues from design intent and control flow
    - compare the reviewed implementation against `L2` architecture and the key mechanisms fixed in `L3`
    - do not use keyword, regex, or naming scans as a quality probe
-7. After the full-file read and structured comparison, confirm an actual semantic contradiction, omission, weakened requirement, architectural drift, or quality problem.
-8. Do not repair anything in this phase.
-9. After each defect class is classified, immediately publish that batch through scripts/agent_sync.py.
-10. If the published batch contains defects, release the waiting fix session without waiting for later classes to finish.
-11. For every defect, generate:
+7. Before publishing, write the required semantic review artifact for the current class, including reviewed targets, reviewed anchor/context files, and per-target comparison notes.
+8. After the full-file read, structured comparison, and review artifact are complete, confirm an actual semantic contradiction, omission, weakened requirement, architectural drift, or quality problem.
+9. Do not repair anything in this phase.
+10. After each defect class is classified, immediately publish that batch through scripts/agent_sync.py.
+11. If the published batch contains defects, release the waiting fix session without waiting for later classes to finish.
+12. For every defect, generate:
    - stable ID
    - defect type
    - evidence
    - summary
    - explicit repair logic for the fix session
-12. Every triage report, including `accept`, must persist:
+13. Every triage report, including `accept`, must persist:
    - `checks_run`
    - `evidence_summary`
+   - semantic review artifact coverage
    - optional audit `notes`
-13. Accept only when no defects remain after all three classes are classified.
+14. Accept only when no defects remain after all three classes are classified.
 ```
 
 ### Fix Phase
