@@ -54,7 +54,12 @@ Manage the refinement of raw thoughts into traceable specifications.
 - Treat these as skill trigger phrases, not as a requirement that a top-level `vibespec` binary already exists.
 - Load `references/dual_agent_coordination.md` for the shared-state protocol.
 - Load `references/gate_workflows.md` for the active actor phase.
-- Execute `python3 scripts/agent_sync.py ...` directly to manage shared gate state.
+- Start from the safe runner commands:
+  - `python3 scripts/agent_sync.py run-triage-pass`
+  - `python3 scripts/agent_sync.py run-fix-pass`
+- Use low-level mutating commands only after reasoning over the runner output:
+  - `python3 scripts/agent_sync.py publish-triage ...`
+  - `python3 scripts/agent_sync.py publish-submission ...`
 - `triage` is responsible for detecting all defect classes in priority order `spec-drift -> src-drift -> quality` and generating the frozen repair plan.
 - `triage` may release fix early after each classified defect class.
 - `fix` is responsible for executing only the latest triage-generated repair plan and waits on the fix gate when no released work exists.

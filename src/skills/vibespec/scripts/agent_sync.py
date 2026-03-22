@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -35,6 +36,44 @@ GATE_PROFILE = {
         "no deadlocks",
         "no dead waits",
         "no blind waits",
+    ],
+}
+AUTO_DECISION_REQUIRED_FIELDS = [
+    "Timestamp:",
+    "Context:",
+    "Options considered:",
+    "Chosen option:",
+    "Rationale:",
+    "Affected:",
+]
+QUALITY_PROBES = {
+    "no workaround logic": [
+        "workaround",
+        "temporary fix",
+        "hack",
+    ],
+    "no legacy logic": [
+        "legacy",
+        "deprecated path",
+        "old behavior",
+    ],
+    "no concurrency bottlenecks": [
+        "global lock",
+        "serialized queue",
+        "bottleneck",
+    ],
+    "no deadlocks": [
+        "deadlock",
+        "lock inversion",
+    ],
+    "no dead waits": [
+        "wait forever",
+        "dead wait",
+    ],
+    "no blind waits": [
+        "sleep(",
+        "time.sleep(",
+        "blind wait",
     ],
 }
 
@@ -122,6 +161,75 @@ def gate_profile_payload() -> dict:
     }
 
 
+def run_command(command: list[str], cwd: Path) -> tuple[int, str, str]:
+    completed = subprocess.run(
+        command,
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return completed.returncode, completed.stdout, completed.stderr
+
+
+def summarize_text(text: str, limit: int = 12) -> list[str]:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if len(lines) <= limit:
+        return lines
+    return lines[:limit] + [f"... ({len(lines) - limit} more lines)"]
+
+
+def detect_changed_path_classes(paths: list[str]) -> dict[str, list[str]]:
+    buckets = {"src": [], "specs": [], "tests": [], "other": []}
+    for path in sorted(paths):
+        if path.startswith("src/"):
+            buckets["src"].append(path)
+        elif path.startswith("specs/"):
+            buckets["specs"].append(path)
+        elif path.startswith("tests/"):
+            buckets["tests"].append(path)
+        else:
+            buckets["other"].append(path)
+    return buckets
+
+
+def parse_git_status_porcelain(output: str) -> list[str]:
+    paths: list[str] = []
+    for raw_line in output.splitlines():
+        if not raw_line.strip():
+            continue
+        path_fragment = raw_line[3:] if len(raw_line) > 3 else raw_line
+        path = path_fragment.split(" -> ", 1)[-1].strip()
+        if path:
+            paths.append(path)
+    return paths
+
+
+def extract_changed_paths_from_submission(manifest: dict) -> list[str]:
+    return [path for path in manifest.get("changed_files", []) if isinstance(path, str)]
+
+
+def normalize_checks_run(entries: list[str] | None) -> list[str]:
+    checks = [entry.strip() for entry in entries or [] if entry and entry.strip()]
+    if not checks:
+        raise CoordinationError("Triage reports must include at least one `--check-run`.")
+    return checks
+
+
+def normalize_notes(entries: list[str] | None) -> list[str]:
+    return [entry.strip() for entry in entries or [] if entry and entry.strip()]
+
+
+def normalize_evidence_summary(summary: str | None) -> str:
+    if not summary or not summary.strip():
+        raise CoordinationError("Triage reports must include `--evidence-summary`.")
+    return summary.strip()
+
+
+def parse_defect_evidence(entries: list[str] | None) -> dict[str, str]:
+    return parse_key_value_pairs(entries, "Defect evidence")
+
+
 def build_repair_plan(
     defects: list[dict[str, str]],
     defect_class: str,
@@ -169,6 +277,11 @@ class CoordinationStore:
         self.lock_dir = self.task_dir / "lease" / "turn.lock"
         self.submissions_dir = self.task_dir / "submissions"
         self.triage_dir = self.task_dir / "triage"
+
+    def ensure_task(self) -> dict:
+        if self.state_file.exists():
+            return self.read_state()
+        return self.init_task()
 
     def init_task(self) -> dict:
         if self.state_file.exists():
@@ -245,10 +358,15 @@ class CoordinationStore:
         changed_files: list[str] | None = None,
         validation_summary: list[str] | None = None,
         repair_responses: dict[str, str] | None = None,
+        repair_rounds: int = 1,
+        artifact_dir: str | None = None,
     ) -> dict:
         changed_files = list(changed_files or [])
         validation_summary = list(validation_summary or [])
         repair_responses = dict(repair_responses or {})
+        repair_rounds = int(repair_rounds)
+        if repair_rounds <= 0:
+            raise CoordinationError("Repair rounds must be >= 1.")
 
         with self._short_lock():
             state = self.read_state()
@@ -259,6 +377,16 @@ class CoordinationStore:
                 joined = ", ".join(missing_responses)
                 raise CoordinationError(
                     f"Fix submission must respond to all open defects: {joined}."
+                )
+
+            artifact_manifest_path = None
+            if artifact_dir is not None:
+                artifact_manifest_path = str(
+                    self._validate_repair_artifacts(artifact_dir).relative_to(self.root)
+                )
+            elif repair_rounds > 1:
+                raise CoordinationError(
+                    "Multi-round repair submissions must provide `--artifact-dir` under `specs/build/`."
                 )
 
             submission_id = int(state["submission_id"]) + 1
@@ -273,6 +401,8 @@ class CoordinationStore:
                 "changed_files": changed_files,
                 "validation_summary": validation_summary,
                 "repair_responses": repair_responses,
+                "repair_rounds": repair_rounds,
+                "artifact_dir": artifact_manifest_path,
             }
             write_json_atomic(
                 self.submissions_dir / f"submission-{submission_id:04d}.json", manifest
@@ -305,14 +435,22 @@ class CoordinationStore:
         defect_class: str,
         defects: list[dict[str, str]] | None = None,
         repair_logic: dict[str, str] | None = None,
+        evidence_summary: str | None = None,
+        checks_run: list[str] | None = None,
+        notes: list[str] | None = None,
+        defect_evidence: dict[str, str] | None = None,
     ) -> dict:
         defects = list(defects or [])
+        defect_evidence = dict(defect_evidence or {})
         if decision not in {"accept", "reject"}:
             raise CoordinationError("Triage decision must be `accept` or `reject`.")
         if defect_class not in DEFECT_CLASSES:
             raise CoordinationError(
                 "Defect class must be one of: " + ", ".join(DEFECT_CLASSES) + "."
             )
+        evidence_summary = normalize_evidence_summary(evidence_summary)
+        checks_run = normalize_checks_run(checks_run)
+        notes = normalize_notes(notes)
 
         with self._short_lock():
             state = self.read_state()
@@ -338,6 +476,17 @@ class CoordinationStore:
             repair_plan = []
             if decision == "reject":
                 repair_plan = build_repair_plan(defects, defect_class, repair_logic)
+                missing_evidence = sorted(
+                    defect["id"] for defect in repair_plan if not defect_evidence.get(defect["id"], "").strip()
+                )
+                if missing_evidence:
+                    raise CoordinationError(
+                        "Rejected triage batches must generate defect evidence for every defect: "
+                        + ", ".join(missing_evidence)
+                        + "."
+                    )
+                for defect in repair_plan:
+                    defect["evidence"] = defect_evidence[defect["id"]].strip()
 
             report_id = int(state["triage_report_id"]) + 1
             report = {
@@ -350,6 +499,9 @@ class CoordinationStore:
                 "created_at": utc_now(),
                 "defect_class": defect_class,
                 "decision": decision,
+                "checks_run": checks_run,
+                "evidence_summary": evidence_summary,
+                "notes": notes,
                 "defects": repair_plan if decision == "reject" else [],
             }
             write_json_atomic(self.triage_dir / f"triage-{report_id:04d}.json", report)
@@ -415,6 +567,41 @@ class CoordinationStore:
             write_json_atomic(self.state_file, next_state)
             return next_state
 
+    def run_triage_pass(
+        self, poll_interval: float = 2.0, timeout: float | None = None
+    ) -> dict:
+        self.ensure_task()
+        initial = self.inspect_actor("triage")
+        if initial["result"] == "wait" and timeout == 0:
+            return self._triage_runner_packet(initial["state"], result="wait")
+
+        verdict = self.wait_for_turn("triage", poll_interval=poll_interval, timeout=timeout)
+        if verdict["result"] != "actionable":
+            state = verdict.get("state", self.read_state())
+            return self._triage_runner_packet(state, result=verdict["result"])
+
+        state = verdict["state"]
+        defect_class = self._expected_triage_class(state)
+        probe = self._run_probe_suite(defect_class, int(state["submission_id"]))
+        return self._triage_runner_packet(state, result="actionable", probe=probe)
+
+    def run_fix_pass(
+        self, poll_interval: float = 2.0, timeout: float | None = None
+    ) -> dict:
+        if not self.state_file.exists():
+            self.init_task()
+        initial = self.inspect_actor("fix")
+        if initial["result"] == "wait" and timeout == 0:
+            return self._fix_runner_packet(initial["state"], result="wait")
+
+        verdict = self.wait_for_turn("fix", poll_interval=poll_interval, timeout=timeout)
+        if verdict["result"] != "actionable":
+            state = verdict.get("state", self.read_state())
+            return self._fix_runner_packet(state, result=verdict["result"])
+
+        state = verdict["state"]
+        return self._fix_runner_packet(state, result="actionable")
+
     def mark_blocked(self, reason: str) -> dict:
         reason = reason.strip()
         if not reason:
@@ -433,6 +620,226 @@ class CoordinationStore:
             )
             write_json_atomic(self.state_file, next_state)
             return next_state
+
+    def _run_probe_suite(self, defect_class: str, submission_id: int) -> dict:
+        if defect_class == "spec-drift":
+            return self._probe_spec_drift()
+        if defect_class == "src-drift":
+            return self._probe_src_drift(submission_id)
+        if defect_class == "quality":
+            return self._probe_quality()
+        raise CoordinationError(f"Unsupported defect class `{defect_class}`.")
+
+    def _probe_spec_drift(self) -> dict:
+        checks_run: list[str] = []
+        notes: list[str] = []
+
+        validate_cmd = [sys.executable, "src/skills/vibespec/scripts/validate.py", "specs/"]
+        validate_code, validate_out, validate_err = run_command(validate_cmd, self.root)
+        checks_run.append("python3 src/skills/vibespec/scripts/validate.py specs/")
+        notes.extend(
+            [f"validate.py exit code: {validate_code}"]
+            + summarize_text(validate_out or validate_err, limit=8)
+        )
+
+        unittest_cmd = [sys.executable, "-m", "unittest", "discover", "-s", "tests/specs", "-q"]
+        unittest_code, unittest_out, unittest_err = run_command(unittest_cmd, self.root)
+        checks_run.append("python3 -m unittest discover -s tests/specs -q")
+        notes.extend(
+            [f"spec tests exit code: {unittest_code}"]
+            + summarize_text(unittest_out or unittest_err, limit=8)
+        )
+
+        evidence_summary = (
+            f"Spec drift probes completed: validate.py exit={validate_code}, "
+            f"spec tests exit={unittest_code}."
+        )
+        return {
+            "checks_run": checks_run,
+            "evidence_summary": evidence_summary,
+            "notes": notes,
+        }
+
+    def _probe_src_drift(self, submission_id: int) -> dict:
+        checks_run: list[str] = []
+        notes: list[str] = []
+        source = "repo status"
+        changed_paths: list[str] = []
+
+        if submission_id > 0:
+            manifest_path = self.submissions_dir / f"submission-{submission_id:04d}.json"
+            if not manifest_path.exists():
+                raise CoordinationError(
+                    f"Missing frozen submission manifest for submission_id={submission_id}."
+                )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            changed_paths = extract_changed_paths_from_submission(manifest)
+            checks_run.append(
+                f"frozen submission manifest: submissions/submission-{submission_id:04d}.json"
+            )
+            source = f"submission-{submission_id:04d}.json"
+        else:
+            git_code, git_out, git_err = run_command(
+                ["git", "status", "--short", "--untracked-files=all"], self.root
+            )
+            checks_run.append("git status --short --untracked-files=all")
+            if git_code != 0:
+                raise CoordinationError(
+                    "Unable to inspect git status for src-drift probe: "
+                    + (git_err.strip() or "unknown git error")
+                )
+            changed_paths = parse_git_status_porcelain(git_out)
+
+        buckets = detect_changed_path_classes(changed_paths)
+        notes.append(f"Evidence source: {source}")
+        for bucket, paths in buckets.items():
+            if paths:
+                notes.append(f"{bucket}: {', '.join(paths)}")
+            else:
+                notes.append(f"{bucket}: none")
+
+        mismatch_notes = []
+        if buckets["src"] and not buckets["specs"]:
+            mismatch_notes.append("src changes exist without matching specs changes")
+        if buckets["specs"] and not buckets["src"]:
+            mismatch_notes.append("specs changes exist without matching src changes")
+        notes.extend(mismatch_notes)
+
+        evidence_summary = (
+            "Src drift probes summarized frozen path-class changes and src/specs mismatch signals."
+        )
+        return {
+            "checks_run": checks_run,
+            "evidence_summary": evidence_summary,
+            "notes": notes,
+        }
+
+    def _probe_quality(self) -> dict:
+        checks_run: list[str] = []
+        notes: list[str] = []
+
+        for checklist_item, patterns in QUALITY_PROBES.items():
+            for pattern in patterns:
+                command = [
+                    "rg",
+                    "-n",
+                    "-F",
+                    "--hidden",
+                    "-g",
+                    "*.py",
+                    "-g",
+                    "*.js",
+                    "-g",
+                    "*.ts",
+                    "-g",
+                    "*.tsx",
+                    "-g",
+                    "*.jsx",
+                    pattern,
+                    "src/",
+                ]
+                checks_run.append(f"rg -n {pattern!r} src/")
+                code, stdout, stderr = run_command(command, self.root)
+                if code not in {0, 1}:
+                    raise CoordinationError(
+                        "Quality probe failed for pattern "
+                        f"{pattern!r}: {(stderr or stdout).strip()}"
+                    )
+                matches = summarize_text(stdout, limit=6)
+                if matches:
+                    notes.append(f"{checklist_item} / {pattern}: {' | '.join(matches)}")
+                else:
+                    notes.append(f"{checklist_item} / {pattern}: no matches")
+
+        evidence_summary = (
+            "Quality probes scanned src/ for built-in checklist terms covering workaround, "
+            "legacy, concurrency, deadlock, dead-wait, and blind-wait signals."
+        )
+        return {
+            "checks_run": checks_run,
+            "evidence_summary": evidence_summary,
+            "notes": notes,
+        }
+
+    def _validate_repair_artifacts(self, artifact_dir: str) -> Path:
+        artifact_root = (self.root / artifact_dir).resolve()
+        specs_build_root = (self.root / "specs" / "build").resolve()
+        if not artifact_root.is_dir():
+            raise CoordinationError("Artifact dir must exist and be a directory.")
+        try:
+            artifact_root.relative_to(specs_build_root)
+        except ValueError as exc:
+            raise CoordinationError(
+                "Artifact dir must live under `specs/build/`."
+            ) from exc
+
+        todo_path = artifact_root / "todo.md"
+        if not todo_path.exists():
+            raise CoordinationError("Artifact dir must contain `todo.md`.")
+
+        decisions_path = artifact_root / "auto-decisions.md"
+        if not decisions_path.exists():
+            raise CoordinationError("Artifact dir must contain `auto-decisions.md`.")
+
+        decisions_text = decisions_path.read_text(encoding="utf-8")
+        for field in AUTO_DECISION_REQUIRED_FIELDS:
+            if field not in decisions_text:
+                raise CoordinationError(
+                    "`auto-decisions.md` must contain labeled field " + field
+                )
+        return artifact_root
+
+    def _triage_runner_packet(
+        self, state: dict, result: str, probe: dict | None = None
+    ) -> dict:
+        packet = {
+            "result": result,
+            "actor": "triage",
+            "state_version": state.get("state_version"),
+            "submission_id": state.get("submission_id"),
+            "defect_class": None,
+            "quality_target_id": None,
+            "checks_run": [],
+            "evidence_summary": None,
+            "notes": [],
+            "state": state,
+        }
+        if result == "actionable":
+            defect_class = self._expected_triage_class(state)
+            packet.update(
+                {
+                    "defect_class": defect_class,
+                    "quality_target_id": (
+                        QUALITY_TARGET_ID if defect_class == "quality" else None
+                    ),
+                    "checks_run": list(probe.get("checks_run", [])) if probe else [],
+                    "evidence_summary": (
+                        probe.get("evidence_summary") if probe else None
+                    ),
+                    "notes": list(probe.get("notes", [])) if probe else [],
+                }
+            )
+        return packet
+
+    def _fix_runner_packet(self, state: dict, result: str) -> dict:
+        return {
+            "result": result,
+            "actor": "fix",
+            "state_version": state.get("state_version"),
+            "active_repair_plan": list(state.get("active_repair_plan", [])),
+            "open_defects": list(state.get("open_defects", [])),
+            "triage_status": state.get("triage_status"),
+            "submission_allowed": state.get("expected_actor") == "fix",
+            "artifact_requirements": {
+                "multi_round_dir_root": "specs/build/<timestamp>/",
+                "required_files_when_repair_rounds_gt_1": [
+                    "todo.md",
+                    "auto-decisions.md",
+                ],
+                "auto_decision_fields": list(AUTO_DECISION_REQUIRED_FIELDS),
+            },
+            "state": state,
+        }
 
     def _validate_actor(self, actor: str) -> None:
         if actor not in ACTORS:
@@ -494,6 +901,30 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("init", help="Initialize the unified coordination gate.")
     subparsers.add_parser("state", help="Read current coordination state.")
 
+    triage_run_parser = subparsers.add_parser(
+        "run-triage-pass",
+        help="Initialize if needed, then inspect/wait and collect the next triage probe packet.",
+    )
+    triage_run_parser.add_argument("--poll-interval", type=float, default=2.0)
+    triage_run_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Optional timeout in seconds; omit to wait indefinitely.",
+    )
+
+    fix_run_parser = subparsers.add_parser(
+        "run-fix-pass",
+        help="Inspect/wait and collect the next actionable fix packet.",
+    )
+    fix_run_parser.add_argument("--poll-interval", type=float, default=2.0)
+    fix_run_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Optional timeout in seconds; omit to wait indefinitely.",
+    )
+
     wait_parser = subparsers.add_parser(
         "wait", help="Block until actor turn, terminal state, or timeout."
     )
@@ -521,6 +952,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         help="Repeatable KEY=VALUE repair disposition, e.g. R1-1=fixed.",
     )
+    submit_parser.add_argument(
+        "--repair-rounds",
+        type=int,
+        default=1,
+        help="Number of repair rounds executed before this submission.",
+    )
+    submit_parser.add_argument(
+        "--artifact-dir",
+        help="Artifact directory under specs/build/ containing todo.md and auto-decisions.md.",
+    )
 
     triage_parser = subparsers.add_parser(
         "publish-triage",
@@ -544,6 +985,29 @@ def build_parser() -> argparse.ArgumentParser:
         dest="repair_logic",
         action="append",
         help="Repeatable KEY=VALUE repair instruction generated by triage.",
+    )
+    triage_parser.add_argument(
+        "--evidence-summary",
+        required=True,
+        help="Structured summary of the triage checks and evidence for this class.",
+    )
+    triage_parser.add_argument(
+        "--check-run",
+        dest="checks_run",
+        action="append",
+        help="Repeatable deterministic check command or probe description.",
+    )
+    triage_parser.add_argument(
+        "--note",
+        dest="notes",
+        action="append",
+        help="Repeatable additional triage note.",
+    )
+    triage_parser.add_argument(
+        "--defect-evidence",
+        dest="defect_evidence",
+        action="append",
+        help="Repeatable KEY=VALUE per-defect evidence entry.",
     )
 
     blocked_parser = subparsers.add_parser(
@@ -573,6 +1037,22 @@ def main(argv: list[str] | None = None) -> int:
             print_json(store.read_state())
             return 0
 
+        if args.command == "run-triage-pass":
+            result = store.run_triage_pass(
+                poll_interval=args.poll_interval,
+                timeout=args.timeout,
+            )
+            print_json(result)
+            return 0 if result["result"] != "timeout" else 2
+
+        if args.command == "run-fix-pass":
+            result = store.run_fix_pass(
+                poll_interval=args.poll_interval,
+                timeout=args.timeout,
+            )
+            print_json(result)
+            return 0 if result["result"] != "timeout" else 2
+
         if args.command == "wait":
             verdict = store.wait_for_turn(
                 actor=args.actor,
@@ -592,6 +1072,8 @@ def main(argv: list[str] | None = None) -> int:
                     repair_responses=parse_key_value_pairs(
                         args.repair_responses, "Repair response"
                     ),
+                    repair_rounds=args.repair_rounds,
+                    artifact_dir=args.artifact_dir,
                 )
             )
             return 0
@@ -606,6 +1088,10 @@ def main(argv: list[str] | None = None) -> int:
                     repair_logic=parse_key_value_pairs(
                         args.repair_logic, "Repair logic"
                     ),
+                    evidence_summary=args.evidence_summary,
+                    checks_run=args.checks_run,
+                    notes=args.notes,
+                    defect_evidence=parse_defect_evidence(args.defect_evidence),
                 )
             )
             return 0

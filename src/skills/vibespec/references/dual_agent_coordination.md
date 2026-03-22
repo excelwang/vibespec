@@ -63,6 +63,16 @@ Use a short lock only for shared-state transitions:
 
 Do not hold the lock during the actual Fix or Triage work.
 
+Default to the safe runner commands first:
+
+- `python3 scripts/agent_sync.py run-triage-pass`
+- `python3 scripts/agent_sync.py run-fix-pass`
+
+Use low-level mutating commands only after reasoning over runner output:
+
+- `python3 scripts/agent_sync.py publish-triage ...`
+- `python3 scripts/agent_sync.py publish-submission ...`
+
 The fix gate starts closed by default. Only Triage opens it by publishing a classified defect batch.
 
 ### Triage Responsibilities
@@ -78,8 +88,15 @@ For every rejected triage item, Triage must publish:
 - `id`
 - `defect_type`
 - evidence summary
+- per-defect evidence
 - repair summary
 - explicit `repair_logic`
+
+For every accepted or rejected triage class report, Triage must persist:
+
+- `checks_run`
+- `evidence_summary`
+- optional `notes`
 
 Fix must treat the released repair items as the only in-scope work for the current cycle.
 Fix may start work as soon as Triage releases any classified batch, even if Triage is still classifying later classes.
@@ -94,6 +111,8 @@ Before handing off, Fix publishes an immutable submission manifest containing at
 - changed file list
 - validation results
 - response for every previously open defect
+- repair round count
+- artifact directory when multi-round repair was required
 
 Triage must audit that exact baseline or `submission_id`, not a moving work tree.
 
@@ -140,9 +159,10 @@ Do not auto-takeover by default.
 2. If terminal, exit.
 3. If not `triage_turn`, wait and reload later.
 4. Load `references/gate_workflows.md`.
-5. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
-6. Continue with `src-drift`, then `quality`, publishing each batch in order.
-7. After the final class is classified, switch to `fix_turn` if any defects remain.
+5. Start with `python3 scripts/agent_sync.py run-triage-pass` to collect the next deterministic probe packet.
+6. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
+7. Continue with `src-drift`, then `quality`, publishing each batch in order.
+8. After the final class is classified, switch to `fix_turn` if any defects remain.
 
 ### Fix Session
 
@@ -150,8 +170,9 @@ Do not auto-takeover by default.
 2. If terminal, exit.
 3. If no released work exists yet, wait on the fix gate and reload later.
 4. Load `references/gate_workflows.md`.
-5. Execute only the latest released repair items within the released scope boundary.
-6. If the repair needs multiple rounds, create fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, then iterate repair -> validate -> re-scan until no actionable item remains.
-7. If Triage is still classifying later classes, keep working locally and do not publish yet.
-8. After Triage completes and hands off final turn ownership, validate and publish the frozen submission.
-9. Switch to `triage_turn`.
+5. Start with `python3 scripts/agent_sync.py run-fix-pass` to collect the latest released repair packet.
+6. Execute only the latest released repair items within the released scope boundary.
+7. If the repair needs multiple rounds, create fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, then iterate repair -> validate -> re-scan until no actionable item remains.
+8. If Triage is still classifying later classes, keep working locally and do not publish yet.
+9. After Triage completes and hands off final turn ownership, validate and publish the frozen submission.
+10. Switch to `triage_turn`.

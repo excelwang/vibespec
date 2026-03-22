@@ -62,8 +62,29 @@
 **Rules**:
 | Input | Gate | Action |
 |-------|------|--------|
-| `vibespec triage gate` | `all-defects` | Triage uses `UnifiedGateTriageWorkflow.DetectAndPlan`, scans `spec-drift -> src-drift -> quality`, and may release Fix after each classified batch |
-| `vibespec fix gate` | `all-defects` | Fix uses `UnifiedGateFixWorkflow.ExecuteRepairPlan`, keeps repair scope bounded to the released plan, and iterates repair -> validate -> re-scan until the released work is clear |
+| `vibespec triage gate` | `all-defects` | Triage uses `UnifiedGateTriageWorkflow.DetectAndPlan`, starts from `run-triage-pass`, scans `spec-drift -> src-drift -> quality`, and may release Fix after each classified batch |
+| `vibespec fix gate` | `all-defects` | Fix uses `UnifiedGateFixWorkflow.ExecuteRepairPlan`, starts from `run-fix-pass`, keeps repair scope bounded to the released plan, and iterates repair -> validate -> re-scan until the released work is clear |
+
+## [decision] TriageEvidenceRequirements
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| Triage publishes any class report | REQUIRE | Persist non-empty `checks_run` and `evidence_summary` |
+| Triage rejects defects | REQUIRE | Persist per-defect evidence plus explicit `repair_logic` |
+| Triage accepts a class | ALLOW | Keep `defects = []`, but still write audit evidence |
+
+## [decision] SubmissionArtifactRequirements
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| `repair_rounds = 1` and no artifact dir given | ALLOW | Submission may proceed without repair artifacts |
+| `repair_rounds > 1` and no artifact dir given | REJECT | Block submission |
+| Artifact dir is outside `specs/build/` | REJECT | Block submission |
+| `todo.md` missing | REJECT | Block submission |
+| `auto-decisions.md` missing | REJECT | Block submission |
+| `auto-decisions.md` misses any labeled decision field | REJECT | Block submission |
 ---
 
 ## [workflow] IdeaToSpecWorkflow

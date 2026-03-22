@@ -722,6 +722,10 @@ standard_terms:
   > Responsibility: Usability — keep loop activation predictable and scriptable.
   > Verification: Documentation and workflow examples use `vibespec triage gate` and `vibespec fix gate`.
 
+- **RUNNER_FIRST**: System MUST expose safe high-level runner commands before low-level mutating gate commands.
+  > Responsibility: Operational safety — reduce misuse of shared-state transitions during live gate execution.
+  > Verification: `agent_sync.py --help` includes `run-triage-pass` and `run-fix-pass`.
+
 - **WORKFLOW_MAPPING**: System MUST expose unified Triage and Fix workflow metadata in coordination state.
   > Responsibility: Routing — prevent the Agent from re-deciding the phase workflow after trigger.
   > Verification: Gate state includes triage workflow name/phase and fix workflow name/phase.
@@ -746,6 +750,10 @@ standard_terms:
   > Responsibility: Auditability — make autonomous repair choices reviewable after the fact.
   > Verification: Gate repair workflow requires `auto-decisions.md` entries with these fields.
 
+- **AUTO_DECISION_ENFORCEMENT**: Multi-round Fix submissions MUST provide a valid `specs/build/<timestamp>/` artifact directory containing `todo.md` and `auto-decisions.md`.
+  > Responsibility: Enforcement — move multi-round repair evidence from documentation into script-checked protocol.
+  > Verification: Submission publishing rejects multi-round manifests without valid artifact files.
+
 - **MANUAL_RECOVERY**: System MUST expose `blocked` or `suspect_stale` state after prolonged no-progress, and MUST NOT auto-takeover without explicit policy.
   > Responsibility: Safety — avoid false recovery on long but valid work.
   > Verification: Recovery path requires human intervention or a separately specified takeover policy.
@@ -761,3 +769,11 @@ standard_terms:
 - **QUALITY_GATE_SCOPE**: Triage Agent MUST audit `src/` for workaround logic, legacy logic, concurrency bottlenecks, deadlocks, dead waits, and blind waits when executing the unified gate triage phase.
   > Responsibility: Defect finding — keep the quality gate focused and repeatable.
   > Verification: Unified gate checklist includes all six quality defect classes.
+
+- **TRIAGE_AUDITABILITY**: Triage Agent MUST persist `checks_run` and `evidence_summary` for every triage class report, including `accept`.
+  > Responsibility: Auditability — make accepted triage classes reviewable after the fact.
+  > Verification: Stored triage artifacts always include non-empty check and evidence fields.
+
+- **DETERMINISTIC_PROBES**: System MUST provide deterministic built-in probe suites for `spec-drift`, `src-drift`, and `quality`.
+  > Responsibility: Repeatability — anchor triage in stable scripted evidence before human-like reasoning classifies defects.
+  > Verification: High-level triage runner outputs `checks_run`, `evidence_summary`, and notes for each supported defect class.

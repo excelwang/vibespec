@@ -16,6 +16,8 @@ interface System {
 ```code
 interface CoordinationStore {
   readState(gate: GateKind, focusId?: string): CoordinationState
+  runTriagePass(gate: GateKind, focusId?: string): TriageProbePacket
+  runFixPass(gate: GateKind, focusId?: string): FixRepairPacket
   tryClaimTurn(gate: GateKind, actor: "fix" | "triage", turnId: int, focusId?: string): ClaimResult
   publishSubmission(gate: GateKind, manifest: SubmissionManifest, focusId?: string): CoordinationState
   publishTriage(gate: GateKind, report: TriageReport, focusId?: string): CoordinationState
@@ -39,14 +41,15 @@ interface CoordinationStore {
 4. Triage/Fix sessions load `references/gate_workflows.md` and select the mapped phase prompt from coordination state.
 5. The gate starts at `triage_turn`, and the Fix gate is closed until Triage releases work.
 6. `CoordinationStore.tryClaimTurn()` grants a short lock only for turn validation and artifact publication.
-7. `TriageSession` audits the latest baseline or frozen submission in order `spec-drift -> src-drift -> quality`.
-8. After each classified batch, `CoordinationStore.publishTriage()` appends released repair items and may open the Fix gate immediately.
-9. `FixSession` waits while the Fix gate remains closed; once opened, it loads the latest released repair items and may begin work locally even while Triage continues scanning later classes.
-10. When released work requires repeated repair rounds, `FixSession` creates fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, derives repair tasks from the released scope, grounds auto-decisions in triage logic plus validation evidence, and iterates repair -> validate -> re-scan until no actionable item remains.
-11. After the final class is classified, `CoordinationStore.publishTriage()` either sets `status = done` or hands off final turn ownership with `phase = fix_turn`.
-12. `FixSession` validates the fully repaired state and `CoordinationStore.publishSubmission()` writes `submission_id`, changed files, validation results, and repair responses, then resets the Fix gate and returns to `triage_turn`.
-13. Waiting sessions reload shared state until they observe a non-wait condition; they do not terminate while `status = active`.
-14. If the no-progress window is exceeded, `CoordinationStore.markBlocked()` records manual recovery instead of automatic takeover.
+7. `TriageSession` begins from `CoordinationStore.runTriagePass()`, which returns the next class-specific deterministic probe packet for `spec-drift -> src-drift -> quality`.
+8. `TriageSession` audits the latest baseline or frozen submission, then `CoordinationStore.publishTriage()` persists `checks_run`, `evidence_summary`, notes, and any released repair items.
+9. After each classified batch, `CoordinationStore.publishTriage()` may open the Fix gate immediately.
+10. `FixSession` waits while the Fix gate remains closed; once opened, it begins from `CoordinationStore.runFixPass()` and may work locally even while Triage continues scanning later classes.
+11. When released work requires repeated repair rounds, `FixSession` creates fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, derives repair tasks from the released scope, grounds auto-decisions in triage logic plus validation evidence, and iterates repair -> validate -> re-scan until no actionable item remains.
+12. After the final class is classified, `CoordinationStore.publishTriage()` either sets `status = done` or hands off final turn ownership with `phase = fix_turn`.
+13. `FixSession` validates the fully repaired state and `CoordinationStore.publishSubmission()` writes `submission_id`, changed files, validation results, repair responses, and multi-round artifact references, then resets the Fix gate and returns to `triage_turn`.
+14. Waiting sessions reload shared state until they observe a non-wait condition; they do not terminate while `status = active`.
+15. If the no-progress window is exceeded, `CoordinationStore.markBlocked()` records manual recovery instead of automatic takeover.
 
 ---
 
