@@ -310,6 +310,49 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(result["state"]["expected_actor"], "triage")
         self.assertFalse(result["state"]["fix_gate_open"])
 
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_run_triage_pass_auto_resets_completed_gate(self):
+        """CONTRACTS.DUAL_AGENT_GATE.AUTO_RESET_COMPLETED_GATE: Triage runner MUST reopen a completed gate into a fresh cycle."""
+        store = CoordinationStore(self.root)
+        store.init_task()
+        store.publish_triage(
+            **self._triage_kwargs(
+                evidence_summary="No spec drift findings.",
+                checks_run=["probe: spec-drift"],
+            )
+        )
+        store.publish_triage(
+            **self._triage_kwargs(
+                defect_class="src-drift",
+                evidence_summary="No src drift findings.",
+                checks_run=["probe: src-drift"],
+            )
+        )
+        completed = store.publish_triage(
+            **self._triage_kwargs(
+                defect_class="quality",
+                evidence_summary="No quality findings.",
+                checks_run=["probe: quality"],
+            )
+        )
+        self.assertEqual(completed["status"], "done")
+
+        store._run_probe_suite = lambda defect_class, submission_id: {
+            "checks_run": ["probe: reset"],
+            "evidence_summary": "fresh cycle",
+            "notes": ["reset note"],
+        }
+        result = store.run_triage_pass(timeout=0.0)
+
+        self.assertEqual(result["result"], "actionable")
+        self.assertEqual(result["defect_class"], "spec-drift")
+        self.assertEqual(result["checks_run"], ["probe: reset"])
+        self.assertEqual(result["state"]["status"], "active")
+        self.assertEqual(result["state"]["phase"], "triage_turn")
+        self.assertEqual(result["state"]["expected_actor"], "triage")
+        self.assertEqual(result["state"]["published_triage_classes"], [])
+        self.assertEqual(result["state"]["open_defects"], [])
+
     @verify_spec("CONTRACTS.QUALITY_DETECTION")
     def test_quality_probe_reports_deterministic_matches(self):
         """CONTRACTS.QUALITY_DETECTION.DETERMINISTIC_PROBE_SUITES: Quality probes MUST emit scripted checklist evidence."""

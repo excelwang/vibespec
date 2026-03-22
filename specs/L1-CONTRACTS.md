@@ -702,6 +702,10 @@ standard_terms:
   > Responsibility: Ownership — keep repair intake controlled by Triage findings.
   > Verification: Fix wait becomes actionable only after Triage updates shared state with released work.
 
+- **AUTO_RESET_COMPLETED_GATE**: `run-triage-pass` MUST automatically reset a `done` gate into a fresh `triage_turn` cycle before collecting the next triage probe packet.
+  > Responsibility: Reusability — let repeated `vibespec triage gate` triggers start a new cycle without manual reset.
+  > Verification: A completed gate returns to `status = active`, `phase = triage_turn`, and clears released work when the triage runner starts again.
+
 - **STALE_REPORT_REJECT**: Triage Agent MUST reject or discard reports against superseded submissions.
   > Responsibility: Freshness — prevent stale findings from reopening closed rounds.
   > Verification: Triage report `submission_id` matches the latest published submission.

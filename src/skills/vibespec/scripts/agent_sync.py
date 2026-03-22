@@ -283,6 +283,32 @@ class CoordinationStore:
             return self.read_state()
         return self.init_task()
 
+    def reset_completed_cycle(self) -> dict:
+        with self._short_lock():
+            state = self.read_state()
+            if state["status"] != "done":
+                return state
+
+            next_state = self._next_state(
+                state,
+                {
+                    "status": "active",
+                    "phase": "triage_turn",
+                    "expected_actor": "triage",
+                    "fix_gate_open": False,
+                    "triage_status": "scanning",
+                    "next_triage_class_index": 0,
+                    "published_triage_classes": [],
+                    "triage_of_submission_id": state["submission_id"],
+                    "open_defects": [],
+                    "active_repair_plan": [],
+                    "blocked_reason": None,
+                    "last_event": "cycle_reset",
+                },
+            )
+            write_json_atomic(self.state_file, next_state)
+            return next_state
+
     def init_task(self) -> dict:
         if self.state_file.exists():
             raise CoordinationError("Unified gate is already initialized.")
@@ -570,7 +596,9 @@ class CoordinationStore:
     def run_triage_pass(
         self, poll_interval: float = 2.0, timeout: float | None = None
     ) -> dict:
-        self.ensure_task()
+        state = self.ensure_task()
+        if state["status"] == "done":
+            state = self.reset_completed_cycle()
         initial = self.inspect_actor("triage")
         if initial["result"] == "wait" and timeout == 0:
             return self._triage_runner_packet(initial["state"], result="wait")

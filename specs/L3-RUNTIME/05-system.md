@@ -41,7 +41,7 @@ interface CoordinationStore {
 4. Triage/Fix sessions load `references/gate_workflows.md` and select the mapped phase prompt from coordination state.
 5. The gate starts at `triage_turn`, and the Fix gate is closed until Triage releases work.
 6. `CoordinationStore.tryClaimTurn()` grants a short lock only for turn validation and artifact publication.
-7. `TriageSession` begins from `CoordinationStore.runTriagePass()`, which returns the next class-specific deterministic probe packet for `spec-drift -> src-drift -> quality`.
+7. `TriageSession` begins from `CoordinationStore.runTriagePass()`, which automatically resets a completed gate into a fresh `triage_turn` cycle and then returns the next class-specific deterministic probe packet for `spec-drift -> src-drift -> quality`.
 8. `TriageSession` audits the latest baseline or frozen submission, then `CoordinationStore.publishTriage()` persists `checks_run`, `evidence_summary`, notes, and any released repair items.
 9. After each classified batch, `CoordinationStore.publishTriage()` may open the Fix gate immediately.
 10. `FixSession` waits while the Fix gate remains closed; once opened, it begins from `CoordinationStore.runFixPass()` and may work locally even while Triage continues scanning later classes.

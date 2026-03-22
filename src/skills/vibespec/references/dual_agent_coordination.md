@@ -156,7 +156,7 @@ Do not auto-takeover by default.
 ### Triage Session
 
 1. Read shared state.
-2. If terminal, exit.
+2. If the last cycle is `done`, `run-triage-pass` may reopen a fresh `triage_turn` cycle automatically.
 3. If not `triage_turn`, wait and reload later.
 4. Load `references/gate_workflows.md`.
 5. Start with `python3 scripts/agent_sync.py run-triage-pass` to collect the next deterministic probe packet.
