@@ -114,10 +114,12 @@ def merge_test_status(test_metadata: dict, spec_id: str, status: str):
         test_metadata[spec_id] = status
 
 
-def is_testable_l1_contract(item_id: str, item_data: dict) -> bool:
-    """Tests map to L1 H2 CONTRACTS sections, not nested bullets/items."""
-    header = item_data.get('header', '').strip()
-    return header.startswith('## ') and item_id.startswith('CONTRACTS.')
+def is_testable_l1_contract(item_id: str, l1_ids: set[str]) -> bool:
+    """Tests map to concrete L1 contract leaves, not grouping sections."""
+    if not item_id.startswith('CONTRACTS.'):
+        return False
+    child_prefix = item_id + '.'
+    return not any(other_id.startswith(child_prefix) for other_id in l1_ids if other_id != item_id)
 
 
 def is_skip_like_content(content: str) -> bool:
@@ -428,8 +430,12 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
             exports_map[exp] = file_path
         
         if data['layer'] == 1:
-            for item_id, item_data in data['items'].items():
-                if is_testable_l1_contract(item_id, item_data):
+            l1_ids = {
+                item_id for item_id in data['items'].keys()
+                if item_id.startswith('CONTRACTS.')
+            }
+            for item_id in l1_ids:
+                if is_testable_l1_contract(item_id, l1_ids):
                     testable_ids.add(item_id)
 
     if tests_dir:
@@ -475,8 +481,12 @@ def validate_references(references_dir: Path, tests_dir: Path = None, project_pr
     # Structural L1-L0 Traceability (Section Level)
     for file_path, data in references.items():
         if data['layer'] == 1:
+            l1_ids = {
+                candidate_id for candidate_id in data['items'].keys()
+                if candidate_id.startswith('CONTRACTS.')
+            }
             for item_id, item_data in data['items'].items():
-                if not is_testable_l1_contract(item_id, item_data):
+                if not is_testable_l1_contract(item_id, l1_ids):
                     continue
                 explicit_targets = extract_covers_l0_targets(item_data.get('body', ''))
                 if explicit_targets:
