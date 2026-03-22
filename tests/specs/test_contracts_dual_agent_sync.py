@@ -163,6 +163,9 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("Treat probe output as signals only", reference_content)
         self.assertIn("fully read every listed `specs/` file", reference_content)
         self.assertIn("confirm an actual semantic contradiction", reference_content)
+        self.assertIn("item by item in order `L1<-L0`, `L2<-L1`, `L3<-L2`", reference_content)
+        self.assertIn("relevant `src` modules against `L2`", reference_content)
+        self.assertIn("components against the key mechanisms fixed in `L3`", reference_content)
 
         skill_content = skill_path.read_text()
         self.assertIn("vibespec fix gate", skill_content)
@@ -175,6 +178,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("signals only", skill_content)
         self.assertIn("fully read every `specs/` file", skill_content)
         self.assertIn("semantic inconsistency", skill_content)
+        self.assertIn("item by item", skill_content)
+        self.assertIn("module by module", skill_content)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_fix_auto_decision_basis_and_priority_are_explicit(self):
@@ -376,6 +381,15 @@ class TestContractsDualAgentSync(unittest.TestCase):
             result["semantic_review_contract"]["must_not_classify_from_text_match_only"]
         )
         self.assertTrue(result["full_file_review_contract"]["must_read_full_files"])
+        self.assertTrue(
+            result["semantic_review_contract"]["must_apply_structured_spec_drift_checks"]
+        )
+        self.assertTrue(result["spec_drift_review_contract"]["must_compare_layer_by_layer"])
+        self.assertTrue(result["spec_drift_review_contract"]["must_compare_item_by_item"])
+        self.assertIn(
+            "L1",
+            [entry["reviewed_layer"] for entry in result["spec_drift_review_contract"]["layer_review_order"]],
+        )
         self.assertEqual(result["defect_class"], "spec-drift")
         self.assertEqual(result["submission_id"], 0)
         self.assertEqual(result["checks_run"], ["probe: stub"])
@@ -405,6 +419,88 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("specs/L1-CONTRACTS.md", result["full_file_review_contract"]["spec_files"])
         self.assertIn("src/example.py", result["full_file_review_contract"]["source_files"])
         self.assertIn("Do not anchor on isolated text fragments", result["full_file_review_contract"]["warning"])
+
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_spec_drift_runner_lists_context_files_and_unresolved_refs(self):
+        """CONTRACTS.DUAL_AGENT_GATE.SPEC_CONTEXT_REVIEW: Spec-drift review MUST expose context files and unresolved references."""
+        specs_dir = self.root / "specs"
+        specs_dir.mkdir(parents=True)
+        docs_dir = self.root / "docs"
+        docs_dir.mkdir(parents=True)
+        (docs_dir / "ENGINEERING_GOVERNANCE.md").write_text("# governance\n", encoding="utf-8")
+        (specs_dir / "L0-VISION.md").write_text(
+            "See `docs/ENGINEERING_GOVERNANCE.md` and `docs/MISSING_GUIDE.md`.\n",
+            encoding="utf-8",
+        )
+        (specs_dir / "L1-CONTRACTS.md").write_text("# contracts\n", encoding="utf-8")
+
+        store = CoordinationStore(self.root)
+        store._run_probe_suite = lambda defect_class, submission_id: {
+            "checks_run": ["probe: stub"],
+            "evidence_summary": "stub evidence",
+            "notes": ["stub note"],
+        }
+
+        result = store.run_triage_pass(timeout=0.0)
+
+        self.assertIn(
+            "docs/ENGINEERING_GOVERNANCE.md",
+            result["full_file_review_contract"]["context_files"],
+        )
+        self.assertIn(
+            "docs/MISSING_GUIDE.md",
+            result["spec_drift_review_contract"]["unresolved_context_refs"],
+        )
+        self.assertTrue(
+            result["spec_drift_review_contract"]["must_read_context_files_when_listed"]
+        )
+
+    @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
+    def test_src_drift_runner_returns_structured_module_review_contract(self):
+        """CONTRACTS.DUAL_AGENT_GATE.STRUCTURED_SRC_DRIFT_REVIEW: Src-drift review MUST expose module/component comparison requirements."""
+        store = CoordinationStore(self.root)
+        store.init_task()
+        store.publish_triage(**self._triage_kwargs())
+        (self.root / "src").mkdir(parents=True)
+        (self.root / "src" / "api.py").write_text("print('x')\n", encoding="utf-8")
+        (self.root / "src" / "engine").mkdir(parents=True)
+        (self.root / "src" / "engine" / "worker.py").write_text("print('x')\n", encoding="utf-8")
+        (self.root / "specs").mkdir(exist_ok=True)
+        (self.root / "specs" / "L2-ARCHITECTURE.md").write_text("# arch\n", encoding="utf-8")
+        (self.root / "specs" / "L3-RUNTIME").mkdir(exist_ok=True)
+        (self.root / "specs" / "L3-RUNTIME" / "03-automation.md").write_text("# l3\n", encoding="utf-8")
+        store._run_probe_suite = lambda defect_class, submission_id: {
+            "checks_run": ["probe: src-drift"],
+            "evidence_summary": "stub src evidence",
+            "notes": ["stub src note"],
+        }
+
+        result = store.run_triage_pass(timeout=0.0)
+
+        self.assertEqual(result["defect_class"], "src-drift")
+        self.assertTrue(result["semantic_review_contract"]["must_compare_module_by_module"])
+        self.assertTrue(
+            result["semantic_review_contract"]["must_compare_component_by_component"]
+        )
+        self.assertTrue(
+            result["src_drift_review_contract"]["must_compare_against_l2_architecture"]
+        )
+        self.assertTrue(
+            result["src_drift_review_contract"]["must_compare_against_l3_key_mechanisms"]
+        )
+        self.assertIn(
+            "specs/L2-ARCHITECTURE.md",
+            result["src_drift_review_contract"]["architecture_files"],
+        )
+        self.assertIn(
+            "specs/L3-RUNTIME/03-automation.md",
+            result["src_drift_review_contract"]["key_mechanism_files"],
+        )
+        module_plan = result["src_drift_review_contract"]["source_module_review_order"]
+        self.assertTrue(module_plan)
+        module_text = json.dumps(module_plan)
+        self.assertIn("src/api.py", module_text)
+        self.assertIn("src/engine", module_text)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_run_fix_pass_returns_wait_while_gate_is_closed(self):
@@ -616,6 +712,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("specs/example.md", notes_text)
         self.assertIn("tests/test_example.py", notes_text)
         self.assertIn("path-class or file-presence mismatch alone", notes_text)
+        self.assertIn("source modules/components:", notes_text)
+        self.assertIn("against L2 architecture", notes_text)
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_publish_triage_requires_audit_fields_and_persists_accept_reports(self):

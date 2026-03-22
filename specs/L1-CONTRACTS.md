@@ -758,6 +758,18 @@ standard_terms:
   > Responsibility: Context completeness — prevent snippet-anchored or grep-anchored judgments from replacing full semantic review.
   > Verification: Triage runner output includes explicit full-file review requirements and the file lists to read before defect publication.
 
+- **STRUCTURED_SPEC_DRIFT_REVIEW**: When classifying `spec-drift`, Triage Agent MUST compare each reviewed layer against its immediate parent layer item by item instead of relying on file-level impressions alone.
+  > Responsibility: Review rigor — keep spec drift review anchored in explicit cross-layer comparison rather than broad intuition.
+  > Verification: Triage runner output and gate workflow instructions define an ordered `L1<-L0`, `L2<-L1`, `L3<-L2` comparison plan plus mandatory semantic checks.
+
+- **SPEC_CONTEXT_REVIEW**: Triage runner MUST list project context documents referenced by specs when they can be resolved, and MUST surface unresolved spec context references for semantic review.
+  > Responsibility: Context reach — prevent formal-spec drift review from missing governance or auxiliary documents that specs explicitly depend on.
+  > Verification: Triage runner packets include `context_files` and `unresolved_context_refs` for spec-drift review.
+
+- **STRUCTURED_SRC_DRIFT_REVIEW**: When classifying `src-drift`, Triage Agent MUST compare relevant src modules against `L2` architecture boundaries and src components against key `L3` mechanisms.
+  > Responsibility: Architecture fidelity — prevent source review from collapsing into path-diff inspection or broad whole-repo intuition.
+  > Verification: Triage runner output and gate workflow instructions define module/component review requirements plus explicit L2/L3 comparison anchors for src-drift.
+
 - **FIX_EXECUTES_TRIAGE_PLAN**: Fix Agent MUST execute the latest triage-generated repair plan rather than inventing new gate-specific repair logic.
   > Responsibility: Scope control — keep repair work bounded to triaged findings.
   > Verification: Fix workflow instructions reference only the latest frozen repair plan.

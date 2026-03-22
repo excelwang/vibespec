@@ -71,11 +71,35 @@
 | Condition | Verdict | Action |
 |-----------|---------|--------|
 | Probe output is only a text/regex/path match signal | REQUIRE | Read surrounding code/spec context before classifying any defect |
-| Triage has not fully read the listed `specs/` and source files | REJECT | Do not publish any defect yet |
+| Triage has not fully read the listed `specs/`, source, and context files | REJECT | Do not publish any defect yet |
+| Active class is `spec-drift` and the ordered parent-layer item review is incomplete | REJECT | Do not publish or accept spec-drift yet |
+| Active class is `src-drift` and the ordered module/component review against `L2` and `L3` is incomplete | REJECT | Do not publish or accept src-drift yet |
 | No semantic contradiction or real quality problem is confirmed | REJECT | Do not publish a defect from the probe result alone |
 | Triage publishes any class report | REQUIRE | Persist non-empty `checks_run` and `evidence_summary` |
 | Triage rejects defects | REQUIRE | Persist per-defect evidence plus explicit `repair_logic` |
 | Triage accepts a class | ALLOW | Keep `defects = []`, but still write audit evidence |
+
+## [decision] SpecDriftSemanticReviewAxes
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| Reviewing `spec-drift` | REQUIRE | Compare `L1<-L0`, then `L2<-L1`, then each `L3<-L2` file pair in order |
+| Reviewing a layer pair | REQUIRE | Check every reviewed-layer item against the parent-layer item or boundary it consumes |
+| Traceability target address style is inconsistent with actual parent-layer items | FLAG | Treat the mismatch as candidate spec drift and decide explicitly |
+| Lower layer introduces governance-only or implementation-only detail forbidden by a higher layer | FLAG | Treat the leakage as candidate spec drift and decide explicitly |
+| Runner lists unresolved spec context refs | FLAG | Review them as candidate spec drift instead of ignoring them |
+
+## [decision] SrcDriftSemanticReviewAxes
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| Reviewing `src-drift` | REQUIRE | Compare relevant src modules against `L2` architecture before accepting semantic alignment |
+| Reviewing a src module | REQUIRE | Compare its owned responsibilities against the matching `L2` component or boundary |
+| Reviewing a src component | REQUIRE | Check it against the key `L3` workflow/interface/mechanism files that define current behavior |
+| Changed paths or missing sibling files are the only signal | REJECT | Do not publish src drift from path evidence alone |
+| Module/component review reveals broadened ownership, collapsed boundaries, or missing mechanisms | FLAG | Treat the mismatch as candidate src drift and decide explicitly |
 
 ## [decision] SubmissionArtifactRequirements
 

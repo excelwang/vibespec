@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -91,6 +92,25 @@ QUALITY_PROBE_IGNORED_PARTS = {
     "venv",
     "__pycache__",
 }
+DEFAULT_SPEC_CONTEXT_CANDIDATES = (
+    "README.md",
+    "specs/readme.md",
+    "docs/ENGINEERING_GOVERNANCE.md",
+)
+SPEC_DRIFT_REVIEW_CHECKS = [
+    "Review spec drift layer by layer and item by item: compare every reviewed-layer item against its parent-layer intent before accepting the layer.",
+    "Resolve `Covers L0`, `Traces to`, and equivalent traceability references against actual spec item IDs, and treat address-space mismatches as spec drift evidence.",
+    "Compare section-level boundary statements against detailed items in the same layer and child layers; flag contradictions, weakened boundaries, or silent scope expansion.",
+    "Flag repo-topology, package/module/file-path, env-var, SDK-chain, helper-crate, or deployment detail that higher-layer specs say belongs in governance or implementation-only material.",
+    "Verify shared vocabulary, defaults, and parameter/read axes stay semantically aligned across L0-L3 interfaces and workflows.",
+    "Read every listed context file when present, and treat unresolved spec context references as candidate drift instead of ignoring them.",
+]
+SRC_DRIFT_REVIEW_CHECKS = [
+    "Review src drift module by module and component by component instead of relying on changed-path summaries alone.",
+    "Compare each relevant src module against the L2 component/module architecture and flag broadened ownership, collapsed boundaries, or missing components.",
+    "Compare each relevant src component against key L3 workflows, interfaces, and fixed mechanisms before accepting semantic alignment.",
+    "Treat changed paths, file-presence mismatch, and source-root discovery as intake signals only; publish src drift only after confirming an actual implementation-vs-architecture or implementation-vs-mechanism mismatch.",
+]
 DEBUG_ONLY_WARNING = (
     "Debug-only command. Do not bypass gate blocking with `state` or `wait`. "
     "Normal gate sessions must start from the blocking runner entrypoints "
@@ -237,11 +257,15 @@ def blocking_contract(actor: str) -> dict:
 def semantic_review_contract(defect_class: str | None) -> dict:
     class_specific = {
         "spec-drift": [
-            "Read the affected spec items and their parent/child traceability chain.",
-            "Confirm an actual semantic contradiction, omission, or weakening before publishing drift.",
+            "Read the full spec tree plus listed context documents before classifying spec drift.",
+            "Compare the reviewed layer against its immediate parent layer item by item, not just section by section.",
+            "Resolve traceability targets and verify they match the project's actual spec item address scheme.",
+            "Check for self-contradiction between declared layer boundaries and lower-layer detail.",
+            "Confirm an actual semantic contradiction, omission, weakened requirement, or layering leak before publishing drift.",
         ],
         "src-drift": [
-            "Inspect changed code/spec context and confirm a real behavior-spec mismatch.",
+            "Inspect changed code/spec context and confirm a real implementation-vs-architecture or implementation-vs-mechanism mismatch.",
+            "Compare src module by module against L2 architecture and component by component against key L3 mechanisms.",
             "Treat path-class or file-presence mismatches as signals only, not defects by themselves.",
         ],
         "quality": [
@@ -256,12 +280,23 @@ def semantic_review_contract(defect_class: str | None) -> dict:
         "must_not_judge_from_snippets_only": True,
         "must_not_classify_from_text_match_only": True,
         "must_not_classify_from_path_match_only": True,
+        "must_review_context_files_when_listed": defect_class == "spec-drift",
+        "must_apply_structured_spec_drift_checks": defect_class == "spec-drift",
+        "must_compare_module_by_module": defect_class == "src-drift",
+        "must_compare_component_by_component": defect_class == "src-drift",
         "warning": (
             "Probe output is evidence input only. Do not publish drift or defects solely from "
             "keyword hits, regex matches, file-name/path overlap, or path-class mismatches. "
             "Read complete spec and source files, then confirm a semantic inconsistency first."
         ),
         "required_review_actions": list(class_specific.get(defect_class, [])),
+        "mandatory_checks": list(
+            SPEC_DRIFT_REVIEW_CHECKS
+            if defect_class == "spec-drift"
+            else SRC_DRIFT_REVIEW_CHECKS
+            if defect_class == "src-drift"
+            else class_specific.get(defect_class, [])
+        ),
     }
 
 
@@ -279,6 +314,165 @@ def discover_specs_review_files(root: Path) -> list[str]:
         except ValueError:
             discovered.append(str(path))
     return discovered
+
+
+def extract_markdown_path_refs(text: str) -> list[str]:
+    discovered: list[str] = []
+    seen: set[str] = set()
+
+    patterns = (
+        re.compile(r"`([^`\n]+\.md)`"),
+        re.compile(r"(?<![:A-Za-z0-9_])((?:\.\.?/)?(?:[A-Za-z0-9_.-]+/)*[A-Za-z0-9_.-]+\.md)"),
+    )
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            ref = (match.group(1) or "").strip()
+            if not ref or ref.startswith(("http://", "https://")) or ref in seen:
+                continue
+            discovered.append(ref)
+            seen.add(ref)
+    return discovered
+
+
+def resolve_context_reference(root: Path, source_file: Path, ref: str) -> Path | None:
+    raw = ref.strip()
+    normalized = raw.lstrip("./")
+    candidates = [
+        source_file.parent / raw,
+        root / raw,
+        root / normalized,
+    ]
+    if normalized.startswith(f"{root.name}/"):
+        candidates.append(root / normalized.split("/", 1)[1])
+
+    root_resolved = root.resolve()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+            resolved.relative_to(root_resolved)
+        except (FileNotFoundError, ValueError):
+            continue
+        if resolved.is_file():
+            return resolved
+    return None
+
+
+def discover_spec_context_files(root: Path) -> tuple[list[str], list[str]]:
+    specs_root = root / "specs"
+    discovered: list[str] = []
+    unresolved: list[str] = []
+    seen_discovered: set[str] = set()
+    seen_unresolved: set[str] = set()
+
+    def add_discovered(path: Path) -> None:
+        try:
+            rel = str(path.relative_to(root))
+        except ValueError:
+            rel = str(path)
+        if rel.startswith("specs/") or rel in seen_discovered:
+            return
+        discovered.append(rel)
+        seen_discovered.add(rel)
+
+    for candidate in DEFAULT_SPEC_CONTEXT_CANDIDATES:
+        path = root / candidate
+        if path.is_file():
+            add_discovered(path)
+
+    if not specs_root.is_dir():
+        return discovered, unresolved
+
+    for spec_path in sorted(specs_root.rglob("*.md")):
+        if "build" in spec_path.parts:
+            continue
+        text = spec_path.read_text(encoding="utf-8")
+        for ref in extract_markdown_path_refs(text):
+            resolved = resolve_context_reference(root, spec_path, ref)
+            if resolved is not None:
+                add_discovered(resolved)
+                continue
+            if ref not in seen_unresolved:
+                unresolved.append(ref)
+                seen_unresolved.add(ref)
+
+    return discovered, unresolved
+
+
+def spec_path_if_exists(root: Path, relative_path: str) -> list[str]:
+    path = root / relative_path
+    if path.is_file():
+        return [relative_path]
+    return []
+
+
+def discover_l3_runtime_files(root: Path) -> list[str]:
+    l3_dir = root / "specs" / "L3-RUNTIME"
+    discovered: list[str] = []
+    if not l3_dir.is_dir():
+        return discovered
+    for path in sorted(l3_dir.glob("*.md")):
+        try:
+            discovered.append(str(path.relative_to(root)))
+        except ValueError:
+            discovered.append(str(path))
+    return discovered
+
+
+def discover_spec_layer_review_order(root: Path) -> list[dict[str, object]]:
+    l3_files = discover_l3_runtime_files(root)
+
+    return [
+        {
+            "reviewed_layer": "L1",
+            "parent_layer": "L0",
+            "reviewed_files": spec_path_if_exists(root, "specs/L1-CONTRACTS.md"),
+            "parent_files": spec_path_if_exists(root, "specs/L0-VISION.md"),
+            "comparison_rule": (
+                "Check every L1 contract item against explicit L0 intent and traceability "
+                "targets before accepting semantic alignment."
+            ),
+        },
+        {
+            "reviewed_layer": "L2",
+            "parent_layer": "L1",
+            "reviewed_files": spec_path_if_exists(root, "specs/L2-ARCHITECTURE.md"),
+            "parent_files": spec_path_if_exists(root, "specs/L1-CONTRACTS.md"),
+            "comparison_rule": (
+                "Check every L2 architecture item against the L1 contracts it consumes, and "
+                "flag any broadened ownership, new authority, or implementation-detail leakage."
+            ),
+        },
+        {
+            "reviewed_layer": "L3",
+            "parent_layer": "L2",
+            "reviewed_files": l3_files,
+            "parent_files": spec_path_if_exists(root, "specs/L2-ARCHITECTURE.md"),
+            "comparison_rule": (
+                "Check each L3 workflow/interface file item by item against the L2 boundary; "
+                "do not let runtime, package, or helper detail escape beyond approved architecture."
+            ),
+        },
+    ]
+
+
+def build_spec_drift_review_contract(root: Path) -> dict:
+    context_files, unresolved_context_refs = discover_spec_context_files(root)
+    return {
+        "must_apply_structured_checks": True,
+        "must_read_context_files_when_listed": True,
+        "must_compare_layer_by_layer": True,
+        "must_compare_item_by_item": True,
+        "mandatory_checks": list(SPEC_DRIFT_REVIEW_CHECKS),
+        "layer_review_order": discover_spec_layer_review_order(root),
+        "context_files": context_files,
+        "unresolved_context_refs": unresolved_context_refs,
+        "warning": (
+            "Spec drift review is not complete until the structured checklist is applied across "
+            "the full spec tree, each reviewed layer has been checked item by item against its "
+            "parent layer, and every listed context file has been read. Unresolved spec context "
+            "references are themselves candidate drift evidence."
+        ),
+    }
 
 
 def summarize_text(text: str, limit: int = 12) -> list[str]:
@@ -794,6 +988,19 @@ class CoordinationStore:
             + summarize_text(unittest_out or unittest_err, limit=8)
         )
 
+        context_files, unresolved_context_refs = discover_spec_context_files(self.root)
+        checks_run.append("spec context reference scan")
+        if context_files:
+            notes.append("spec context files: " + ", ".join(context_files))
+        else:
+            notes.append("spec context files: none discovered")
+        if unresolved_context_refs:
+            notes.append(
+                "unresolved spec context refs: " + ", ".join(unresolved_context_refs)
+            )
+        else:
+            notes.append("unresolved spec context refs: none")
+
         evidence_summary = (
             f"Spec drift probes completed: validate.py exit={validate_code}, "
             f"spec tests exit={unittest_code}. These results are structural signals only "
@@ -906,10 +1113,22 @@ class CoordinationStore:
         if buckets["specs"] and not buckets["src"]:
             mismatch_notes.append("specs changes exist without matching src changes")
         notes.extend(mismatch_notes)
+        module_review_order = self._discover_source_component_review_order()
+        if module_review_order:
+            notes.append(
+                "source modules/components: "
+                + "; ".join(
+                    f"{entry['source_root']} => {', '.join(entry['components'])}"
+                    for entry in module_review_order
+                )
+            )
+        else:
+            notes.append("source modules/components: none discovered")
 
         evidence_summary = (
             "Src drift probes summarized frozen path-class changes and src/specs mismatch "
-            "signals. These are heuristic signals only and require semantic comparison before "
+            "signals. These are heuristic signals only and require module-by-module comparison "
+            "against L2 plus component-by-component comparison against key L3 mechanisms before "
             "publishing a drift defect."
         )
         return {
@@ -918,7 +1137,7 @@ class CoordinationStore:
             "notes": notes
             + [
                 "Do not classify src-drift from path-class or file-presence mismatch alone.",
-                "Confirm a real behavior-spec mismatch in surrounding context first.",
+                "Compare src modules against L2 architecture and src components against key L3 mechanisms before publishing a defect.",
             ],
         }
 
@@ -1005,6 +1224,56 @@ class CoordinationStore:
                     discovered.append(str(path))
         return discovered
 
+    def _discover_source_component_review_order(self) -> list[dict[str, object]]:
+        review_order: list[dict[str, object]] = []
+        for source_root in self._discover_quality_source_roots():
+            root_path = self.root / source_root
+            if not root_path.is_dir():
+                continue
+
+            components: list[str] = []
+            for child in sorted(root_path.iterdir()):
+                if any(part in QUALITY_PROBE_IGNORED_PARTS for part in child.parts):
+                    continue
+                if child.is_file() and child.suffix.lower() not in QUALITY_PROBE_EXTENSIONS:
+                    continue
+                try:
+                    components.append(str(child.relative_to(self.root)))
+                except ValueError:
+                    components.append(str(child))
+
+            if not components:
+                continue
+
+            review_order.append(
+                {
+                    "source_root": source_root,
+                    "components": components,
+                    "comparison_rule": (
+                        "Review each listed module/component against L2 ownership and the "
+                        "relevant L3 mechanism files before accepting src alignment."
+                    ),
+                }
+            )
+        return review_order
+
+    def _build_src_drift_review_contract(self) -> dict:
+        return {
+            "must_compare_module_by_module": True,
+            "must_compare_component_by_component": True,
+            "must_compare_against_l2_architecture": True,
+            "must_compare_against_l3_key_mechanisms": True,
+            "architecture_files": spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md"),
+            "key_mechanism_files": discover_l3_runtime_files(self.root),
+            "source_module_review_order": self._discover_source_component_review_order(),
+            "mandatory_checks": list(SRC_DRIFT_REVIEW_CHECKS),
+            "warning": (
+                "Src drift review is not complete until the relevant src modules and components "
+                "have been compared against L2 architecture boundaries and the key mechanisms "
+                "fixed in L3. Changed paths alone are not enough."
+            ),
+        }
+
     def _discover_quality_source_roots(self) -> list[str]:
         candidate_roots: list[Path] = []
         root_src = self.root / "src"
@@ -1073,15 +1342,19 @@ class CoordinationStore:
     def _triage_runner_packet(
         self, state: dict, result: str, probe: dict | None = None
     ) -> dict:
+        context_files, unresolved_context_refs = discover_spec_context_files(self.root)
         full_file_review_contract = {
             "must_read_full_files": True,
             "must_not_judge_from_snippets_only": True,
             "spec_files": discover_specs_review_files(self.root),
             "source_files": self._discover_source_review_files(),
+            "context_files": context_files,
+            "must_read_context_files_when_listed": True,
+            "unresolved_context_refs": unresolved_context_refs,
             "warning": (
                 "Before publishing any triage defect, read the complete contents of every listed "
-                "spec file and source file. Do not anchor on isolated text fragments, grep hits, "
-                "or short snippets."
+                "spec file, source file, and listed context file. Do not anchor on isolated text "
+                "fragments, grep hits, or short snippets."
             ),
         }
         packet = {
@@ -1105,6 +1378,16 @@ class CoordinationStore:
             packet.update(
                 {
                     "semantic_review_contract": semantic_review_contract(defect_class),
+                    "spec_drift_review_contract": (
+                        build_spec_drift_review_contract(self.root)
+                        if defect_class == "spec-drift"
+                        else None
+                    ),
+                    "src_drift_review_contract": (
+                        self._build_src_drift_review_contract()
+                        if defect_class == "src-drift"
+                        else None
+                    ),
                     "defect_class": defect_class,
                     "quality_target_id": (
                         state.get("quality_target_id") if defect_class == "quality" else None
@@ -1119,6 +1402,9 @@ class CoordinationStore:
                     "notes": list(probe.get("notes", [])) if probe else [],
                 }
             )
+        else:
+            packet["spec_drift_review_contract"] = None
+            packet["src_drift_review_contract"] = None
         return packet
 
     def _fix_runner_packet(self, state: dict, result: str) -> dict:

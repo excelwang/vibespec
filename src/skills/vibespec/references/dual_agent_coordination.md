@@ -167,11 +167,13 @@ Do not auto-takeover by default.
 2. Start with `python3 scripts/agent_sync.py run-triage-pass` and let it block the session until triage becomes actionable or the gate is terminal.
 3. If the last cycle is `done`, `run-triage-pass` may reopen a fresh `triage_turn` cycle automatically.
 4. Treat the returned probe packet as signals only; do not classify defects from text matches, regex hits, file-name overlap, or path-class mismatch alone.
-5. Fully read every `specs/` file and source file listed by the triage runner before publishing any defect.
-6. Confirm a semantic inconsistency only after the full-file read; do not judge from snippets or anchor fragments.
-7. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
-8. Continue with `src-drift`, then `quality`, publishing each batch in order.
-9. After the final class is classified, switch to `fix_turn` if any defects remain.
+5. Fully read every `specs/` file, source file, and listed context file from the triage runner before publishing any defect.
+6. For `spec-drift`, compare the reviewed layer against its immediate parent layer item by item in the runner-provided order before deciding `accept`.
+7. For `src-drift`, compare the relevant src modules against `L2` architecture and src components against key `L3` mechanisms before deciding `accept`.
+8. Confirm a semantic inconsistency only after the full-file read and structured comparison; do not judge from snippets or anchor fragments.
+9. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
+10. Continue with `src-drift`, then `quality`, publishing each batch in order.
+11. After the final class is classified, switch to `fix_turn` if any defects remain.
 
 ### Fix Session
 
