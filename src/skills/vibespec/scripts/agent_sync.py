@@ -202,12 +202,23 @@ def run_command(command: list[str], cwd: Path) -> tuple[int, str, str]:
 
 def blocking_contract(actor: str) -> dict:
     normal_entrypoint = "run-triage-pass" if actor == "triage" else "run-fix-pass"
+    opposite_actor = "fix" if actor == "triage" else "triage"
+    forbidden_actions = (
+        ["run-fix-pass", "publish-submission"] if actor == "triage" else ["run-triage-pass", "publish-triage"]
+    )
     return {
         "must_block_session": True,
+        "must_remain_actor": actor,
+        "must_not_switch_to_actor": opposite_actor,
         "normal_entrypoint": normal_entrypoint,
         "must_not_bypass_with": ["state", "wait"],
         "debug_only_commands": ["state", "wait"],
+        "forbidden_actions": forbidden_actions,
         "warning": DEBUG_ONLY_WARNING,
+        "role_warning": (
+            f"This {actor} session is role-bound. Do not switch to `{opposite_actor}` or "
+            f"invoke {', '.join(forbidden_actions)} from this session."
+        ),
     }
 
 
@@ -1162,6 +1173,10 @@ def debug_command_payload(command: str, payload: dict) -> dict:
         "command": command,
         "debug_only": True,
         "warning": DEBUG_ONLY_WARNING,
+        "role_warning": (
+            "Do not switch roles from a blocked gate session. A `vibespec fix gate` session "
+            "must stay `fix`; a `vibespec triage gate` session must stay `triage`."
+        ),
         "required_entrypoints": {
             "triage": "run-triage-pass",
             "fix": "run-fix-pass",

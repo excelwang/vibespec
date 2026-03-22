@@ -76,6 +76,10 @@ Use low-level mutating commands only after reasoning over runner output:
 - `python3 scripts/agent_sync.py publish-submission ...`
 
 If `state` or `wait` is called anyway, their output must be treated as a debug-only warning, not as permission to bypass the blocking runners.
+Each gate session is role-bound:
+
+- `vibespec fix gate` must remain `fix` and must not switch into triage or invoke `run-triage-pass` / `publish-triage`.
+- `vibespec triage gate` must remain `triage` and must not switch into fix or invoke `run-fix-pass` / `publish-submission` outside the protocol.
 
 The fix gate starts closed by default. Only Triage opens it by publishing a classified defect batch.
 
@@ -170,8 +174,9 @@ Do not auto-takeover by default.
 
 1. Load `references/gate_workflows.md`.
 2. Start with `python3 scripts/agent_sync.py run-fix-pass` and let it block the session until released repair work exists or the gate is terminal.
-3. Execute only the latest released repair items within the released scope boundary.
-4. If the repair needs multiple rounds, create fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, then iterate repair -> validate -> re-scan until no actionable item remains.
-5. If Triage is still classifying later classes, keep working locally and do not publish yet.
-6. After Triage completes and hands off final turn ownership, validate and publish the frozen submission.
-7. Switch to `triage_turn`.
+3. Stay role-bound to `fix`; do not switch to triage just because no work has been released yet.
+4. Execute only the latest released repair items within the released scope boundary.
+5. If the repair needs multiple rounds, create fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, then iterate repair -> validate -> re-scan until no actionable item remains.
+6. If Triage is still classifying later classes, keep working locally and do not publish yet.
+7. After Triage completes and hands off final turn ownership, validate and publish the frozen submission.
+8. Switch to `triage_turn`.

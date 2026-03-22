@@ -59,6 +59,8 @@ Manage the refinement of raw thoughts into traceable specifications.
   - `python3 scripts/agent_sync.py run-fix-pass`
 - Let the script block the session until the actor becomes actionable or the gate becomes terminal.
 - If `state` or `wait` is called anyway, treat their output as a warning that they are debug-only and not authorization to bypass blocking.
+- A `vibespec fix gate` session is role-bound to `fix`; it must not switch into triage, run `run-triage-pass`, or call `publish-triage`.
+- A `vibespec triage gate` session is role-bound to `triage`; it must not switch into fix, run `run-fix-pass`, or call `publish-submission` except as directed by the workflow.
 - Use low-level mutating commands only after reasoning over the runner output:
   - `python3 scripts/agent_sync.py publish-triage ...`
   - `python3 scripts/agent_sync.py publish-submission ...`

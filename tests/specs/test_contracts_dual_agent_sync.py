@@ -93,6 +93,7 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertTrue(state_payload["debug_only"])
         self.assertTrue(wait_payload["debug_only"])
         self.assertIn("Do not bypass gate blocking", state_payload["warning"])
+        self.assertIn("must stay `fix`", state_payload["role_warning"])
         self.assertEqual(
             state_payload["required_entrypoints"]["triage"], "run-triage-pass"
         )
@@ -378,6 +379,12 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(
             result["blocking_contract"]["normal_entrypoint"], "run-fix-pass"
         )
+        self.assertEqual(result["blocking_contract"]["must_remain_actor"], "fix")
+        self.assertEqual(
+            result["blocking_contract"]["must_not_switch_to_actor"], "triage"
+        )
+        self.assertIn("publish-triage", result["blocking_contract"]["forbidden_actions"])
+        self.assertIn("role-bound", result["blocking_contract"]["role_warning"])
         self.assertEqual(result["state"]["expected_actor"], "triage")
         self.assertFalse(result["state"]["fix_gate_open"])
 

@@ -734,6 +734,10 @@ standard_terms:
   > Responsibility: Session discipline — keep waiting semantics inside `agent_sync.py` instead of reimplemented ad hoc by the Agent.
   > Verification: Skill and protocol documentation route `vibespec fix gate` and `vibespec triage gate` through the blocking runner commands, label `state`/`wait` as debug-only, and debug command output warns agents not to bypass blocking with them.
 
+- **ROLE_BOUND_SESSIONS**: A `vibespec fix gate` session MUST remain `fix`, and a `vibespec triage gate` session MUST remain `triage`; blocked waiting MUST NOT justify switching to the peer role.
+  > Responsibility: Mutual exclusion — prevent one session from taking over the other actor’s responsibilities just because its own work is blocked.
+  > Verification: Runner/debug output includes explicit role-binding warnings and forbidden peer-role actions.
+
 - **WORKFLOW_MAPPING**: System MUST expose unified Triage and Fix workflow metadata in coordination state.
   > Responsibility: Routing — prevent the Agent from re-deciding the phase workflow after trigger.
   > Verification: Gate state includes triage workflow name/phase and fix workflow name/phase.
