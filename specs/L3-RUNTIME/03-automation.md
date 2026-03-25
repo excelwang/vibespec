@@ -38,12 +38,30 @@
 | Condition | Verdict | Action |
 |-----------|---------|--------|
 | `status` in `{done, aborted, blocked}` | EXIT | Stop the loop |
-| `expected_actor != self` and `status = active` | WAIT | Sleep or back off, then reload shared state |
-| `self = fix` and `fix_gate_open = false` | WAIT | Keep waiting; no released repair work exists yet |
+| `active_owner != self` and `self != fix` and `status = active` | WAIT | Sleep or back off, then reload shared state |
+| `self = fix` and `worker_state = dormant` | WAIT | Keep waiting; no released repair work exists yet |
 | Turn lock unavailable | WAIT | Retry later without ending the loop |
 | No-progress window exceeded | ESCALATE | Mark `blocked` or `suspect_stale` and request manual recovery |
-| `expected_actor = self` and lock acquired | ACT | Execute the current turn |
-| `self = fix` and `fix_gate_open = true` | ACT | Start executing released repair work even if Triage is still classifying later defect classes |
+| `active_owner = self` and lock acquired | ACT | Execute the current baton-owned turn |
+| `self = fix` and `worker_state in {released, owner}` | ACT | Start executing released repair work; publish only when the baton has moved to Fix |
+
+## [decision] BatonAuthority
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| Orchestrating `vibespec fix gate` or `vibespec triage gate` | REQUIRE | Use the installed `subagent-baton` skill as the authority for generic baton semantics |
+| Repo-local coordination docs are loaded | REQUIRE | Treat them as vibespec-specific adapters, not as competing protocol sources |
+| Canonical baton skill is unavailable | REJECT | Stop and surface the missing dependency instead of improvising a replacement protocol |
+
+## [decision] WorkerIterationControl
+
+**Rules**:
+| Condition | Verdict | Action |
+|-----------|---------|--------|
+| Fix receives released work while Triage still owns shared state | REQUIRE | Execute one bounded worker iteration and return control without publishing shared-state mutations |
+| Fix receives final baton ownership | REQUIRE | Validate and publish the frozen submission before returning ownership to Triage |
+| Worker iteration completes without an explicit handoff outcome | REJECT | Treat the loop as protocol-broken and request orchestration recovery |
 
 ## [decision] AutoDecisionPriority
 

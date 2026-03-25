@@ -34,14 +34,14 @@ version: 3.0.0
 
 ### Roles.FixSession
 
-> The implementation-facing session responsible for executing the latest triage-generated repair plan and producing the next triageable artifact set.
+> The worker-side execution role responsible for bounded repair iterations against the latest triage-generated repair plan and producing the next triageable artifact set.
 
 #### FixSession
 
-**Role**: Executes frozen repair tasks, validates changes, and publishes frozen submissions.
+**Role**: Executes frozen repair tasks, validates changes, and publishes frozen submissions when the baton moves to Fix.
 
 - **Observes**: Coordination state, open defect ledger, frozen repair plan, repository baseline, and local validation results.
-- **Decides**: How to execute the published repair logic, whether released work is available, and whether the round is ready to submit.
+- **Decides**: How to execute the published repair logic within released scope, whether released work is available, and whether the round is ready to submit.
 - **Acts**:
     - **Implementing**: Edits `src/`, `specs/`, and tests during `fix_turn` or while released work is available.
     - **Validating**: Runs validation before handoff.
@@ -49,18 +49,18 @@ version: 3.0.0
 
 ### Roles.TriageSession
 
-> The automated audit-facing session responsible for deciding whether another repair round is required.
+> The coordinator-side audit role responsible for deciding whether another repair round is required.
 
 #### TriageSession
 
-**Role**: Audits the latest frozen baseline or submission, identifies all supported defect classes in priority order, and reports acceptance or a frozen repair plan.
+**Role**: Audits the latest frozen baseline or submission, identifies all supported defect classes in priority order, owns shared-state updates, and reports acceptance or a frozen repair plan.
 
 - **Observes**: Coordination state, latest submission manifest, repository diff, and validation evidence.
 - **Decides**: Acceptance vs rejection, defect classification, repair logic, release timing for Fix, and completion of the triage round.
 - **Acts**:
     - **Triaging**: Examines the frozen baseline or submission only, in class order `spec-drift -> src-drift -> quality`.
     - **Reporting**: Writes defect IDs, defect types, and repair logic.
-    - **Releasing**: Opens the Fix gate after each classified batch with repair work.
+    - **Releasing**: Opens the Fix gate after each classified batch with repair work while retaining shared-state ownership until the full class cycle is complete.
     - **HandingOff**: Returns control to Fix or marks completion.
 
 ---

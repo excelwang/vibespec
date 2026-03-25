@@ -156,6 +156,12 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(state["status"], "active")
         self.assertEqual(state["phase"], "triage_turn")
         self.assertEqual(state["expected_actor"], "triage")
+        self.assertEqual(state["active_owner"], "triage")
+        self.assertEqual(state["worker_state"], "dormant")
+        self.assertEqual(state["coordination_model"], "coordinator-plus-one-worker")
+        self.assertEqual(state["coordination_authority"]["skill_name"], "subagent-baton")
+        self.assertEqual(state["coordinator_actor"], "triage")
+        self.assertEqual(state["worker_actor"], "fix")
         self.assertFalse(state["fix_gate_open"])
         self.assertEqual(state["next_triage_class_index"], 0)
         self.assertEqual(
@@ -165,6 +171,14 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(
             state["gate_profile"]["fix_workflow"]["name"],
             "UnifiedGateFixWorkflow",
+        )
+        self.assertEqual(
+            state["gate_profile"]["coordination_model"],
+            "coordinator-plus-one-worker",
+        )
+        self.assertEqual(
+            state["gate_profile"]["coordination_authority"]["skill_name"],
+            "subagent-baton",
         )
         self.assertFalse(state["policy"]["heartbeat_required"])
         self.assertFalse(state["policy"]["work_budget_required"])
@@ -181,6 +195,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(verdict["result"], "timeout")
         self.assertEqual(verdict["state"]["status"], "active")
         self.assertEqual(verdict["state"]["expected_actor"], "triage")
+        self.assertEqual(verdict["state"]["active_owner"], "triage")
+        self.assertEqual(verdict["state"]["worker_state"], "dormant")
         self.assertFalse(verdict["state"]["fix_gate_open"])
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
@@ -197,13 +213,17 @@ class TestContractsDualAgentSync(unittest.TestCase):
         """CONTRACTS.DUAL_AGENT_GATE.WORKFLOW_MAPPING: Skill SHOULD route prompts through references."""
         skill_root = Path(__file__).parent.parent.parent / "src" / "skills" / "vibespec"
         reference_path = skill_root / "references" / "gate_workflows.md"
+        coordination_path = skill_root / "references" / "dual_agent_coordination.md"
         skill_path = skill_root / "SKILL.md"
 
         self.assertTrue(reference_path.exists(), "gate_workflows.md MUST exist")
+        self.assertTrue(coordination_path.exists(), "dual_agent_coordination.md MUST exist")
         reference_content = reference_path.read_text()
+        coordination_content = coordination_path.read_text()
         self.assertIn("## Unified Gate", reference_content)
         self.assertIn("UnifiedGateTriageWorkflow", reference_content)
         self.assertIn("UnifiedGateFixWorkflow", reference_content)
+        self.assertIn("installed `subagent-baton` skill", reference_content)
         self.assertIn("structured review packet only", reference_content)
         self.assertIn("fully read every listed `specs/` file", reference_content)
         self.assertIn("confirm an actual semantic contradiction", reference_content)
@@ -211,12 +231,20 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertIn("relevant `src` modules against `L2`", reference_content)
         self.assertIn("components against the key mechanisms fixed in `L3`", reference_content)
         self.assertIn("do not use keyword, regex, or naming scans as a quality probe", reference_content)
+        self.assertIn(
+            "authoritative coordination protocol is the installed `subagent-baton` skill",
+            coordination_content,
+        )
+        self.assertIn("coordinator-plus-worker baton model", coordination_content)
+        self.assertIn("worker_state = dormant | released | owner", coordination_content)
 
         skill_content = skill_path.read_text()
         self.assertIn("vibespec fix gate", skill_content)
         self.assertIn("vibespec triage gate", skill_content)
         self.assertIn("vibespec review [SPEC_ID]", skill_content)
         self.assertNotIn("vibespec review gate", skill_content)
+        self.assertIn("subagent-baton", skill_content)
+        self.assertIn("coordinator + one worker", skill_content)
         self.assertIn("references/gate_workflows.md", skill_content)
         self.assertIn("run-triage-pass", skill_content)
         self.assertIn("run-fix-pass", skill_content)
@@ -314,6 +342,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
             )
         )
         self.assertEqual(first_batch["expected_actor"], "triage")
+        self.assertEqual(first_batch["active_owner"], "triage")
+        self.assertEqual(first_batch["worker_state"], "released")
         self.assertTrue(first_batch["fix_gate_open"])
         self.assertEqual(first_batch["published_triage_classes"], ["spec-drift"])
         self.assertEqual(first_batch["open_defects"], ["R1-1"])
@@ -329,6 +359,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
         fix_verdict = store.wait_for_turn("fix", poll_interval=0.01, timeout=0.0)
         self.assertEqual(fix_verdict["result"], "actionable")
         self.assertEqual(fix_verdict["state"]["expected_actor"], "triage")
+        self.assertEqual(fix_verdict["state"]["active_owner"], "triage")
+        self.assertEqual(fix_verdict["state"]["worker_state"], "released")
 
         with self.assertRaises(CoordinationError):
             store.publish_submission(
@@ -345,6 +377,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
             )
         )
         self.assertEqual(second_batch["expected_actor"], "triage")
+        self.assertEqual(second_batch["active_owner"], "triage")
+        self.assertEqual(second_batch["worker_state"], "released")
         self.assertEqual(
             second_batch["published_triage_classes"],
             ["spec-drift", "src-drift"],
@@ -359,6 +393,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
         )
         self.assertEqual(final_triage["expected_actor"], "fix")
         self.assertEqual(final_triage["phase"], "fix_turn")
+        self.assertEqual(final_triage["active_owner"], "fix")
+        self.assertEqual(final_triage["worker_state"], "owner")
 
         first_submission = store.publish_submission(
             base_rev="base-0",
@@ -369,6 +405,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
         )
         self.assertEqual(first_submission["expected_actor"], "triage")
         self.assertEqual(first_submission["submission_id"], 1)
+        self.assertEqual(first_submission["active_owner"], "triage")
+        self.assertEqual(first_submission["worker_state"], "dormant")
 
         accepted_batch_1 = store.publish_triage(
             **self._triage_kwargs(
@@ -399,6 +437,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(accepted["status"], "done")
         self.assertEqual(accepted["phase"], "done")
         self.assertIsNone(accepted["expected_actor"])
+        self.assertIsNone(accepted["active_owner"])
+        self.assertEqual(accepted["worker_state"], "dormant")
 
     @verify_spec("CONTRACTS.DUAL_AGENT_GATE")
     def test_run_triage_pass_initializes_and_returns_probe_packet(self):
@@ -418,6 +458,12 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(
             result["blocking_contract"]["normal_entrypoint"], "run-triage-pass"
         )
+        self.assertEqual(
+            result["baton_contract"]["coordination_authority"]["skill_name"],
+            "subagent-baton",
+        )
+        self.assertEqual(result["baton_contract"]["active_owner"], "triage")
+        self.assertEqual(result["baton_contract"]["worker_state"], "dormant")
         self.assertIn("state", result["blocking_contract"]["must_not_bypass_with"])
         self.assertTrue(result["semantic_review_contract"]["signals_only"])
         self.assertTrue(result["semantic_review_contract"]["must_confirm_semantically"])
@@ -607,6 +653,12 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(
             result["blocking_contract"]["normal_entrypoint"], "run-fix-pass"
         )
+        self.assertEqual(
+            result["baton_contract"]["coordination_authority"]["skill_name"],
+            "subagent-baton",
+        )
+        self.assertEqual(result["baton_contract"]["active_owner"], "triage")
+        self.assertEqual(result["baton_contract"]["worker_state"], "dormant")
         self.assertEqual(result["blocking_contract"]["must_remain_actor"], "fix")
         self.assertEqual(
             result["blocking_contract"]["must_not_switch_to_actor"], "triage"
@@ -638,6 +690,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
             store = CoordinationStore(self.root)
             state = store.read_state()
             self.assertEqual(state["expected_actor"], "triage")
+            self.assertEqual(state["active_owner"], "triage")
+            self.assertEqual(state["worker_state"], "dormant")
             self.assertFalse(state["fix_gate_open"])
 
             store.publish_triage(
@@ -654,6 +708,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
             payload = json.loads(stdout)
             self.assertEqual(payload["result"], "actionable")
             self.assertEqual(payload["actor"], "fix")
+            self.assertEqual(payload["baton_contract"]["active_owner"], "triage")
+            self.assertEqual(payload["baton_contract"]["worker_state"], "released")
             self.assertEqual(payload["open_defects"], ["R1-1"])
         finally:
             if process.poll() is None:
@@ -700,6 +756,8 @@ class TestContractsDualAgentSync(unittest.TestCase):
         self.assertEqual(result["state"]["status"], "active")
         self.assertEqual(result["state"]["phase"], "triage_turn")
         self.assertEqual(result["state"]["expected_actor"], "triage")
+        self.assertEqual(result["state"]["active_owner"], "triage")
+        self.assertEqual(result["state"]["worker_state"], "dormant")
         self.assertEqual(result["state"]["published_triage_classes"], [])
         self.assertEqual(result["state"]["open_defects"], [])
 

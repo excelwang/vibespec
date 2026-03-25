@@ -1,189 +1,105 @@
-# Dual-Agent Coordination Reference
+# Vibespec Baton Coordination Adapter
 
-> **Load when**: User wants `fix` and `triage` agent sessions to run `vibespec fix gate` / `vibespec triage gate` without an external orchestrator.
+> **Load when**: User wants `vibespec fix gate` or `vibespec triage gate`, and the Agent needs the vibespec-specific overlay for the canonical baton protocol.
 
-## Coordination Goal
+## Authority
 
-Keep two sessions in one unified gate where Triage owns classification and Fix waits for released work:
+The authoritative coordination protocol is the installed `subagent-baton` skill.
 
-```text
-TRIAGE_TURN -> FIX_TURN -> TRIAGE_TURN -> ... -> DONE
-```
+This file is only the vibespec adapter layer. It maps the canonical baton model onto:
 
-- `triage` works first and is solely responsible for identifying all defect classes.
-- `triage` scans in priority order: `spec-drift -> src-drift -> quality`.
-- after each class is classified, `triage` may release work immediately to the waiting `fix` session.
-- `triage` freezes both the defect list and the repair logic for the next round.
-- `fix` executes only the latest triage-generated repair plan.
-- Waiting is not completion.
-- Human-reviewed flows stay outside this gate: `vibespec review [SPEC_ID]`, `vibespec bug`, and `vibespec test` are separate workflows.
+- `triage` / `fix` gate compatibility entrypoints
+- vibespec defect-class ordering
+- early Fix release rules
+- frozen submission and repair-plan requirements
 
-## Entry Commands
+If the installed `subagent-baton` skill is unavailable, stop instead of improvising a local replacement protocol.
 
-- Fix session: `vibespec fix gate`
-- Triage session: `vibespec triage gate`
+## Role Mapping
 
-## Minimal Protocol
+- `triage` is the coordinator-side actor for state ownership, defect classification, and repair-plan publication.
+- `fix` is the worker-side actor for bounded repair execution against released scope.
+- `triage` and `fix` are not peer orchestration endpoints. They are compatibility roles within one coordinator-plus-worker baton model.
 
-### Shared State
+## Shared-State Mapping
 
-Store shared coordination state outside the tracked work tree, for example:
+The shared coordination state keeps the existing gate-compatible fields such as:
 
-```text
-.git/agent-sync/
-  gate/
-    all-defects/
-```
+- `phase`
+- `expected_actor`
+- `fix_gate_open`
+- `open_defects`
+- `active_repair_plan`
 
-Suggested `current.json` fields:
+In addition, vibespec baton state must expose:
 
-```json
-{
-  "gate": "all-defects",
-  "quality_target_id": "VISION.QUALITY_DETECTION",
-  "quality_target_source": "project-specs | vibespec-template",
-  "status": "active",
-  "phase": "triage_turn",
-  "expected_actor": "triage",
-  "fix_gate_open": false,
-  "next_triage_class_index": 0,
-  "submission_id": 0,
-  "open_defects": [],
-  "active_repair_plan": []
-}
-```
+- `coordination_model = coordinator-plus-one-worker`
+- `coordination_authority.skill_name = subagent-baton`
+- `active_owner`
+- `coordinator_actor = triage`
+- `worker_actor = fix`
+- `worker_state = dormant | released | owner`
 
-### Locking
+Interpretation:
 
-Use a short lock only for shared-state transitions:
+- `active_owner` is the only side allowed to mutate shared gate state.
+- `expected_actor` remains the compatibility alias for the current baton owner.
+- `worker_state = released` means Fix may execute bounded repair work, but Triage still owns the shared state.
+- `worker_state = owner` means the baton has moved to Fix for final submission work.
 
-1. Claim current turn ownership.
-2. Publish `submission.json`.
-3. Publish `triage-report.json`.
-4. Switch `phase` / `expected_actor` / `status`.
+## Baton Semantics In Vibespec
 
-Do not hold the lock during the actual Fix or Triage work.
+### Triage-Owned State
 
-Default to the blocking runner commands first:
+During `triage_turn`:
+
+- `triage` owns the baton and remains the only shared-state writer.
+- `triage` must classify in order `spec-drift -> src-drift -> quality`.
+- after each rejected class, `triage` may release bounded Fix work early by opening the Fix gate
+- early release does not transfer shared-state ownership yet
+
+### Fix-Owned State
+
+After Triage finishes the full class scan and defects remain:
+
+- the baton moves to `fix`
+- `phase = fix_turn`
+- `active_owner = fix`
+- `worker_state = owner`
+- Fix validates and publishes the frozen submission before the baton returns to `triage`
+
+### Done / Blocked
+
+- `done`, `aborted`, and `blocked` are terminal
+- terminal state clears `active_owner`
+- waiting is never completion by itself
+
+## Blocking Entry Rules
+
+Normal gate entry must still use the existing blocking runner commands:
 
 - `python3 scripts/agent_sync.py run-triage-pass`
 - `python3 scripts/agent_sync.py run-fix-pass`
 
-Do not inspect `state` or use `wait` as the normal entry sequence for `vibespec fix gate` / `vibespec triage gate`.
-Use low-level mutating commands only after reasoning over runner output:
+`state` and `wait` remain debug-only helpers.
 
-- `python3 scripts/agent_sync.py publish-triage ...`
-- `python3 scripts/agent_sync.py publish-submission ...`
+## Worker Iterations
 
-If `state` or `wait` is called anyway, their output must be treated as a debug-only warning, not as permission to bypass the blocking runners.
-Each gate session is role-bound:
+When Fix is released:
 
-- `vibespec fix gate` must remain `fix` and must not switch into triage or invoke `run-triage-pass` / `publish-triage`.
-- `vibespec triage gate` must remain `triage` and must not switch into fix or invoke `run-fix-pass` / `publish-submission` outside the protocol.
+- treat each Fix wake-up as one bounded worker iteration
+- stay inside the latest released repair plan
+- do not publish a submission until Triage has completed the full classification cycle and the baton has actually moved to Fix
 
-The fix gate starts closed by default. Only Triage opens it by publishing a classified defect batch.
+When Triage owns the baton:
 
-### Triage Responsibilities
+- classify exactly the next required defect class
+- publish one class report at a time
+- update shared state before deciding whether Fix stays released or becomes the active owner
 
-Triage audits the latest baseline or frozen submission across all supported defect classes:
+## Vibespec-Specific Constraints
 
-- spec drift
-- src/spec drift
-- quality defects from `VISION.QUALITY_DETECTION`, using the project item when present and otherwise the vibespec template default
-
-For every rejected triage item, Triage must publish:
-
-- `id`
-- `defect_type`
-- evidence summary
-- per-defect evidence
-- repair summary
-- explicit `repair_logic`
-
-For every accepted or rejected triage class report, Triage must persist:
-
-- `checks_run`
-- `evidence_summary`
-- optional `notes`
-
-Fix must treat the released repair items as the only in-scope work for the current cycle.
-Fix may start work as soon as Triage releases any classified batch, even if Triage is still classifying later classes.
-
-### Frozen Triage Target
-
-Before handing off, Fix publishes an immutable submission manifest containing at least:
-
-- `submission_id`
-- `base_rev`
-- `head_rev`
-- changed file list
-- validation results
-- response for every previously open defect
-- repair round count
-- artifact directory when multi-round repair was required
-
-Triage must audit that exact baseline or `submission_id`, not a moving work tree.
-
-### Waiting Semantics
-
-When an agent observes:
-
-- `expected_actor != self`
-- lock unavailable
-- for Fix: `fix_gate_open = false`
-
-it enters `WAIT`, then reloads state later. It does not decide the loop is complete.
-
-Terminal states are explicit:
-
-- `done`
-- `aborted`
-- `blocked`
-
-## No Heartbeat / No Work Budget Mode
-
-This protocol intentionally supports:
-
-- no mandatory heartbeat files
-- no fixed execution budget for Fix or Triage work
-
-Use this mode when manual recovery is acceptable.
-
-## Recovery Policy
-
-Without heartbeats, stale detection should be conservative:
-
-- watch for long periods with no state change
-- mark `blocked` or `suspect_stale`
-- require human intervention unless a separate takeover policy is defined
-
-Do not auto-takeover by default.
-
-## ReAct Loop Template
-
-### Triage Session
-
-1. Load `references/gate_workflows.md`.
-2. Start with `python3 scripts/agent_sync.py run-triage-pass` and let it block the session until triage becomes actionable or the gate is terminal.
-3. If the last cycle is `done`, `run-triage-pass` may reopen a fresh `triage_turn` cycle automatically.
-4. Treat the returned probe packet as a structured review packet only; it defines scope and comparison anchors, but does not classify defects by itself.
-5. Fully read every `specs/` file, every listed readable text file under `src/`, and every listed context file from the triage runner before publishing any defect.
-6. For `spec-drift`, compare the reviewed layer against its immediate parent layer item by item in the runner-provided order before deciding `accept`.
-7. For `src-drift`, compare the relevant src modules against `L2` architecture and src components against key `L3` mechanisms before deciding `accept`.
-8. For `quality`, review the relevant source modules/components semantically against the quality target categories, `L2`, and key `L3` mechanisms; do not use keyword or regex scanning.
-9. Write the class review artifact with reviewed targets, anchor/context coverage, and per-target comparison notes before publishing any batch.
-10. Confirm a semantic inconsistency only after the full-file read, structured comparison, and review artifact are complete; do not judge from snippets or anchor fragments.
-11. Detect `spec-drift`, publish that batch, and open the fix gate if work exists.
-12. Continue with `src-drift`, then `quality`, publishing each batch in order.
-13. After the final class is classified, switch to `fix_turn` if any defects remain.
-
-### Fix Session
-
-1. Load `references/gate_workflows.md`.
-2. Start with `python3 scripts/agent_sync.py run-fix-pass` and let it block the session until released repair work exists or the gate is terminal.
-3. Stay role-bound to `fix`; do not switch to triage just because no work has been released yet.
-4. Execute only the latest released repair items within the released scope boundary.
-5. If the repair needs multiple rounds, create fresh `specs/build/<timestamp>/todo.md` and `auto-decisions.md` artifacts, then iterate repair -> validate -> re-scan until no actionable item remains.
-6. If Triage is still classifying later classes, keep working locally and do not publish yet.
-7. After Triage completes and hands off final turn ownership, validate and publish the frozen submission.
-8. Switch to `triage_turn`.
+- Triage reports must persist `checks_run`, `evidence_summary`, semantic review coverage, and per-defect `repair_logic` for rejects.
+- Fix submissions must answer every open defect.
+- Multi-round Fix work still requires `specs/build/<timestamp>/todo.md` and `auto-decisions.md`.
+- Probe packets remain structured review inputs only; they do not classify defects by themselves.

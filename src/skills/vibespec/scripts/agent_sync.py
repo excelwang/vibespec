@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Minimal shared-state coordination store for paired fix/triage gate loops.
+Baton-driven shared-state coordination for vibespec fix/triage gate loops.
 """
 from __future__ import annotations
 
@@ -23,11 +23,33 @@ GATE_NAME = "all-defects"
 QUALITY_TARGET_ID = "VISION.QUALITY_DETECTION"
 QUALITY_TARGET_SOURCE_PROJECT = "project-specs"
 QUALITY_TARGET_SOURCE_TEMPLATE = "vibespec-template"
+COORDINATION_MODEL = "coordinator-plus-one-worker"
+COORDINATION_AUTHORITY = {
+    "type": "installed-skill",
+    "skill_name": "subagent-baton",
+    "skill_path_hint": "~/.codex/skills/subagent-baton/SKILL.md",
+    "required": True,
+}
+COORDINATOR_ACTOR = "triage"
+WORKER_ACTOR = "fix"
+WORKER_STATE_DORMANT = "dormant"
+WORKER_STATE_RELEASED = "released"
+WORKER_STATE_OWNER = "owner"
+WORKER_STATES = {
+    WORKER_STATE_DORMANT,
+    WORKER_STATE_RELEASED,
+    WORKER_STATE_OWNER,
+}
+WORKER_CONTROL_MARKERS = [
+    "ITERATION_DONE_WORKER_CONTINUE",
+    "BATON_READY_FOR_COORDINATOR",
+    "BLOCKED",
+]
 DEFECT_CLASSES = ["spec-drift", "src-drift", "quality"]
 GATE_PROFILE = {
     "description": (
         "Unified triage-generated repair gate covering quality defects, spec drift, "
-        "and src/spec drift."
+        "and src/spec drift under a coordinator-plus-worker baton model."
     ),
     "triage_workflow": {"name": "UnifiedGateTriageWorkflow", "phase": "DetectAndPlan"},
     "fix_workflow": {"name": "UnifiedGateFixWorkflow", "phase": "ExecuteRepairPlan"},
@@ -193,6 +215,12 @@ def gate_profile_payload(quality_target: dict[str, str]) -> dict:
         "quality_target_id": quality_target["quality_target_id"],
         "quality_target_source": quality_target["quality_target_source"],
         "quality_checklist": list(GATE_PROFILE["quality_checklist"]),
+        "coordination_model": COORDINATION_MODEL,
+        "coordination_authority": dict(COORDINATION_AUTHORITY),
+        "coordinator_actor": COORDINATOR_ACTOR,
+        "worker_actor": WORKER_ACTOR,
+        "worker_iteration_mode": "bounded",
+        "worker_control_markers": list(WORKER_CONTROL_MARKERS),
     }
 
 
@@ -636,63 +664,133 @@ def build_repair_plan(
     return plan
 
 
-class CoordinationStore:
-    """Filesystem-backed coordination store using short-lived lock directories."""
+class BatonEngine:
+    """Generic baton state engine shared by the vibespec gate adapter."""
 
-    def __init__(self, root: str | Path):
-        self.root = Path(root).resolve()
-        self.skill_root = Path(__file__).resolve().parent.parent
-        self.git_dir = resolve_git_dir(self.root)
-        self.sync_dir = self.git_dir / "agent-sync"
-        self.task_dir = self.sync_dir / "gate" / GATE_NAME
-        self.state_file = self.task_dir / "state" / "current.json"
-        self.lock_dir = self.task_dir / "lease" / "turn.lock"
-        self.submissions_dir = self.task_dir / "submissions"
-        self.triage_dir = self.task_dir / "triage"
+    def __init__(self, *, coordinator_actor: str, worker_actor: str):
+        self.coordinator_actor = coordinator_actor
+        self.worker_actor = worker_actor
 
-    def ensure_task(self) -> dict:
-        if self.state_file.exists():
-            return self.read_state()
-        return self.init_task()
-
-    def reset_completed_cycle(self) -> dict:
-        with self._short_lock():
-            state = self.read_state()
-            if state["status"] != "done":
-                return state
-
-            next_state = self._next_state(
-                state,
-                {
-                    "status": "active",
-                    "phase": "triage_turn",
-                    "expected_actor": "triage",
-                    "fix_gate_open": False,
-                    "triage_status": "scanning",
-                    "next_triage_class_index": 0,
-                    "published_triage_classes": [],
-                    "triage_of_submission_id": state["submission_id"],
-                    "open_defects": [],
-                    "active_repair_plan": [],
-                    "blocked_reason": None,
-                    "last_event": "cycle_reset",
-                },
+    def initial_state(
+        self,
+        payload: dict,
+        *,
+        active_owner: str | None,
+        worker_state: str = WORKER_STATE_DORMANT,
+    ) -> dict:
+        state = dict(payload)
+        state.update(
+            self._coordination_fields(
+                status=state["status"],
+                active_owner=active_owner,
+                worker_state=worker_state,
             )
-            write_json_atomic(self.state_file, next_state)
-            return next_state
+        )
+        return state
 
-    def init_task(self) -> dict:
-        if self.state_file.exists():
-            raise CoordinationError("Unified gate is already initialized.")
+    def transition(
+        self,
+        state: dict,
+        updates: dict,
+        *,
+        active_owner: str | None,
+        worker_state: str = WORKER_STATE_DORMANT,
+    ) -> dict:
+        next_state = dict(state)
+        next_state.update(updates)
+        next_state.update(
+            self._coordination_fields(
+                status=next_state["status"],
+                active_owner=active_owner,
+                worker_state=worker_state,
+            )
+        )
+        next_state["state_version"] = int(state["state_version"]) + 1
+        next_state["turn_id"] = int(state["turn_id"]) + 1
+        next_state["updated_at"] = utc_now()
+        return next_state
 
+    def inspect_actor(self, state: dict, actor: str) -> dict:
+        if state["status"] in TERMINAL_STATUSES:
+            return {"result": "terminal", "state": state}
+        if actor == self.worker_actor:
+            if (
+                state["status"] == "active"
+                and state.get("worker_state") == WORKER_STATE_RELEASED
+                and state.get("fix_gate_open")
+                and state.get("open_defects")
+            ):
+                return {"result": "actionable", "state": state}
+        if state["status"] == "active" and state.get("active_owner") == actor:
+            return {"result": "actionable", "state": state}
+        return {"result": "wait", "state": state}
+
+    def require_owner(self, state: dict, actor: str) -> None:
+        if state["status"] in TERMINAL_STATUSES:
+            raise CoordinationError(
+                f"Gate `{state['gate']}` is already terminal: {state['status']}."
+            )
+        if state.get("active_owner") != actor:
+            raise CoordinationError(
+                f"It is `{state.get('active_owner')}` turn, not `{actor}` turn."
+            )
+
+    def _coordination_fields(
+        self,
+        *,
+        status: str,
+        active_owner: str | None,
+        worker_state: str,
+    ) -> dict:
+        if status in TERMINAL_STATUSES:
+            return {
+                "coordination_model": COORDINATION_MODEL,
+                "coordination_authority": dict(COORDINATION_AUTHORITY),
+                "coordinator_actor": self.coordinator_actor,
+                "worker_actor": self.worker_actor,
+                "active_owner": None,
+                "expected_actor": None,
+                "worker_state": WORKER_STATE_DORMANT,
+            }
+
+        if active_owner not in ACTORS:
+            raise CoordinationError("Active owner must be `triage` or `fix`.")
+        if worker_state not in WORKER_STATES:
+            raise CoordinationError(
+                "Worker state must be one of: "
+                + ", ".join(sorted(WORKER_STATES))
+                + "."
+            )
+        if active_owner == self.worker_actor and worker_state != WORKER_STATE_OWNER:
+            raise CoordinationError("Worker-owned baton state must use worker_state=`owner`.")
+        if active_owner != self.worker_actor and worker_state == WORKER_STATE_OWNER:
+            raise CoordinationError("Only the worker actor may use worker_state=`owner`.")
+
+        return {
+            "coordination_model": COORDINATION_MODEL,
+            "coordination_authority": dict(COORDINATION_AUTHORITY),
+            "coordinator_actor": self.coordinator_actor,
+            "worker_actor": self.worker_actor,
+            "active_owner": active_owner,
+            "expected_actor": active_owner,
+            "worker_state": worker_state,
+        }
+
+
+class VibespecGateAdapter:
+    """Vibespec-specific gate state layered on the generic baton engine."""
+
+    def __init__(self, root: Path):
+        self.root = root
+
+    def initial_state(self) -> dict:
         quality_target = resolve_quality_target(self.root)
-        initial_state = {
+        return {
             "gate": GATE_NAME,
             "quality_target_id": quality_target["quality_target_id"],
             "quality_target_source": quality_target["quality_target_source"],
             "status": "active",
             "phase": "triage_turn",
-            "expected_actor": "triage",
             "fix_gate_open": False,
             "triage_status": "scanning",
             "next_triage_class_index": 0,
@@ -714,6 +812,151 @@ class CoordinationStore:
             },
             "gate_profile": gate_profile_payload(quality_target),
         }
+
+    def reset_cycle_fields(self, state: dict) -> dict:
+        return {
+            "status": "active",
+            "phase": "triage_turn",
+            "fix_gate_open": False,
+            "triage_status": "scanning",
+            "next_triage_class_index": 0,
+            "published_triage_classes": [],
+            "triage_of_submission_id": state["submission_id"],
+            "open_defects": [],
+            "active_repair_plan": [],
+            "blocked_reason": None,
+            "last_event": "cycle_reset",
+        }
+
+    def post_submission_fields(self, submission_id: int) -> dict:
+        return {
+            "status": "active",
+            "phase": "triage_turn",
+            "fix_gate_open": False,
+            "triage_status": "scanning",
+            "next_triage_class_index": 0,
+            "published_triage_classes": [],
+            "submission_id": submission_id,
+            "triage_of_submission_id": submission_id,
+            "open_defects": [],
+            "active_repair_plan": [],
+            "blocked_reason": None,
+            "last_event": "submission_published",
+        }
+
+    def triage_transition_fields(
+        self,
+        *,
+        report_id: int,
+        published_triage_classes: list[str],
+        open_defects: list[str],
+        active_repair_plan: list[dict[str, str]],
+        next_triage_class_index: int,
+        defect_class: str,
+    ) -> tuple[dict, str | None, str]:
+        triage_complete = next_triage_class_index >= len(DEFECT_CLASSES)
+        if triage_complete and not open_defects:
+            return (
+                {
+                    "status": "done",
+                    "phase": "done",
+                    "fix_gate_open": False,
+                    "triage_status": "complete",
+                    "next_triage_class_index": next_triage_class_index,
+                    "published_triage_classes": published_triage_classes,
+                    "open_defects": [],
+                    "active_repair_plan": [],
+                    "triage_report_id": report_id,
+                    "blocked_reason": None,
+                    "last_event": "triage_accepted",
+                },
+                None,
+                WORKER_STATE_DORMANT,
+            )
+        if triage_complete:
+            return (
+                {
+                    "status": "active",
+                    "phase": "fix_turn",
+                    "fix_gate_open": True,
+                    "triage_status": "complete",
+                    "next_triage_class_index": next_triage_class_index,
+                    "published_triage_classes": published_triage_classes,
+                    "open_defects": open_defects,
+                    "active_repair_plan": active_repair_plan,
+                    "triage_report_id": report_id,
+                    "blocked_reason": None,
+                    "last_event": "triage_completed_with_repairs",
+                },
+                WORKER_ACTOR,
+                WORKER_STATE_OWNER,
+            )
+        return (
+            {
+                "status": "active",
+                "phase": "triage_turn",
+                "fix_gate_open": bool(open_defects),
+                "triage_status": "scanning",
+                "next_triage_class_index": next_triage_class_index,
+                "published_triage_classes": published_triage_classes,
+                "open_defects": open_defects,
+                "active_repair_plan": active_repair_plan,
+                "triage_report_id": report_id,
+                "blocked_reason": None,
+                "last_event": f"triage_batch_published:{defect_class}",
+            },
+            COORDINATOR_ACTOR,
+            WORKER_STATE_RELEASED if open_defects else WORKER_STATE_DORMANT,
+        )
+
+class CoordinationStore:
+    """Vibespec gate adapter layered on a generic baton state engine."""
+
+    def __init__(self, root: str | Path):
+        self.root = Path(root).resolve()
+        self.skill_root = Path(__file__).resolve().parent.parent
+        self.git_dir = resolve_git_dir(self.root)
+        self.sync_dir = self.git_dir / "agent-sync"
+        self.task_dir = self.sync_dir / "gate" / GATE_NAME
+        self.state_file = self.task_dir / "state" / "current.json"
+        self.lock_dir = self.task_dir / "lease" / "turn.lock"
+        self.submissions_dir = self.task_dir / "submissions"
+        self.triage_dir = self.task_dir / "triage"
+        self.engine = BatonEngine(
+            coordinator_actor=COORDINATOR_ACTOR,
+            worker_actor=WORKER_ACTOR,
+        )
+        self.adapter = VibespecGateAdapter(self.root)
+
+    def ensure_task(self) -> dict:
+        if self.state_file.exists():
+            return self.read_state()
+        return self.init_task()
+
+    def reset_completed_cycle(self) -> dict:
+        with self._short_lock():
+            state = self.read_state()
+            if state["status"] != "done":
+                return state
+
+            next_state = self.engine.transition(
+                state,
+                self.adapter.reset_cycle_fields(state),
+                active_owner=COORDINATOR_ACTOR,
+                worker_state=WORKER_STATE_DORMANT,
+            )
+            write_json_atomic(self.state_file, next_state)
+            return next_state
+
+    def init_task(self) -> dict:
+        if self.state_file.exists():
+            raise CoordinationError("Unified gate is already initialized.")
+
+        initial_state = self.engine.initial_state(
+            self.adapter.initial_state(),
+            active_owner=COORDINATOR_ACTOR,
+            worker_state=WORKER_STATE_DORMANT,
+        )
         write_json_atomic(self.state_file, initial_state)
         return initial_state
 
@@ -725,14 +968,7 @@ class CoordinationStore:
     def inspect_actor(self, actor: str) -> dict:
         self._validate_actor(actor)
         state = self.read_state()
-        if state["status"] in TERMINAL_STATUSES:
-            return {"result": "terminal", "state": state}
-        if actor == "fix":
-            if state["status"] == "active" and state.get("fix_gate_open") and state["open_defects"]:
-                return {"result": "actionable", "state": state}
-        if state["status"] == "active" and state["expected_actor"] == actor:
-            return {"result": "actionable", "state": state}
-        return {"result": "wait", "state": state}
+        return self.engine.inspect_actor(state, actor)
 
     def wait_for_turn(
         self, actor: str, poll_interval: float = 2.0, timeout: float | None = None
@@ -808,22 +1044,11 @@ class CoordinationStore:
                 self.submissions_dir / f"submission-{submission_id:04d}.json", manifest
             )
 
-            next_state = self._next_state(
+            next_state = self.engine.transition(
                 state,
-                {
-                    "phase": "triage_turn",
-                    "expected_actor": "triage",
-                    "fix_gate_open": False,
-                    "triage_status": "scanning",
-                    "next_triage_class_index": 0,
-                    "published_triage_classes": [],
-                    "submission_id": submission_id,
-                    "triage_of_submission_id": submission_id,
-                    "open_defects": [],
-                    "active_repair_plan": [],
-                    "blocked_reason": None,
-                    "last_event": "submission_published",
-                },
+                self.adapter.post_submission_fields(submission_id),
+                active_owner=COORDINATOR_ACTOR,
+                worker_state=WORKER_STATE_DORMANT,
             )
             write_json_atomic(self.state_file, next_state)
             return next_state
@@ -925,55 +1150,20 @@ class CoordinationStore:
                 active_repair_plan.extend(repair_plan)
 
             next_triage_class_index = int(state.get("next_triage_class_index", 0)) + 1
-            triage_complete = next_triage_class_index >= len(DEFECT_CLASSES)
-
-            if triage_complete and not open_defects:
-                next_fields = {
-                    "status": "done",
-                    "phase": "done",
-                    "expected_actor": None,
-                    "fix_gate_open": False,
-                    "triage_status": "complete",
-                    "next_triage_class_index": next_triage_class_index,
-                    "published_triage_classes": published_triage_classes,
-                    "open_defects": [],
-                    "active_repair_plan": [],
-                    "triage_report_id": report_id,
-                    "blocked_reason": None,
-                    "last_event": "triage_accepted",
-                }
-            elif triage_complete:
-                next_fields = {
-                    "status": "active",
-                    "phase": "fix_turn",
-                    "expected_actor": "fix",
-                    "fix_gate_open": True,
-                    "triage_status": "complete",
-                    "next_triage_class_index": next_triage_class_index,
-                    "published_triage_classes": published_triage_classes,
-                    "open_defects": open_defects,
-                    "active_repair_plan": active_repair_plan,
-                    "triage_report_id": report_id,
-                    "blocked_reason": None,
-                    "last_event": "triage_completed_with_repairs",
-                }
-            else:
-                next_fields = {
-                    "status": "active",
-                    "phase": "triage_turn",
-                    "expected_actor": "triage",
-                    "fix_gate_open": bool(open_defects),
-                    "triage_status": "scanning",
-                    "next_triage_class_index": next_triage_class_index,
-                    "published_triage_classes": published_triage_classes,
-                    "open_defects": open_defects,
-                    "active_repair_plan": active_repair_plan,
-                    "triage_report_id": report_id,
-                    "blocked_reason": None,
-                    "last_event": f"triage_batch_published:{defect_class}",
-                }
-
-            next_state = self._next_state(state, next_fields)
+            next_fields, active_owner, worker_state = self.adapter.triage_transition_fields(
+                report_id=report_id,
+                published_triage_classes=published_triage_classes,
+                open_defects=open_defects,
+                active_repair_plan=active_repair_plan,
+                next_triage_class_index=next_triage_class_index,
+                defect_class=defect_class,
+            )
+            next_state = self.engine.transition(
+                state,
+                next_fields,
+                active_owner=active_owner,
+                worker_state=worker_state,
+            )
             write_json_atomic(self.state_file, next_state)
             return next_state
 
@@ -1020,15 +1210,16 @@ class CoordinationStore:
             raise CoordinationError("Blocked reason must not be empty.")
         with self._short_lock():
             state = self.read_state()
-            next_state = self._next_state(
+            next_state = self.engine.transition(
                 state,
                 {
                     "status": "blocked",
                     "phase": "blocked",
-                    "expected_actor": None,
                     "blocked_reason": reason,
                     "last_event": "blocked",
                 },
+                active_owner=None,
+                worker_state=WORKER_STATE_DORMANT,
             )
             write_json_atomic(self.state_file, next_state)
             return next_state
@@ -1625,6 +1816,7 @@ class CoordinationStore:
             "result": result,
             "actor": "triage",
             "blocking_contract": blocking_contract("triage"),
+            "baton_contract": self._baton_contract(state),
             "semantic_review_contract": semantic_review_contract(None),
             "full_file_review_contract": full_file_review_contract,
             "review_artifact_contract": {
@@ -1695,11 +1887,12 @@ class CoordinationStore:
             "result": result,
             "actor": "fix",
             "blocking_contract": blocking_contract("fix"),
+            "baton_contract": self._baton_contract(state),
             "state_version": state.get("state_version"),
             "active_repair_plan": list(state.get("active_repair_plan", [])),
             "open_defects": list(state.get("open_defects", [])),
             "triage_status": state.get("triage_status"),
-            "submission_allowed": state.get("expected_actor") == "fix",
+            "submission_allowed": state.get("active_owner") == "fix",
             "artifact_requirements": {
                 "multi_round_dir_root": "specs/build/<timestamp>/",
                 "required_files_when_repair_rounds_gt_1": [
@@ -1717,14 +1910,7 @@ class CoordinationStore:
 
     def _require_turn(self, state: dict, actor: str) -> None:
         self._validate_actor(actor)
-        if state["status"] in TERMINAL_STATUSES:
-            raise CoordinationError(
-                f"Gate `{state['gate']}` is already terminal: {state['status']}."
-            )
-        if state["expected_actor"] != actor:
-            raise CoordinationError(
-                f"It is `{state['expected_actor']}` turn, not `{actor}` turn."
-            )
+        self.engine.require_owner(state, actor)
 
     def _expected_triage_class(self, state: dict) -> str:
         index = int(state.get("next_triage_class_index", 0))
@@ -1732,13 +1918,20 @@ class CoordinationStore:
             raise CoordinationError("Triage classification is already complete for this cycle.")
         return DEFECT_CLASSES[index]
 
-    def _next_state(self, state: dict, updates: dict) -> dict:
-        next_state = dict(state)
-        next_state.update(updates)
-        next_state["state_version"] = int(state["state_version"]) + 1
-        next_state["turn_id"] = int(state["turn_id"]) + 1
-        next_state["updated_at"] = utc_now()
-        return next_state
+    def _baton_contract(self, state: dict) -> dict:
+        return {
+            "coordination_model": state.get("coordination_model", COORDINATION_MODEL),
+            "coordination_authority": dict(
+                state.get("coordination_authority", COORDINATION_AUTHORITY)
+            ),
+            "coordinator_actor": state.get("coordinator_actor", COORDINATOR_ACTOR),
+            "worker_actor": state.get("worker_actor", WORKER_ACTOR),
+            "active_owner": state.get("active_owner"),
+            "worker_state": state.get("worker_state"),
+            "bounded_worker_iterations": True,
+            "worker_control_markers": list(WORKER_CONTROL_MARKERS),
+            "shared_state_single_writer": True,
+        }
 
     @contextmanager
     def _short_lock(self):
@@ -1758,7 +1951,7 @@ class CoordinationStore:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Minimal shared-state coordination for paired fix/triage gate loops."
+        description="Baton-driven shared-state coordination for vibespec fix/triage gate loops."
     )
     parser.add_argument(
         "--root",

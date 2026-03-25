@@ -658,13 +658,17 @@ standard_terms:
 
 ## CONTRACTS.DUAL_AGENT_GATE
 
-- **STAGED_COORDINATION**: System MUST encode `phase`, `expected_actor`, and fix-gate release state in shared coordination state.
-  > Responsibility: Baton ownership — separate Triage classification authority from Fix execution authority.
-  > Verification: State transitions start at `triage_turn`, may expose released repair work while `expected_actor = triage`, and end only at `done` or `blocked`.
+- **STAGED_COORDINATION**: System MUST encode `phase`, `expected_actor`, `active_owner`, and worker release state in shared coordination state.
+  > Responsibility: Baton ownership — separate shared-state ownership from worker execution release.
+  > Verification: State transitions start at `triage_turn` with `active_owner = triage`, may expose released repair work while `expected_actor = triage`, and end only at `done` or `blocked`.
 
 - **TRIAGE_FIRST**: System MUST start the unified gate at `triage_turn`.
   > Responsibility: Planning order — ensure Triage defines repair work before Fix acts.
   > Verification: Initialized coordination state sets `phase = triage_turn` and `expected_actor = triage`.
+
+- **COORDINATION_AUTHORITY**: Agent MUST treat the installed `subagent-baton` skill as the coordination authority and use repo-local coordination prose only as a vibespec-specific adapter.
+  > Responsibility: Consistency — avoid competing generic protocols inside vibespec.
+  > Verification: Skill docs name `subagent-baton` as authoritative, and the local coordination reference maps vibespec behavior onto that protocol instead of redefining it wholesale.
 
 - **SHORT_LOCKS**: System MUST hold synchronization locks only while claiming turn ownership or publishing shared artifacts.
   > Responsibility: Throughput — prevent long lock holds during reasoning work.
@@ -691,8 +695,12 @@ standard_terms:
   > Verification: Triage batch publication order follows the configured class order.
 
 - **EARLY_FIX_RELEASE**: System MUST allow Triage to release Fix work immediately after each classified defect class instead of waiting for the full triage pass to complete.
-  > Responsibility: Parallelism — overlap Fix execution with later Triage classification work.
-  > Verification: Shared state can expose released repair items while Triage remains the expected actor.
+  > Responsibility: Parallelism — overlap Fix execution with later Triage classification work without giving up shared-state ownership early.
+  > Verification: Shared state can expose released repair items while Triage remains the expected actor and active owner.
+
+- **BOUNDED_WORKER_ITERATIONS**: Fix-side released work MUST be framed as bounded worker iterations under coordinator supervision.
+  > Responsibility: Orchestration safety — keep continuation and handoff decisions explicit.
+  > Verification: Gate docs and runner metadata describe Fix work as bounded iterations and expose the required worker control markers.
 
 - **FIX_GATE_DEFAULT_LOCKED**: System MUST keep the Fix gate closed when no released repair work exists.
   > Responsibility: Discipline — prevent Fix from inventing work before Triage publishes it.
@@ -722,8 +730,8 @@ standard_terms:
   > Responsibility: Command clarity — avoid overloading gate commands with manual review semantics.
   > Verification: `vibespec review [SPEC_ID]`, `vibespec bug`, `vibespec test`, and `vibespec distill` remain standalone workflows.
 
-- **GATE_COMMAND**: Agent MUST interpret `vibespec triage gate` and `vibespec fix gate` as the canonical trigger shape for paired gate loops.
-  > Responsibility: Usability — keep loop activation predictable and scriptable.
+- **GATE_COMMAND**: Agent MUST interpret `vibespec triage gate` and `vibespec fix gate` as the canonical trigger shape for baton-driven gate loops.
+  > Responsibility: Usability — keep loop activation predictable and scriptable while preserving compatibility commands.
   > Verification: Documentation and workflow examples use `vibespec triage gate` and `vibespec fix gate`.
 
 - **RUNNER_FIRST**: System MUST expose safe high-level runner commands before low-level mutating gate commands.
