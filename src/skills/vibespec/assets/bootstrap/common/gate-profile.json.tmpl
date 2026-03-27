@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "triage": {
+    "spec_roots": [
+      "specs"
+    ],
+    "source_roots": [
+      "src"
+    ]
+  },
+  "coverage": {
+    "black_box": {
+      "test_globs": [
+        "__BLACK_BOX_GLOB__"
+      ],
+      "contract_spec": "__CONTRACT_SPEC__"
+    },
+    "white_box": {
+      "test_globs": [
+        "__WHITE_BOX_GLOB__"
+      ],
+      "source_roots": [
+        "src"
+      ]
+    }
+  },
+  "run": {
+    "commands": __RUN_COMMANDS_JSON__
+  }
+}

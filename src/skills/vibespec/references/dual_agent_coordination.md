@@ -30,7 +30,7 @@ The shared coordination state keeps the existing gate-compatible fields such as:
 - `fix_gate_open`
 - `open_defects`
 - `active_repair_plan`
-- `state_version = 2`
+- `state_version = 3`
 - `state_revision`
 
 In addition, vibespec baton state must expose:
@@ -99,6 +99,12 @@ Normal gate entry must still use the existing blocking runner commands:
 
 - `python3 scripts/agent_sync.py run-triage-pass`
 - `python3 scripts/agent_sync.py run-fix-pass --timeout 0`
+
+Bootstrap precondition:
+
+- if `src/` is missing or empty, the repo is not ready for gate entry
+- do not improvise code creation from inside gate
+- direct the user to `vibespec bootstrap impl` first
 
 `state` and `wait` remain debug-only helpers.
 

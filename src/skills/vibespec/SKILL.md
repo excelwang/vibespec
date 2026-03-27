@@ -18,12 +18,18 @@ Manage the refinement of raw thoughts into traceable specifications.
 ### Passive / Context-Aware
 
 #### `vibespec`
-- Present the available workflows: `ingest`, `test`, `bug`, `reflect`, `distill`, `review`, `idea`, and baton-driven `fix|triage gate`.
+- Present the available workflows: `ingest`, `bootstrap impl`, `test`, `bug`, `reflect`, `distill`, `review`, `idea`, and baton-driven `fix|triage gate`.
 
 #### `vibespec ingest`
 - If `specs/` is missing, load `references/ingest_workflows.md` and run `BootstrapWorkflow`.
 - If `ideas/` contains pending files, load `references/ingest_workflows.md` and run `IdeaToSpecWorkflow`.
 - Otherwise, load `references/review_workflows.md` and run `SpecValidationWorkflow`.
+
+#### `vibespec bootstrap impl`
+- Load `references/ingest_workflows.md`, `references/layer_system.md`, and `references/testing_protocol.md`.
+- Run `ImplementationBootstrapWorkflow`.
+- This workflow is explicit-only; do not auto-trigger it from `vibespec ingest`.
+- Use `python3 scripts/bootstrap_impl.py --lang <profile>` as the deterministic generator after validating `specs/`.
 
 #### `vibespec reflect`
 - Analyze recent conversation history for new requirements or architectural changes.
@@ -48,6 +54,7 @@ Manage the refinement of raw thoughts into traceable specifications.
 
 #### `vibespec test`
 - Load `references/ingest_workflows.md` and `references/testing_protocol.md`.
+- If `src/` is missing or empty, stop and direct the user to `vibespec bootstrap impl` instead of entering certification.
 - Run `CertificationWorkflow`.
 
 #### `vibespec fix gate` / `vibespec triage gate`
@@ -57,6 +64,7 @@ Manage the refinement of raw thoughts into traceable specifications.
 - Load `references/gate_workflows.md` for the active actor phase.
 - Treat the gate as coordinator + one worker, not as two peer sessions. Keep exactly one shared-state owner at a time.
 - The repo must provide `specs/gate-profile.json`. `triage` v3 no longer falls back to weak documented-command probing when that file is missing or incomplete.
+- The repo must already have a non-empty `src/` tree. If the repo is still `specs/`-only, stop and direct the user to `vibespec bootstrap impl`.
 - Start normal triage entry from the blocking runner command `python3 scripts/agent_sync.py run-triage-pass`.
 - Start normal fix entry from the non-blocking check `python3 scripts/agent_sync.py run-fix-pass --timeout 0`, then follow the packet:
   - if `result=actionable`, continue fix work
@@ -104,6 +112,7 @@ Manage the refinement of raw thoughts into traceable specifications.
 ## Scripts
 
 - `python3 scripts/validate.py specs/` — structural validation and L1 coverage auditing.
+- `python3 scripts/bootstrap_impl.py --lang <profile>` — generate the minimal implementation, black-box skeleton tests, white-box skeleton tests, `scripts/test-workflow.sh`, and `specs/gate-profile.json` for a `specs/`-only repo.
 - `python3 scripts/agent_sync.py --help` — shared-state coordination for baton-driven `fix` + `triage` gate loops with coordinator/worker compatibility entrypoints.
 
 Run `python3 scripts/validate.py specs/` immediately after spec edits.

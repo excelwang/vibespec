@@ -1,6 +1,6 @@
 # Ingest Workflows Reference
 
-> **Load when**: `vibespec ingest`, `vibespec test`, first-time bootstrap, or idea refinement work.
+> **Load when**: `vibespec ingest`, `vibespec bootstrap impl`, `vibespec test`, first-time bootstrap, or idea refinement work.
 
 ## BootstrapWorkflow
 
@@ -15,6 +15,30 @@
 4. After approval, create `specs/L0-VISION.md` from `assets/L0-VISION.md`.
 5. Create `ideas/`.
 6. Run `python3 scripts/validate.py specs/`.
+
+## ImplementationBootstrapWorkflow
+
+**Trigger**: Explicit `vibespec bootstrap impl`.
+
+**Use when**: `specs/` already exists, but `src/` and supported test files do not.
+
+**Steps**:
+1. Run `python3 scripts/validate.py specs/` and stop on structural errors.
+2. Read `L1`, `L2`, and `L3` in full before deciding the initial implementation surface.
+3. Derive the minimal implementation map:
+   - one black-box contract test file per `L1` `## CONTRACTS.*` section
+   - one implementation module per leaf `L2` `ROLES.*` or `COMPONENTS.*` item
+   - related `L3` items attached as source comments or stubs
+4. Confirm the target language profile with the user if it is not already explicit.
+5. Run `python3 scripts/bootstrap_impl.py --lang <profile>`.
+6. Generate:
+   - minimal `src/` skeleton
+   - black-box contract test skeletons
+   - white-box supplemental test skeletons
+   - `scripts/test-workflow.sh`
+   - `specs/gate-profile.json`
+7. Do not run project-native tests in this workflow.
+8. After bootstrap, direct the user to `vibespec triage gate` / `vibespec fix gate`.
 
 ## IdeaToSpecWorkflow
 
@@ -62,12 +86,14 @@ Load `references/testing_protocol.md`.
 **Precondition**: `src/` must be non-empty.
 
 **Steps**:
-1. For each L1 `## CONTRACTS.*` section, generate one black-box test file.
-2. If implementation exists, generate real assertions with `src/` imports.
-3. Otherwise, generate a skip-marked test.
-4. Present L1 text, assertion intent, and generated code for review.
-5. After approval, run the project-native test command.
-6. Report PASS, FAIL, and SKIP counts.
+1. If `src/` is missing or empty, stop and direct the user to `vibespec bootstrap impl`.
+2. Keep `L1` contract tests black-box only and keep white-box coverage in separate files.
+3. For each L1 `## CONTRACTS.*` section, generate or refine one black-box test file.
+4. If implementation exists, generate real assertions with `src/` imports.
+5. Otherwise, generate a skeleton-marked test.
+6. Present L1 text, assertion intent, and generated code for review.
+7. After approval, run the project-native test command.
+8. Report PASS, FAIL, and SKIP counts.
 
 ## Script-First Optimization
 

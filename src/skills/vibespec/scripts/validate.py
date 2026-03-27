@@ -123,11 +123,19 @@ def is_testable_l1_contract(item_id: str, l1_ids: set[str]) -> bool:
 
 
 def is_skip_like_content(content: str) -> bool:
+    lowered = content.lower()
     return (
         "self.skipTest" in content
         or "pytest.skip" in content
         or "#[ignore" in content
         or "todo!(" in content
+        or "t.skip(" in lowered
+        or "t.skipnow(" in lowered
+        or "skip =" in lowered
+        or "skip=" in lowered
+        or "notimplementederror(" in lowered
+        or "notimplementedexception" in lowered
+        or "pending implementation" in lowered
     )
 
 

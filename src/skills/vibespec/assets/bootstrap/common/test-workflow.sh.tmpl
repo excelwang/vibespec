@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+run_contracts() {
+__CONTRACTS_COMMAND__
+}
+
+run_whitebox() {
+__WHITEBOX_COMMAND__
+}
+
+run_all() {
+  run_contracts
+  run_whitebox
+}
+
+case "${1:-all}" in
+  contracts)
+    run_contracts
+    ;;
+  whitebox)
+    run_whitebox
+    ;;
+  all)
+    run_all
+    ;;
+  *)
+    echo "Usage: $0 {contracts|whitebox|all}" >&2
+    exit 64
+    ;;
+esac
