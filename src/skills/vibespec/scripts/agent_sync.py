@@ -5,6 +5,7 @@ Baton-driven shared-state coordination for vibespec fix/triage gate loops.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -20,6 +21,8 @@ from pathlib import Path
 TERMINAL_STATUSES = {"done", "aborted", "blocked"}
 ACTORS = {"fix", "triage"}
 GATE_NAME = "all-defects"
+PROTOCOL_VERSION = 3
+REPO_GATE_PROFILE_RELATIVE_PATH = "specs/gate-profile.json"
 QUALITY_TARGET_ID = "VISION.QUALITY_DETECTION"
 QUALITY_TARGET_SOURCE_PROJECT = "project-specs"
 QUALITY_TARGET_SOURCE_TEMPLATE = "vibespec-template"
@@ -46,10 +49,30 @@ WORKER_CONTROL_MARKERS = [
     "BLOCKED",
 ]
 DEFECT_CLASSES = ["spec-drift", "src-drift", "quality"]
+COVERAGE_KINDS = ["black-box", "white-box"]
+COVERAGE_DEFECT_TYPE = {
+    "black-box": "black_box_test_gap",
+    "white-box": "white_box_test_gap",
+}
+SRC_DRIFT_DEFECT_TYPES = [
+    "l2_boundary_drift",
+    "l3_mechanism_drift",
+    "missing_component",
+    "unexpected_component",
+]
+QUALITY_DEFECT_TYPES = [
+    "workaround",
+    "legacy",
+    "concurrency_bottleneck",
+    "deadlock",
+    "dead_wait",
+    "blind_wait",
+]
+PROGRESS_DECISIONS = {"aligned", "defect", "blocked"}
 GATE_PROFILE = {
     "description": (
-        "Unified triage-generated repair gate covering quality defects, spec drift, "
-        "and src/spec drift under a coordinator-plus-worker baton model."
+        "Unified review-first triage gate covering semantic drift, quality review, "
+        "coverage audit, and deferred terminal runs under a coordinator-plus-worker baton model."
     ),
     "triage_workflow": {"name": "UnifiedGateTriageWorkflow", "phase": "DetectAndPlan"},
     "fix_workflow": {"name": "UnifiedGateFixWorkflow", "phase": "ExecuteRepairPlan"},
@@ -107,6 +130,16 @@ QUALITY_REVIEW_CHECKS = [
     "Review source modules and components semantically against the quality target categories instead of scanning for self-descriptive keywords.",
     "Infer workaround, legacy, concurrency bottleneck, deadlock, dead-wait, and blind-wait defects from design intent, control flow, and cross-file behavior rather than terminology alone.",
     "Compare the reviewed implementation against L2 architecture boundaries and the key mechanisms fixed in L3 before classifying a quality defect.",
+]
+BLACK_BOX_COVERAGE_CHECKS = [
+    "Review L1 contract sections against black-box tests only; do not treat white-box assertions as contract coverage.",
+    "Read the contract section and the matching contract test files before deciding whether black-box coverage is aligned or missing.",
+    "Treat missing public-surface assertions, missing contract test files, or white-box-only coverage as black-box test gaps.",
+]
+WHITE_BOX_COVERAGE_CHECKS = [
+    "Review implementation modules against the non-contract test layer; white-box coverage must stay outside the L1 contract test files.",
+    "Read the relevant source module and the matching non-contract tests before deciding whether white-box coverage is aligned or missing.",
+    "Treat missing internal-state, adapter, recovery, taxonomy, or mechanism assertions as white-box test gaps.",
 ]
 DEBUG_ONLY_WARNING = (
     "Debug-only command. Do not bypass gate blocking with `state` or `wait`. "
@@ -287,6 +320,16 @@ def semantic_review_contract(defect_class: str | None) -> dict:
             "Do not use keyword or regex matching as a quality probe or as quality evidence.",
             "Review source modules/components against L2 architecture, key L3 mechanisms, and the quality target categories.",
         ],
+        "black-box": [
+            "Audit black-box test coverage by reading L1 contracts and contract-test files; do not infer coverage from command output.",
+            "Treat public API assertions as the only valid evidence for black-box contract coverage.",
+            "Classify missing or inadequate contract-test coverage as a test gap before any final run occurs.",
+        ],
+        "white-box": [
+            "Audit white-box coverage by reading implementation modules and non-contract tests together.",
+            "Keep white-box coverage out of L1 contract files; it belongs to the supplemental implementation/quality layer.",
+            "Classify missing internal or mechanism-level assertions as white-box test gaps before any final run occurs.",
+        ],
     }
     return {
         "signals_only": True,
@@ -301,11 +344,10 @@ def semantic_review_contract(defect_class: str | None) -> dict:
         "must_compare_component_by_component": defect_class == "src-drift",
         "must_not_use_keyword_probe": defect_class == "quality",
         "warning": (
-            "Probe output is review-scope input only. Do not publish drift or defects solely from "
-            "lexical matches, naming overlap, file-name/path similarity, repository inventory, "
-            "or changed-file summaries. Read complete spec files and all listed readable `src/` "
-            "text files, then confirm a "
-            "semantic inconsistency first."
+            "Runner output defines review scope only. Do not publish drift, quality defects, or "
+            "coverage gaps solely from lexical matches, naming overlap, repository inventory, or "
+            "test-command output. Read the relevant spec/source/test files first and confirm the "
+            "semantic problem directly."
         ),
         "required_review_actions": list(class_specific.get(defect_class, [])),
         "mandatory_checks": list(
@@ -313,6 +355,12 @@ def semantic_review_contract(defect_class: str | None) -> dict:
             if defect_class == "spec-drift"
             else SRC_DRIFT_REVIEW_CHECKS
             if defect_class == "src-drift"
+            else QUALITY_REVIEW_CHECKS
+            if defect_class == "quality"
+            else BLACK_BOX_COVERAGE_CHECKS
+            if defect_class == "black-box"
+            else WHITE_BOX_COVERAGE_CHECKS
+            if defect_class == "white-box"
             else class_specific.get(defect_class, [])
         ),
     }
@@ -435,6 +483,43 @@ def dedupe_strings(values: list[str]) -> list[str]:
     return deduped
 
 
+def normalize_string_list(
+    entries: list[str] | None,
+    *,
+    label: str,
+    required: bool = False,
+) -> list[str]:
+    normalized = dedupe_strings(
+        [entry.strip() for entry in entries or [] if entry and entry.strip()]
+    )
+    if required and not normalized:
+        raise CoordinationError(f"{label} must include at least one entry.")
+    return normalized
+
+
+def defect_class_profile_key(defect_class: str) -> str:
+    return defect_class.replace("-", "_")
+
+
+def sanitize_progress_slug(value: str) -> str:
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "-", value).strip("-")
+    return sanitized or "unit"
+
+
+def section_slug(value: str) -> str:
+    value = value.split(".", 1)[-1]
+    value = value.lower().replace("-", "_")
+    value = re.sub(r"[^a-z0-9_]+", "_", value)
+    value = re.sub(r"_+", "_", value).strip("_")
+    return value or "section"
+
+
+def replace_first_glob_star(pattern: str, replacement: str) -> str | None:
+    if "*" not in pattern:
+        return None
+    return pattern.replace("*", replacement, 1)
+
+
 def collect_markdown_review_targets(root: Path, relative_path: str) -> list[str]:
     path = root / relative_path
     if not path.is_file():
@@ -527,12 +612,15 @@ def discover_spec_layer_review_order(root: Path) -> list[dict[str, object]]:
 def build_spec_drift_review_contract(root: Path) -> dict:
     context_files, unresolved_context_refs = discover_spec_context_files(root)
     layer_review_order = discover_spec_layer_review_order(root)
+    spec_files = discover_specs_review_files(root)
     return {
         "must_apply_structured_checks": True,
         "must_read_context_files_when_listed": True,
         "must_compare_layer_by_layer": True,
         "must_compare_item_by_item": True,
+        "must_publish_progress_per_spec_file": True,
         "mandatory_checks": list(SPEC_DRIFT_REVIEW_CHECKS),
+        "required_progress_targets": spec_files,
         "layer_review_order": layer_review_order,
         "required_review_targets": dedupe_strings(
             [
@@ -569,40 +657,11 @@ def summarize_text(text: str, limit: int = 12) -> list[str]:
 def shell_join(command: list[str]) -> str:
     return " ".join(shlex.quote(token) for token in command)
 
-
-def detect_changed_path_classes(paths: list[str]) -> dict[str, list[str]]:
-    buckets = {"src": [], "specs": [], "tests": [], "other": []}
-    for path in sorted(paths):
-        if path.startswith("src/"):
-            buckets["src"].append(path)
-        elif path.startswith("specs/"):
-            buckets["specs"].append(path)
-        elif path.startswith("tests/"):
-            buckets["tests"].append(path)
-        else:
-            buckets["other"].append(path)
-    return buckets
-
-
-def parse_git_status_porcelain(output: str) -> list[str]:
-    paths: list[str] = []
-    for raw_line in output.splitlines():
-        if not raw_line.strip():
-            continue
-        path_fragment = raw_line[3:] if len(raw_line) > 3 else raw_line
-        path = path_fragment.split(" -> ", 1)[-1].strip()
-        if path:
-            paths.append(path)
-    return paths
-
-
-def extract_changed_paths_from_submission(manifest: dict) -> list[str]:
-    return [path for path in manifest.get("changed_files", []) if isinstance(path, str)]
-
-
-def normalize_checks_run(entries: list[str] | None) -> list[str]:
+def normalize_checks_run(
+    entries: list[str] | None, *, required: bool = False
+) -> list[str]:
     checks = [entry.strip() for entry in entries or [] if entry and entry.strip()]
-    if not checks:
+    if required and not checks:
         raise CoordinationError("Triage reports must include at least one `--check-run`.")
     return checks
 
@@ -705,7 +764,8 @@ class BatonEngine:
                 worker_state=worker_state,
             )
         )
-        next_state["state_version"] = int(state["state_version"]) + 1
+        next_state["state_version"] = PROTOCOL_VERSION
+        next_state["state_revision"] = int(state.get("state_revision", 0)) + 1
         next_state["turn_id"] = int(state["turn_id"]) + 1
         next_state["updated_at"] = utc_now()
         return next_state
@@ -799,10 +859,19 @@ class VibespecGateAdapter:
             "submission_id": 0,
             "triage_of_submission_id": 0,
             "triage_report_id": 0,
+            "coverage_report_id": 0,
             "open_defects": [],
             "active_repair_plan": [],
             "blocked_reason": None,
-            "state_version": 1,
+            "state_version": PROTOCOL_VERSION,
+            "state_revision": 1,
+            "progress_record_count": 0,
+            "last_progress_unit_id": None,
+            "coverage_kind_index": 0,
+            "published_coverage_kinds": [],
+            "coverage_status": "pending",
+            "coverage_progress_record_count": 0,
+            "last_coverage_unit_id": None,
             "updated_at": utc_now(),
             "last_event": "init",
             "policy": {
@@ -822,9 +891,18 @@ class VibespecGateAdapter:
             "next_triage_class_index": 0,
             "published_triage_classes": [],
             "triage_of_submission_id": state["submission_id"],
+            "triage_report_id": 0,
+            "coverage_report_id": 0,
             "open_defects": [],
             "active_repair_plan": [],
             "blocked_reason": None,
+            "progress_record_count": 0,
+            "last_progress_unit_id": None,
+            "coverage_kind_index": 0,
+            "published_coverage_kinds": [],
+            "coverage_status": "pending",
+            "coverage_progress_record_count": 0,
+            "last_coverage_unit_id": None,
             "last_event": "cycle_reset",
         }
 
@@ -838,9 +916,18 @@ class VibespecGateAdapter:
             "published_triage_classes": [],
             "submission_id": submission_id,
             "triage_of_submission_id": submission_id,
+            "triage_report_id": 0,
+            "coverage_report_id": 0,
             "open_defects": [],
             "active_repair_plan": [],
             "blocked_reason": None,
+            "progress_record_count": 0,
+            "last_progress_unit_id": None,
+            "coverage_kind_index": 0,
+            "published_coverage_kinds": [],
+            "coverage_status": "pending",
+            "coverage_progress_record_count": 0,
+            "last_coverage_unit_id": None,
             "last_event": "submission_published",
         }
 
@@ -855,47 +942,30 @@ class VibespecGateAdapter:
         defect_class: str,
     ) -> tuple[dict, str | None, str]:
         triage_complete = next_triage_class_index >= len(DEFECT_CLASSES)
-        if triage_complete and not open_defects:
-            return (
-                {
-                    "status": "done",
-                    "phase": "done",
-                    "fix_gate_open": False,
-                    "triage_status": "complete",
-                    "next_triage_class_index": next_triage_class_index,
-                    "published_triage_classes": published_triage_classes,
-                    "open_defects": [],
-                    "active_repair_plan": [],
-                    "triage_report_id": report_id,
-                    "blocked_reason": None,
-                    "last_event": "triage_accepted",
-                },
-                None,
-                WORKER_STATE_DORMANT,
-            )
         if triage_complete:
             return (
                 {
                     "status": "active",
-                    "phase": "fix_turn",
-                    "fix_gate_open": True,
-                    "triage_status": "complete",
+                    "phase": "coverage_audit",
+                    "fix_gate_open": False,
+                    "triage_status": "coverage_audit",
                     "next_triage_class_index": next_triage_class_index,
                     "published_triage_classes": published_triage_classes,
                     "open_defects": open_defects,
                     "active_repair_plan": active_repair_plan,
                     "triage_report_id": report_id,
                     "blocked_reason": None,
-                    "last_event": "triage_completed_with_repairs",
+                    "coverage_status": "pending",
+                    "last_event": "triage_completed_start_coverage_audit",
                 },
-                WORKER_ACTOR,
-                WORKER_STATE_OWNER,
+                COORDINATOR_ACTOR,
+                WORKER_STATE_DORMANT,
             )
         return (
             {
                 "status": "active",
                 "phase": "triage_turn",
-                "fix_gate_open": bool(open_defects),
+                "fix_gate_open": False,
                 "triage_status": "scanning",
                 "next_triage_class_index": next_triage_class_index,
                 "published_triage_classes": published_triage_classes,
@@ -906,7 +976,75 @@ class VibespecGateAdapter:
                 "last_event": f"triage_batch_published:{defect_class}",
             },
             COORDINATOR_ACTOR,
-            WORKER_STATE_RELEASED if open_defects else WORKER_STATE_DORMANT,
+            WORKER_STATE_DORMANT,
+        )
+
+    def coverage_transition_fields(
+        self,
+        *,
+        report_id: int,
+        coverage_kind: str,
+        published_coverage_kinds: list[str],
+        open_defects: list[str],
+        active_repair_plan: list[dict[str, str]],
+        next_coverage_kind_index: int,
+    ) -> tuple[dict, str | None, str]:
+        coverage_complete = next_coverage_kind_index >= len(COVERAGE_KINDS)
+        if coverage_complete and not open_defects:
+            return (
+                {
+                    "status": "done",
+                    "phase": "done",
+                    "fix_gate_open": False,
+                    "triage_status": "complete",
+                    "coverage_status": "complete",
+                    "coverage_kind_index": next_coverage_kind_index,
+                    "published_coverage_kinds": published_coverage_kinds,
+                    "open_defects": [],
+                    "active_repair_plan": [],
+                    "coverage_report_id": report_id,
+                    "blocked_reason": None,
+                    "last_event": "coverage_audit_completed_clean",
+                },
+                None,
+                WORKER_STATE_DORMANT,
+            )
+        if coverage_complete:
+            return (
+                {
+                    "status": "active",
+                    "phase": "fix_turn",
+                    "fix_gate_open": True,
+                    "triage_status": "complete",
+                    "coverage_status": "complete",
+                    "coverage_kind_index": next_coverage_kind_index,
+                    "published_coverage_kinds": published_coverage_kinds,
+                    "open_defects": open_defects,
+                    "active_repair_plan": active_repair_plan,
+                    "coverage_report_id": report_id,
+                    "blocked_reason": None,
+                    "last_event": "coverage_audit_completed_with_repairs",
+                },
+                WORKER_ACTOR,
+                WORKER_STATE_OWNER,
+            )
+        return (
+            {
+                "status": "active",
+                "phase": "coverage_audit",
+                "fix_gate_open": False,
+                "triage_status": "coverage_audit",
+                "coverage_status": "scanning",
+                "coverage_kind_index": next_coverage_kind_index,
+                "published_coverage_kinds": published_coverage_kinds,
+                "open_defects": open_defects,
+                "active_repair_plan": active_repair_plan,
+                "coverage_report_id": report_id,
+                "blocked_reason": None,
+                "last_event": f"coverage_audit_published:{coverage_kind}",
+            },
+            COORDINATOR_ACTOR,
+            WORKER_STATE_DORMANT,
         )
 
 class CoordinationStore:
@@ -922,6 +1060,7 @@ class CoordinationStore:
         self.lock_dir = self.task_dir / "lease" / "turn.lock"
         self.submissions_dir = self.task_dir / "submissions"
         self.triage_dir = self.task_dir / "triage"
+        self.progress_dir = self.task_dir / "progress"
         self.engine = BatonEngine(
             coordinator_actor=COORDINATOR_ACTOR,
             worker_actor=WORKER_ACTOR,
@@ -930,7 +1069,11 @@ class CoordinationStore:
 
     def ensure_task(self) -> dict:
         if self.state_file.exists():
-            return self.read_state()
+            state = self.read_state()
+            if self._state_is_current_protocol(state):
+                return state
+            self._archive_incompatible_task_dir(state)
+            return self.init_task()
         return self.init_task()
 
     def reset_completed_cycle(self) -> dict:
@@ -960,6 +1103,31 @@ class CoordinationStore:
         write_json_atomic(self.state_file, initial_state)
         return initial_state
 
+    def _state_is_current_protocol(self, state: dict) -> bool:
+        return (
+            int(state.get("state_version", 0)) == PROTOCOL_VERSION
+            and "state_revision" in state
+        )
+
+    def _archive_incompatible_task_dir(self, state: dict) -> None:
+        if not self.task_dir.exists():
+            return
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        version_hint = str(state.get("state_version", "legacy"))
+        archive_dir = (
+            self.task_dir.parent
+            / f"{self.task_dir.name}-archived-v{version_hint}-{timestamp}"
+        )
+        suffix = 1
+        while archive_dir.exists():
+            suffix += 1
+            archive_dir = (
+                self.task_dir.parent
+                / f"{self.task_dir.name}-archived-v{version_hint}-{timestamp}-{suffix}"
+            )
+        os.replace(self.task_dir, archive_dir)
+
     def read_state(self) -> dict:
         if not self.state_file.exists():
             raise CoordinationError("Unified gate has not been initialized yet.")
@@ -967,7 +1135,7 @@ class CoordinationStore:
 
     def inspect_actor(self, actor: str) -> dict:
         self._validate_actor(actor)
-        state = self.read_state()
+        state = self.ensure_task()
         return self.engine.inspect_actor(state, actor)
 
     def wait_for_turn(
@@ -1075,14 +1243,17 @@ class CoordinationStore:
                 "Defect class must be one of: " + ", ".join(DEFECT_CLASSES) + "."
             )
         evidence_summary = normalize_evidence_summary(evidence_summary)
-        checks_run = normalize_checks_run(checks_run)
+        checks_run = normalize_checks_run(checks_run, required=False)
         notes = normalize_notes(notes)
         review_artifact = normalize_review_artifact_path(review_artifact)
-        review_coverage = self._validate_review_artifact(defect_class, review_artifact)
 
         with self._short_lock():
             state = self.read_state()
             self._require_turn(state, "triage")
+            if int(state.get("next_triage_class_index", 0)) >= len(DEFECT_CLASSES):
+                raise CoordinationError(
+                    "Defect-class triage is already complete for this cycle; use coverage audit commands next."
+                )
             current_submission = int(state["submission_id"])
             if submission_id != current_submission:
                 raise CoordinationError(
@@ -1101,6 +1272,45 @@ class CoordinationStore:
                     f"Triage must publish `{expected_class}` next, not `{defect_class}`."
                 )
 
+            required_units = self._required_progress_units(defect_class)
+            progress_records = self._load_progress_records(submission_id, defect_class)
+            required_unit_ids = {str(unit["unit_id"]) for unit in required_units}
+            progress_unit_ids = set(progress_records)
+            missing_progress_units = sorted(required_unit_ids - progress_unit_ids)
+            if missing_progress_units:
+                raise CoordinationError(
+                    "Triage phase finalization is missing progress units: "
+                    + ", ".join(missing_progress_units)
+                    + "."
+                )
+            unexpected_progress_units = sorted(progress_unit_ids - required_unit_ids)
+            if unexpected_progress_units:
+                raise CoordinationError(
+                    "Triage phase finalization includes unknown progress units: "
+                    + ", ".join(unexpected_progress_units)
+                    + "."
+                )
+
+            blocked_progress_units = sorted(
+                unit_id
+                for unit_id, record in progress_records.items()
+                if record.get("decision") == "blocked"
+            )
+            if blocked_progress_units:
+                raise CoordinationError(
+                    "Cannot finalize triage while progress units remain blocked. Mark the gate blocked instead: "
+                    + ", ".join(blocked_progress_units)
+                    + "."
+                )
+
+            review_coverage = self._validate_review_artifact(
+                defect_class,
+                submission_id,
+                review_artifact,
+                required_units,
+                progress_records,
+            )
+
             repair_plan = []
             if decision == "reject":
                 repair_plan = build_repair_plan(defects, defect_class, repair_logic)
@@ -1113,8 +1323,46 @@ class CoordinationStore:
                         + ", ".join(missing_evidence)
                         + "."
                     )
+                progress_defect_ids = dedupe_strings(
+                    [
+                        defect_id
+                        for record in progress_records.values()
+                        for defect_id in record.get("defect_ids", [])
+                    ]
+                )
+                defect_ids = [defect["id"] for defect in repair_plan]
+                missing_progress_defect_ids = sorted(
+                    set(defect_ids) - set(progress_defect_ids)
+                )
+                if missing_progress_defect_ids:
+                    raise CoordinationError(
+                        "Rejected triage defects must trace to defect progress units: "
+                        + ", ".join(missing_progress_defect_ids)
+                        + "."
+                    )
+                unexpected_progress_defect_ids = sorted(
+                    set(progress_defect_ids) - set(defect_ids)
+                )
+                if unexpected_progress_defect_ids:
+                    raise CoordinationError(
+                        "Progress defect IDs must be carried into the rejected triage batch: "
+                        + ", ".join(unexpected_progress_defect_ids)
+                        + "."
+                    )
                 for defect in repair_plan:
                     defect["evidence"] = defect_evidence[defect["id"]].strip()
+            else:
+                non_aligned_progress = sorted(
+                    unit_id
+                    for unit_id, record in progress_records.items()
+                    if record.get("decision") != "aligned"
+                )
+                if non_aligned_progress:
+                    raise CoordinationError(
+                        "Accepted triage batches require every progress unit to be aligned: "
+                        + ", ".join(non_aligned_progress)
+                        + "."
+                    )
 
             report_id = int(state["triage_report_id"]) + 1
             report = {
@@ -1133,10 +1381,13 @@ class CoordinationStore:
                 "notes": notes,
                 "review_artifact": review_coverage["path"],
                 "review_summary": review_coverage["summary"],
+                "covered_progress_units": review_coverage["covered_progress_units"],
+                "progress_record_paths": review_coverage["progress_record_paths"],
                 "reviewed_targets": review_coverage["reviewed_targets"],
                 "reviewed_anchor_files": review_coverage["reviewed_anchor_files"],
                 "reviewed_context_files": review_coverage["reviewed_context_files"],
-                "comparison_notes": review_coverage["comparison_notes"],
+                "evidence_files": review_coverage["evidence_files"],
+                "final_decision_notes": review_coverage["final_decision_notes"],
                 "defects": repair_plan if decision == "reject" else [],
             }
             write_json_atomic(self.triage_dir / f"triage-{report_id:04d}.json", report)
@@ -1183,15 +1434,22 @@ class CoordinationStore:
             return self._triage_runner_packet(state, result=verdict["result"])
 
         state = verdict["state"]
-        defect_class = self._expected_triage_class(state)
-        probe = self._run_probe_suite(defect_class, int(state["submission_id"]))
+        try:
+            if int(state.get("next_triage_class_index", 0)) < len(DEFECT_CLASSES):
+                probe = self._run_probe_suite(
+                    self._expected_triage_class(state), int(state["submission_id"])
+                )
+            else:
+                probe = self._build_coverage_probe(self._expected_coverage_kind(state))
+        except CoordinationError as exc:
+            blocked_state = self.mark_blocked(str(exc))
+            return self._triage_runner_packet(blocked_state, result="blocked")
         return self._triage_runner_packet(state, result="actionable", probe=probe)
 
     def run_fix_pass(
         self, poll_interval: float = 2.0, timeout: float | None = None
     ) -> dict:
-        if not self.state_file.exists():
-            self.init_task()
+        self.ensure_task()
         initial = self.inspect_actor("fix")
         if initial["result"] == "wait" and timeout == 0:
             return self._fix_runner_packet(initial["state"], result="wait")
@@ -1224,6 +1482,1071 @@ class CoordinationStore:
             write_json_atomic(self.state_file, next_state)
             return next_state
 
+    def _load_repo_gate_profile(self) -> dict:
+        profile_path = self.root / REPO_GATE_PROFILE_RELATIVE_PATH
+        if not profile_path.is_file():
+            raise CoordinationError(
+                f"Missing required repo gate profile `{REPO_GATE_PROFILE_RELATIVE_PATH}`."
+            )
+        try:
+            payload = json.loads(profile_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must be valid JSON."
+            ) from exc
+        if not isinstance(payload, dict):
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must be a JSON object."
+            )
+
+        if int(payload.get("version", 0)) != PROTOCOL_VERSION:
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must declare version={PROTOCOL_VERSION}."
+            )
+
+        triage = payload.get("triage")
+        if not isinstance(triage, dict):
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must include `triage`."
+            )
+        coverage = payload.get("coverage")
+        if not isinstance(coverage, dict):
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must include `coverage`."
+            )
+        run_profile = payload.get("run")
+        if not isinstance(run_profile, dict):
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must include `run`."
+            )
+
+        spec_roots = normalize_string_list(
+            triage.get("spec_roots"),
+            label="gate profile triage.spec_roots",
+            required=True,
+        )
+        source_roots = normalize_string_list(
+            triage.get("source_roots"),
+            label="gate profile triage.source_roots",
+            required=True,
+        )
+
+        black_box = coverage.get("black_box")
+        if not isinstance(black_box, dict):
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must include coverage.black_box."
+            )
+        white_box = coverage.get("white_box")
+        if not isinstance(white_box, dict):
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must include coverage.white_box."
+            )
+
+        black_box_test_globs = normalize_string_list(
+            black_box.get("test_globs"),
+            label="coverage.black_box.test_globs",
+            required=True,
+        )
+        contract_spec = str(black_box.get("contract_spec", "")).strip()
+        if not contract_spec:
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must include coverage.black_box.contract_spec."
+            )
+        white_box_test_globs = normalize_string_list(
+            white_box.get("test_globs"),
+            label="coverage.white_box.test_globs",
+            required=True,
+        )
+        white_box_source_roots = normalize_string_list(
+            white_box.get("source_roots"),
+            label="coverage.white_box.source_roots",
+            required=True,
+        )
+        run_commands = self._normalize_command_entries(
+            run_profile.get("commands"),
+            label="run.commands",
+        )
+
+        for root_label, roots in (
+            ("spec_roots", spec_roots),
+            ("source_roots", source_roots),
+            ("white_box.source_roots", white_box_source_roots),
+        ):
+            for relative_root in roots:
+                root_path = (self.root / relative_root).resolve()
+                try:
+                    root_path.relative_to(self.root.resolve())
+                except ValueError as exc:
+                    raise CoordinationError(
+                        f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` {root_label} must stay under the repo root."
+                    ) from exc
+                if not root_path.is_dir():
+                    raise CoordinationError(
+                        f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` {root_label} entry `{relative_root}` is not a directory."
+                    )
+
+        contract_spec_path = (self.root / contract_spec).resolve()
+        try:
+            contract_spec_path.relative_to(self.root.resolve())
+        except ValueError as exc:
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` coverage.black_box.contract_spec must stay under the repo root."
+            ) from exc
+        if not contract_spec_path.is_file():
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` coverage.black_box.contract_spec `{contract_spec}` is not a file."
+            )
+
+        return {
+            "path": str(profile_path.relative_to(self.root)),
+            "version": PROTOCOL_VERSION,
+            "triage": {
+                "spec_roots": spec_roots,
+                "source_roots": source_roots,
+            },
+            "coverage": {
+                "black_box": {
+                    "test_globs": black_box_test_globs,
+                    "contract_spec": contract_spec,
+                },
+                "white_box": {
+                    "test_globs": white_box_test_globs,
+                    "source_roots": white_box_source_roots,
+                },
+            },
+            "run": {
+                "commands": run_commands,
+            },
+        }
+
+    def _normalize_command_entries(
+        self, raw_commands: object, *, label: str
+    ) -> list[dict[str, object]]:
+        if not isinstance(raw_commands, list) or not raw_commands:
+            raise CoordinationError(
+                f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` must include non-empty {label}."
+            )
+        normalized_commands: list[dict[str, object]] = []
+        for raw_command in raw_commands:
+            if isinstance(raw_command, str):
+                argv = shlex.split(raw_command)
+            elif (
+                isinstance(raw_command, list)
+                and raw_command
+                and all(isinstance(token, str) for token in raw_command)
+            ):
+                argv = [token.strip() for token in raw_command if token.strip()]
+            else:
+                raise CoordinationError(
+                    f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` contains an invalid command under {label}."
+                )
+            if not argv:
+                raise CoordinationError(
+                    f"`{REPO_GATE_PROFILE_RELATIVE_PATH}` contains an empty command under {label}."
+                )
+            normalized_commands.append({"argv": argv, "display": shell_join(argv)})
+        return normalized_commands
+
+    def _discover_profile_spec_files(self) -> list[str]:
+        profile = self._load_repo_gate_profile()
+        discovered: list[str] = []
+        for relative_root in profile["triage"]["spec_roots"]:
+            root_path = self.root / relative_root
+            for path in sorted(root_path.rglob("*.md")):
+                if "build" in path.parts:
+                    continue
+                try:
+                    discovered.append(str(path.relative_to(self.root)))
+                except ValueError:
+                    discovered.append(str(path))
+        return dedupe_strings(discovered)
+
+    def _deferred_run_plan(self) -> dict:
+        profile = self._load_repo_gate_profile()
+        return {
+            "profile_path": profile["path"],
+            "commands": list(profile["run"]["commands"]),
+            "warning": (
+                "Deferred run commands are end-of-cycle triggers only. Do not execute them from "
+                "triage before the coverage audit is complete and fix has supplemented required tests."
+            ),
+        }
+
+    def _resolve_test_globs(self, patterns: list[str]) -> list[str]:
+        discovered: list[str] = []
+        for pattern in patterns:
+            matches = sorted(self.root.glob(pattern))
+            for path in matches:
+                if path.is_file():
+                    try:
+                        discovered.append(str(path.relative_to(self.root)))
+                    except ValueError:
+                        discovered.append(str(path))
+        return dedupe_strings(discovered)
+
+    def _black_box_contract_sections(self) -> list[str]:
+        profile = self._load_repo_gate_profile()
+        contract_spec_path = self.root / profile["coverage"]["black_box"]["contract_spec"]
+        sections: list[str] = []
+        for raw_line in contract_spec_path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line.startswith("## CONTRACTS."):
+                continue
+            sections.append(line[3:].strip())
+        return sections
+
+    def _expected_black_box_test_file(self, section: str) -> str | None:
+        profile = self._load_repo_gate_profile()
+        replacement = section_slug(section)
+        for pattern in profile["coverage"]["black_box"]["test_globs"]:
+            candidate = replace_first_glob_star(pattern, replacement)
+            if candidate is not None:
+                return candidate
+        return None
+
+    def _black_box_coverage_units(self) -> list[dict[str, object]]:
+        profile = self._load_repo_gate_profile()
+        discovered_tests = set(
+            self._resolve_test_globs(profile["coverage"]["black_box"]["test_globs"])
+        )
+        contract_spec = profile["coverage"]["black_box"]["contract_spec"]
+        units: list[dict[str, object]] = []
+        for section in self._black_box_contract_sections():
+            test_file_hint = self._expected_black_box_test_file(section)
+            suggested_test_files = (
+                [test_file_hint] if test_file_hint is not None else []
+            )
+            existing_test_files = [
+                path for path in suggested_test_files if path in discovered_tests
+            ] or suggested_test_files
+            units.append(
+                {
+                    "unit_id": f"black-box::{section}",
+                    "target": section,
+                    "spec_file": contract_spec,
+                    "defect_type": None,
+                    "suggested_test_files": existing_test_files,
+                    "suggested_source_files": [],
+                }
+            )
+        return units
+
+    def _white_box_test_files(self) -> list[str]:
+        profile = self._load_repo_gate_profile()
+        return self._resolve_test_globs(profile["coverage"]["white_box"]["test_globs"])
+
+    def _suggested_white_box_tests(self, target: str, white_box_tests: list[str]) -> list[str]:
+        target_stem = Path(target).stem
+        matches: list[str] = []
+        for test_file in white_box_tests:
+            text = (self.root / test_file).read_text(encoding="utf-8")
+            if target in text or target_stem in text:
+                matches.append(test_file)
+        return matches or list(white_box_tests)
+
+    def _white_box_coverage_units(self) -> list[dict[str, object]]:
+        white_box_tests = self._white_box_test_files()
+        units: list[dict[str, object]] = []
+        for target in self._white_box_module_targets():
+            units.append(
+                {
+                    "unit_id": f"white-box::{target}",
+                    "target": target,
+                    "defect_type": None,
+                    "suggested_test_files": self._suggested_white_box_tests(
+                        target, white_box_tests
+                    ),
+                    "suggested_source_files": [target],
+                }
+            )
+        return units
+
+    def _spec_progress_units(self) -> list[dict[str, object]]:
+        units: list[dict[str, object]] = []
+        context_files, _ = discover_spec_context_files(self.root)
+        for spec_file in self._discover_profile_spec_files():
+            if spec_file == "specs/L0-VISION.md":
+                anchor_files: list[str] = []
+            elif spec_file == "specs/L1-CONTRACTS.md":
+                anchor_files = ["specs/L0-VISION.md"]
+            elif spec_file == "specs/L2-ARCHITECTURE.md":
+                anchor_files = ["specs/L1-CONTRACTS.md"]
+            elif spec_file.startswith("specs/L3-RUNTIME/"):
+                anchor_files = ["specs/L2-ARCHITECTURE.md"]
+            else:
+                anchor_files = spec_path_if_exists(self.root, "specs/L0-VISION.md")
+
+            units.append(
+                {
+                    "unit_id": f"spec-drift::{spec_file}",
+                    "target": spec_file,
+                    "defect_type": None,
+                    "suggested_anchor_files": anchor_files,
+                    "suggested_context_files": context_files,
+                }
+            )
+        return units
+
+    def _module_targets(self) -> list[str]:
+        return dedupe_strings(
+            [
+                target
+                for entry in self._discover_source_component_review_order()
+                for target in entry.get("components", [])
+            ]
+        )
+
+    def _white_box_module_targets(self) -> list[str]:
+        return dedupe_strings(
+            [
+                target
+                for entry in self._discover_source_component_review_order(
+                    source_roots=self._load_repo_gate_profile()["coverage"]["white_box"][
+                        "source_roots"
+                    ]
+                )
+                for target in entry.get("components", [])
+            ]
+        )
+
+    def _required_progress_units(self, defect_class: str) -> list[dict[str, object]]:
+        if defect_class == "spec-drift":
+            return self._spec_progress_units()
+
+        if defect_class == "src-drift":
+            defect_types = SRC_DRIFT_DEFECT_TYPES
+        elif defect_class == "quality":
+            defect_types = QUALITY_DEFECT_TYPES
+        else:
+            raise CoordinationError(f"Unsupported defect class `{defect_class}`.")
+
+        anchor_files = dedupe_strings(
+            spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md")
+            + discover_l3_runtime_files(self.root)
+        )
+        units: list[dict[str, object]] = []
+        for target in self._module_targets():
+            for defect_type in defect_types:
+                units.append(
+                    {
+                        "unit_id": f"{defect_class}::{target}::{defect_type}",
+                        "target": target,
+                        "defect_type": defect_type,
+                        "suggested_anchor_files": anchor_files,
+                        "suggested_context_files": [],
+                    }
+                )
+        return units
+
+    def _required_coverage_units(self, coverage_kind: str) -> list[dict[str, object]]:
+        if coverage_kind == "black-box":
+            return self._black_box_coverage_units()
+        if coverage_kind == "white-box":
+            return self._white_box_coverage_units()
+        raise CoordinationError(f"Unsupported coverage kind `{coverage_kind}`.")
+
+    def _progress_record_path(
+        self, submission_id: int, defect_class: str, unit_id: str
+    ) -> Path:
+        digest = hashlib.sha1(unit_id.encode("utf-8")).hexdigest()[:10]
+        slug = sanitize_progress_slug(unit_id)
+        return (
+            self.progress_dir
+            / f"submission-{submission_id:04d}"
+            / defect_class
+            / f"{slug}-{digest}.json"
+        )
+
+    def _load_progress_records(
+        self, submission_id: int, defect_class: str
+    ) -> dict[str, dict]:
+        records: dict[str, dict] = {}
+        phase_dir = self.progress_dir / f"submission-{submission_id:04d}" / defect_class
+        if not phase_dir.is_dir():
+            return records
+
+        for path in sorted(phase_dir.glob("*.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise CoordinationError(
+                    f"Progress artifact `{path}` must be valid JSON."
+                ) from exc
+            if not isinstance(payload, dict):
+                raise CoordinationError(
+                    f"Progress artifact `{path}` must be a JSON object."
+                )
+            unit_id = str(payload.get("unit_id", "")).strip()
+            if not unit_id:
+                raise CoordinationError(
+                    f"Progress artifact `{path}` is missing `unit_id`."
+                )
+            if unit_id in records:
+                raise CoordinationError(
+                    f"Duplicate progress unit `{unit_id}` detected for submission {submission_id} / {defect_class}."
+                )
+            payload["_path"] = str(path.relative_to(self.root))
+            records[unit_id] = payload
+        return records
+
+    def publish_triage_progress(
+        self,
+        submission_id: int,
+        defect_class: str,
+        target: str,
+        defect_type: str | None,
+        decision: str,
+        evidence_summary: str | None = None,
+        evidence_files: list[str] | None = None,
+        reviewed_anchor_files: list[str] | None = None,
+        reviewed_context_files: list[str] | None = None,
+        notes: list[str] | None = None,
+        defect_ids: list[str] | None = None,
+    ) -> dict:
+        if defect_class not in DEFECT_CLASSES:
+            raise CoordinationError(
+                "Defect class must be one of: " + ", ".join(DEFECT_CLASSES) + "."
+            )
+        if decision not in PROGRESS_DECISIONS:
+            raise CoordinationError(
+                "Progress decision must be one of: "
+                + ", ".join(sorted(PROGRESS_DECISIONS))
+                + "."
+            )
+
+        evidence_summary = normalize_evidence_summary(evidence_summary)
+        evidence_files = normalize_string_list(
+            evidence_files, label="Progress evidence files", required=True
+        )
+        reviewed_anchor_files = normalize_string_list(
+            reviewed_anchor_files, label="Reviewed anchor files"
+        )
+        reviewed_context_files = normalize_string_list(
+            reviewed_context_files, label="Reviewed context files"
+        )
+        notes = normalize_notes(notes)
+        defect_ids = normalize_string_list(defect_ids, label="Progress defect IDs")
+
+        if defect_class == "spec-drift" and defect_type is not None:
+            raise CoordinationError("Spec-drift progress must not set `--defect-type`.")
+        if defect_class != "spec-drift" and defect_type is None:
+            raise CoordinationError(
+                f"`{defect_class}` progress must include `--defect-type`."
+            )
+
+        required_units = {
+            unit["unit_id"]: unit for unit in self._required_progress_units(defect_class)
+        }
+        matching_units = [
+            unit
+            for unit in required_units.values()
+            if unit["target"] == target and unit["defect_type"] == defect_type
+        ]
+        if not matching_units:
+            raise CoordinationError(
+                f"`{target}` with defect type `{defect_type}` is not a required progress unit for `{defect_class}`."
+            )
+        if len(matching_units) != 1:
+            raise CoordinationError("Progress unit resolution must be unique.")
+        unit = matching_units[0]
+        unit_id = str(unit["unit_id"])
+
+        if decision == "defect" and not defect_ids:
+            raise CoordinationError(
+                "Defect progress records must include at least one `--defect-id`."
+            )
+        if decision != "defect" and defect_ids:
+            raise CoordinationError(
+                "Only defect progress records may include `--defect-id`."
+            )
+
+        with self._short_lock():
+            state = self.read_state()
+            self._require_turn(state, "triage")
+            current_submission = int(state["submission_id"])
+            if submission_id != current_submission:
+                raise CoordinationError(
+                    f"Triage progress must target latest submission_id={current_submission}."
+                )
+            expected_class = self._expected_triage_class(state)
+            if defect_class != expected_class:
+                raise CoordinationError(
+                    f"Triage progress must publish `{expected_class}` next, not `{defect_class}`."
+                )
+
+            record_path = self._progress_record_path(submission_id, defect_class, unit_id)
+            if record_path.exists():
+                raise CoordinationError(
+                    f"Progress for `{unit_id}` already exists. Reset the gate state before replacing it."
+                )
+
+            record = {
+                "gate": GATE_NAME,
+                "submission_id": submission_id,
+                "turn_id": state["turn_id"],
+                "actor": "triage",
+                "created_at": utc_now(),
+                "defect_class": defect_class,
+                "unit_id": unit_id,
+                "target": target,
+                "defect_type": defect_type,
+                "decision": decision,
+                "evidence_summary": evidence_summary,
+                "evidence_files": evidence_files,
+                "reviewed_anchor_files": reviewed_anchor_files,
+                "reviewed_context_files": reviewed_context_files,
+                "notes": notes,
+                "defect_ids": defect_ids,
+            }
+            write_json_atomic(record_path, record)
+
+            next_state = self.engine.transition(
+                state,
+                {
+                    "status": state["status"],
+                    "phase": state["phase"],
+                    "fix_gate_open": state.get("fix_gate_open", False),
+                    "triage_status": state.get("triage_status"),
+                    "next_triage_class_index": state.get("next_triage_class_index", 0),
+                    "published_triage_classes": list(
+                        state.get("published_triage_classes", [])
+                    ),
+                    "open_defects": list(state.get("open_defects", [])),
+                    "active_repair_plan": list(state.get("active_repair_plan", [])),
+                    "blocked_reason": state.get("blocked_reason"),
+                    "triage_report_id": state.get("triage_report_id", 0),
+                    "submission_id": state.get("submission_id", 0),
+                    "triage_of_submission_id": state.get("triage_of_submission_id", 0),
+                    "progress_record_count": int(state.get("progress_record_count", 0))
+                    + 1,
+                    "last_progress_unit_id": unit_id,
+                    "last_event": f"triage_progress_published:{defect_class}",
+                },
+                active_owner=state.get("active_owner"),
+                worker_state=state.get("worker_state", WORKER_STATE_DORMANT),
+            )
+            write_json_atomic(self.state_file, next_state)
+            return {
+                "state": next_state,
+                "progress_record_path": str(record_path.relative_to(self.root)),
+                "progress_record": record,
+            }
+
+    def _coverage_progress_record_path(
+        self, submission_id: int, coverage_kind: str, unit_id: str
+    ) -> Path:
+        digest = hashlib.sha1(unit_id.encode("utf-8")).hexdigest()[:10]
+        slug = sanitize_progress_slug(unit_id)
+        return (
+            self.task_dir
+            / "coverage-progress"
+            / f"submission-{submission_id:04d}"
+            / coverage_kind
+            / f"{slug}-{digest}.json"
+        )
+
+    def _load_coverage_progress_records(
+        self, submission_id: int, coverage_kind: str
+    ) -> dict[str, dict]:
+        records: dict[str, dict] = {}
+        phase_dir = (
+            self.task_dir / "coverage-progress" / f"submission-{submission_id:04d}" / coverage_kind
+        )
+        if not phase_dir.is_dir():
+            return records
+
+        for path in sorted(phase_dir.glob("*.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                raise CoordinationError(
+                    f"Coverage progress artifact `{path}` must be valid JSON."
+                ) from exc
+            if not isinstance(payload, dict):
+                raise CoordinationError(
+                    f"Coverage progress artifact `{path}` must be a JSON object."
+                )
+            unit_id = str(payload.get("unit_id", "")).strip()
+            if not unit_id:
+                raise CoordinationError(
+                    f"Coverage progress artifact `{path}` is missing `unit_id`."
+                )
+            if unit_id in records:
+                raise CoordinationError(
+                    f"Duplicate coverage progress unit `{unit_id}` detected for submission {submission_id} / {coverage_kind}."
+                )
+            payload["_path"] = str(path.relative_to(self.root))
+            records[unit_id] = payload
+        return records
+
+    def publish_test_coverage_progress(
+        self,
+        submission_id: int,
+        coverage_kind: str,
+        target: str,
+        decision: str,
+        evidence_summary: str | None = None,
+        evidence_files: list[str] | None = None,
+        reviewed_test_files: list[str] | None = None,
+        reviewed_source_files: list[str] | None = None,
+        notes: list[str] | None = None,
+        defect_ids: list[str] | None = None,
+    ) -> dict:
+        if coverage_kind not in COVERAGE_KINDS:
+            raise CoordinationError(
+                "Coverage kind must be one of: " + ", ".join(COVERAGE_KINDS) + "."
+            )
+        if decision not in PROGRESS_DECISIONS:
+            raise CoordinationError(
+                "Coverage progress decision must be one of: "
+                + ", ".join(sorted(PROGRESS_DECISIONS))
+                + "."
+            )
+
+        evidence_summary = normalize_evidence_summary(evidence_summary)
+        evidence_files = normalize_string_list(
+            evidence_files, label="Coverage progress evidence files", required=True
+        )
+        reviewed_test_files = normalize_string_list(
+            reviewed_test_files, label="Reviewed test files", required=True
+        )
+        reviewed_source_files = normalize_string_list(
+            reviewed_source_files, label="Reviewed source files"
+        )
+        notes = normalize_notes(notes)
+        defect_ids = normalize_string_list(defect_ids, label="Coverage progress defect IDs")
+
+        if decision == "defect" and not defect_ids:
+            raise CoordinationError(
+                "Coverage defect progress records must include at least one `--defect-id`."
+            )
+        if decision != "defect" and defect_ids:
+            raise CoordinationError(
+                "Only coverage defect progress records may include `--defect-id`."
+            )
+
+        required_units = {
+            unit["unit_id"]: unit for unit in self._required_coverage_units(coverage_kind)
+        }
+        matching_units = [
+            unit for unit in required_units.values() if unit["target"] == target
+        ]
+        if not matching_units:
+            raise CoordinationError(
+                f"`{target}` is not a required coverage unit for `{coverage_kind}`."
+            )
+        if len(matching_units) != 1:
+            raise CoordinationError("Coverage unit resolution must be unique.")
+        unit = matching_units[0]
+        unit_id = str(unit["unit_id"])
+
+        with self._short_lock():
+            state = self.read_state()
+            self._require_turn(state, "triage")
+            if int(state.get("next_triage_class_index", 0)) < len(DEFECT_CLASSES):
+                raise CoordinationError(
+                    "Coverage audit cannot start until all three defect classes have been finalized."
+                )
+            expected_kind = self._expected_coverage_kind(state)
+            if coverage_kind != expected_kind:
+                raise CoordinationError(
+                    f"Coverage progress must publish `{expected_kind}` next, not `{coverage_kind}`."
+                )
+            current_submission = int(state["submission_id"])
+            if submission_id != current_submission:
+                raise CoordinationError(
+                    f"Coverage progress must target latest submission_id={current_submission}."
+                )
+
+            record_path = self._coverage_progress_record_path(
+                submission_id, coverage_kind, unit_id
+            )
+            if record_path.exists():
+                raise CoordinationError(
+                    f"Coverage progress for `{unit_id}` already exists. Reset the gate state before replacing it."
+                )
+
+            record = {
+                "gate": GATE_NAME,
+                "submission_id": submission_id,
+                "turn_id": state["turn_id"],
+                "actor": "triage",
+                "created_at": utc_now(),
+                "coverage_kind": coverage_kind,
+                "unit_id": unit_id,
+                "target": target,
+                "decision": decision,
+                "evidence_summary": evidence_summary,
+                "evidence_files": evidence_files,
+                "reviewed_test_files": reviewed_test_files,
+                "reviewed_source_files": reviewed_source_files,
+                "notes": notes,
+                "defect_ids": defect_ids,
+            }
+            write_json_atomic(record_path, record)
+
+            next_state = self.engine.transition(
+                state,
+                {
+                    "status": state["status"],
+                    "phase": state["phase"],
+                    "fix_gate_open": state.get("fix_gate_open", False),
+                    "triage_status": state.get("triage_status"),
+                    "next_triage_class_index": state.get("next_triage_class_index", 0),
+                    "published_triage_classes": list(
+                        state.get("published_triage_classes", [])
+                    ),
+                    "coverage_kind_index": state.get("coverage_kind_index", 0),
+                    "published_coverage_kinds": list(
+                        state.get("published_coverage_kinds", [])
+                    ),
+                    "coverage_status": "scanning",
+                    "open_defects": list(state.get("open_defects", [])),
+                    "active_repair_plan": list(state.get("active_repair_plan", [])),
+                    "blocked_reason": state.get("blocked_reason"),
+                    "triage_report_id": state.get("triage_report_id", 0),
+                    "coverage_report_id": state.get("coverage_report_id", 0),
+                    "submission_id": state.get("submission_id", 0),
+                    "triage_of_submission_id": state.get("triage_of_submission_id", 0),
+                    "progress_record_count": state.get("progress_record_count", 0),
+                    "last_progress_unit_id": state.get("last_progress_unit_id"),
+                    "coverage_progress_record_count": int(
+                        state.get("coverage_progress_record_count", 0)
+                    )
+                    + 1,
+                    "last_coverage_unit_id": unit_id,
+                    "last_event": f"coverage_progress_published:{coverage_kind}",
+                },
+                active_owner=state.get("active_owner"),
+                worker_state=state.get("worker_state", WORKER_STATE_DORMANT),
+            )
+            write_json_atomic(self.state_file, next_state)
+            return {
+                "state": next_state,
+                "coverage_progress_record_path": str(record_path.relative_to(self.root)),
+                "coverage_progress_record": record,
+            }
+
+    def _resolve_coverage_artifact_path(self, artifact_path: str) -> Path:
+        return self._resolve_review_artifact_path(artifact_path)
+
+    def _validate_coverage_artifact(
+        self,
+        coverage_kind: str,
+        submission_id: int,
+        artifact_path: str,
+        required_units: list[dict[str, object]],
+        progress_records: dict[str, dict],
+    ) -> dict:
+        resolved = self._resolve_coverage_artifact_path(artifact_path)
+        try:
+            payload = json.loads(resolved.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise CoordinationError("Coverage artifact must be valid JSON.") from exc
+        if not isinstance(payload, dict):
+            raise CoordinationError("Coverage artifact must be a JSON object.")
+        if payload.get("coverage_kind") != coverage_kind:
+            raise CoordinationError(
+                "Coverage artifact `coverage_kind` must match the published audit kind."
+            )
+        summary = str(payload.get("summary", "")).strip()
+        if not summary:
+            raise CoordinationError("Coverage artifact must include a non-empty `summary`.")
+
+        covered_progress_units = dedupe_strings(
+            [str(value) for value in payload.get("covered_progress_units", []) if value]
+        )
+        reviewed_targets = dedupe_strings(
+            [str(value) for value in payload.get("reviewed_targets", []) if value]
+        )
+        reviewed_test_files = dedupe_strings(
+            [str(value) for value in payload.get("reviewed_test_files", []) if value]
+        )
+        reviewed_source_files = dedupe_strings(
+            [str(value) for value in payload.get("reviewed_source_files", []) if value]
+        )
+        evidence_files = dedupe_strings(
+            [str(value) for value in payload.get("evidence_files", []) if value]
+        )
+        final_decision_notes = normalize_string_list(
+            payload.get("final_decision_notes"),
+            label="coverage final decision notes",
+            required=True,
+        )
+
+        required_unit_ids = [str(unit["unit_id"]) for unit in required_units]
+        missing_covered_units = sorted(set(required_unit_ids) - set(covered_progress_units))
+        if missing_covered_units:
+            raise CoordinationError(
+                "Coverage artifact is missing covered progress units: "
+                + ", ".join(missing_covered_units)
+                + "."
+            )
+        unexpected_covered_units = sorted(
+            set(covered_progress_units) - set(required_unit_ids)
+        )
+        if unexpected_covered_units:
+            raise CoordinationError(
+                "Coverage artifact includes unknown covered progress units: "
+                + ", ".join(unexpected_covered_units)
+                + "."
+            )
+
+        aggregated_targets = dedupe_strings([str(unit["target"]) for unit in required_units])
+        aggregated_test_files = dedupe_strings(
+            [
+                entry
+                for record in progress_records.values()
+                for entry in record.get("reviewed_test_files", [])
+            ]
+        )
+        aggregated_source_files = dedupe_strings(
+            [
+                entry
+                for record in progress_records.values()
+                for entry in record.get("reviewed_source_files", [])
+            ]
+        )
+        aggregated_evidence_files = dedupe_strings(
+            [
+                entry
+                for record in progress_records.values()
+                for entry in record.get("evidence_files", [])
+            ]
+        )
+
+        for label, expected, actual in (
+            ("reviewed targets", aggregated_targets, reviewed_targets),
+            ("reviewed test files", aggregated_test_files, reviewed_test_files),
+            ("reviewed source files", aggregated_source_files, reviewed_source_files),
+            ("evidence files", aggregated_evidence_files, evidence_files),
+        ):
+            missing = sorted(set(expected) - set(actual))
+            if missing:
+                raise CoordinationError(
+                    f"Coverage artifact is missing {label}: " + ", ".join(missing) + "."
+                )
+
+        return {
+            "path": str(resolved.relative_to(self.root))
+            if resolved.is_relative_to(self.root)
+            else str(resolved.relative_to(self.git_dir)),
+            "submission_id": submission_id,
+            "summary": summary,
+            "covered_progress_units": covered_progress_units,
+            "reviewed_targets": reviewed_targets,
+            "reviewed_test_files": reviewed_test_files,
+            "reviewed_source_files": reviewed_source_files,
+            "evidence_files": evidence_files,
+            "final_decision_notes": final_decision_notes,
+            "progress_record_paths": dedupe_strings(
+                [record["_path"] for record in progress_records.values()]
+            ),
+        }
+
+    def publish_test_coverage_audit(
+        self,
+        submission_id: int,
+        coverage_kind: str,
+        decision: str,
+        defects: list[dict[str, str]] | None = None,
+        repair_logic: dict[str, str] | None = None,
+        evidence_summary: str | None = None,
+        checks_run: list[str] | None = None,
+        notes: list[str] | None = None,
+        defect_evidence: dict[str, str] | None = None,
+        review_artifact: str | None = None,
+    ) -> dict:
+        defects = list(defects or [])
+        defect_evidence = dict(defect_evidence or {})
+        if coverage_kind not in COVERAGE_KINDS:
+            raise CoordinationError(
+                "Coverage kind must be one of: " + ", ".join(COVERAGE_KINDS) + "."
+            )
+        if decision not in {"accept", "reject"}:
+            raise CoordinationError(
+                "Coverage audit decision must be `accept` or `reject`."
+            )
+        evidence_summary = normalize_evidence_summary(evidence_summary)
+        checks_run = normalize_checks_run(checks_run, required=False)
+        notes = normalize_notes(notes)
+        review_artifact = normalize_review_artifact_path(review_artifact)
+
+        with self._short_lock():
+            state = self.read_state()
+            self._require_turn(state, "triage")
+            if int(state.get("next_triage_class_index", 0)) < len(DEFECT_CLASSES):
+                raise CoordinationError(
+                    "Coverage audit cannot finalize until all three defect classes are complete."
+                )
+            expected_kind = self._expected_coverage_kind(state)
+            if coverage_kind != expected_kind:
+                raise CoordinationError(
+                    f"Coverage audit must publish `{expected_kind}` next, not `{coverage_kind}`."
+                )
+            current_submission = int(state["submission_id"])
+            if submission_id != current_submission:
+                raise CoordinationError(
+                    f"Coverage audit must target latest submission_id={current_submission}."
+                )
+            if decision == "accept" and defects:
+                raise CoordinationError(
+                    "Accepted coverage audits must not include defects."
+                )
+            if decision == "reject" and not defects:
+                raise CoordinationError(
+                    "Rejected coverage audits must include at least one defect."
+                )
+
+            required_units = self._required_coverage_units(coverage_kind)
+            progress_records = self._load_coverage_progress_records(
+                submission_id, coverage_kind
+            )
+            required_unit_ids = {str(unit["unit_id"]) for unit in required_units}
+            progress_unit_ids = set(progress_records)
+            missing_progress_units = sorted(required_unit_ids - progress_unit_ids)
+            if missing_progress_units:
+                raise CoordinationError(
+                    "Coverage audit finalization is missing progress units: "
+                    + ", ".join(missing_progress_units)
+                    + "."
+                )
+            unexpected_progress_units = sorted(progress_unit_ids - required_unit_ids)
+            if unexpected_progress_units:
+                raise CoordinationError(
+                    "Coverage audit finalization includes unknown progress units: "
+                    + ", ".join(unexpected_progress_units)
+                    + "."
+                )
+
+            blocked_progress_units = sorted(
+                unit_id
+                for unit_id, record in progress_records.items()
+                if record.get("decision") == "blocked"
+            )
+            if blocked_progress_units:
+                raise CoordinationError(
+                    "Cannot finalize coverage audit while progress units remain blocked: "
+                    + ", ".join(blocked_progress_units)
+                    + "."
+                )
+
+            review_coverage = self._validate_coverage_artifact(
+                coverage_kind,
+                submission_id,
+                review_artifact,
+                required_units,
+                progress_records,
+            )
+
+            repair_plan: list[dict[str, str]] = []
+            if decision == "reject":
+                repair_plan = build_repair_plan(
+                    defects,
+                    COVERAGE_DEFECT_TYPE[coverage_kind],
+                    repair_logic,
+                )
+                progress_defect_ids = dedupe_strings(
+                    [
+                        defect_id
+                        for record in progress_records.values()
+                        for defect_id in record.get("defect_ids", [])
+                    ]
+                )
+                defect_ids = [defect["id"] for defect in repair_plan]
+                missing_progress_defect_ids = sorted(
+                    set(defect_ids) - set(progress_defect_ids)
+                )
+                if missing_progress_defect_ids:
+                    raise CoordinationError(
+                        "Coverage defects must trace to coverage progress units: "
+                        + ", ".join(missing_progress_defect_ids)
+                        + "."
+                    )
+                unexpected_progress_defect_ids = sorted(
+                    set(progress_defect_ids) - set(defect_ids)
+                )
+                if unexpected_progress_defect_ids:
+                    raise CoordinationError(
+                        "Coverage progress defect IDs must be carried into the rejected audit batch: "
+                        + ", ".join(unexpected_progress_defect_ids)
+                        + "."
+                    )
+                for defect in repair_plan:
+                    evidence = defect_evidence.get(defect["id"], "").strip()
+                    if not evidence:
+                        raise CoordinationError(
+                            f"Coverage defect `{defect['id']}` is missing `--defect-evidence`."
+                        )
+                    defect["evidence"] = evidence
+            else:
+                non_aligned_progress = sorted(
+                    unit_id
+                    for unit_id, record in progress_records.items()
+                    if record.get("decision") != "aligned"
+                )
+                if non_aligned_progress:
+                    raise CoordinationError(
+                        "Accepted coverage audits require every progress unit to be aligned: "
+                        + ", ".join(non_aligned_progress)
+                        + "."
+                    )
+
+            report_id = int(state.get("coverage_report_id", 0)) + 1
+            report_path = (
+                self.task_dir / "coverage" / f"coverage-{report_id:04d}.json"
+            )
+            report = {
+                "gate": GATE_NAME,
+                "coverage_report_id": report_id,
+                "submission_id": submission_id,
+                "turn_id": state["turn_id"],
+                "actor": "triage",
+                "created_at": utc_now(),
+                "coverage_kind": coverage_kind,
+                "decision": decision,
+                "checks_run": checks_run,
+                "evidence_summary": evidence_summary,
+                "notes": notes,
+                "review_artifact": review_coverage["path"],
+                "review_summary": review_coverage["summary"],
+                "covered_progress_units": review_coverage["covered_progress_units"],
+                "progress_record_paths": review_coverage["progress_record_paths"],
+                "reviewed_targets": review_coverage["reviewed_targets"],
+                "reviewed_test_files": review_coverage["reviewed_test_files"],
+                "reviewed_source_files": review_coverage["reviewed_source_files"],
+                "evidence_files": review_coverage["evidence_files"],
+                "final_decision_notes": review_coverage["final_decision_notes"],
+                "defects": repair_plan if decision == "reject" else [],
+            }
+            write_json_atomic(report_path, report)
+
+            published_coverage_kinds = list(state.get("published_coverage_kinds", []))
+            published_coverage_kinds.append(coverage_kind)
+            open_defects = list(state.get("open_defects", []))
+            active_repair_plan = list(state.get("active_repair_plan", []))
+            if decision == "reject":
+                open_defects.extend(defect["id"] for defect in repair_plan)
+                active_repair_plan.extend(repair_plan)
+
+            next_coverage_kind_index = int(state.get("coverage_kind_index", 0)) + 1
+            next_fields, active_owner, worker_state = self.adapter.coverage_transition_fields(
+                report_id=report_id,
+                coverage_kind=coverage_kind,
+                published_coverage_kinds=published_coverage_kinds,
+                open_defects=open_defects,
+                active_repair_plan=active_repair_plan,
+                next_coverage_kind_index=next_coverage_kind_index,
+            )
+            next_state = self.engine.transition(
+                state,
+                next_fields,
+                active_owner=active_owner,
+                worker_state=worker_state,
+            )
+            write_json_atomic(self.state_file, next_state)
+            return next_state
+
     def _run_probe_suite(self, defect_class: str, submission_id: int) -> dict:
         if defect_class == "spec-drift":
             return self._probe_spec_drift()
@@ -1233,27 +2556,54 @@ class CoordinationStore:
             return self._probe_quality()
         raise CoordinationError(f"Unsupported defect class `{defect_class}`.")
 
+    def _build_coverage_probe(self, coverage_kind: str) -> dict:
+        deferred_run_plan = self._deferred_run_plan()
+        if coverage_kind == "black-box":
+            black_box_tests = self._resolve_test_globs(
+                self._load_repo_gate_profile()["coverage"]["black_box"]["test_globs"]
+            )
+            return {
+                "checks_run": [],
+                "run_results": [],
+                "failing_commands": [],
+                "evidence_summary": (
+                    "Black-box coverage audit is review-first. Read L1 contracts and contract tests "
+                    "before deciding whether public-surface coverage is aligned or missing."
+                ),
+                "notes": [
+                    "Do not execute deferred run commands during black-box coverage audit.",
+                    "L1 black-box coverage must stay in contract test files and use public APIs only.",
+                ],
+                "deferred_run_plan": deferred_run_plan,
+                "test_files": black_box_tests,
+            }
+        if coverage_kind == "white-box":
+            white_box_tests = self._white_box_test_files()
+            return {
+                "checks_run": [],
+                "run_results": [],
+                "failing_commands": [],
+                "evidence_summary": (
+                    "White-box coverage audit is review-first. Read implementation modules and "
+                    "supplemental tests before deciding whether internal/mechanism coverage is aligned or missing."
+                ),
+                "notes": [
+                    "Do not execute deferred run commands during white-box coverage audit.",
+                    "White-box coverage must stay outside the L1 contract test files.",
+                ],
+                "deferred_run_plan": deferred_run_plan,
+                "test_files": white_box_tests,
+            }
+        raise CoordinationError(f"Unsupported coverage kind `{coverage_kind}`.")
+
     def _probe_spec_drift(self) -> dict:
         checks_run: list[str] = []
-        notes: list[str] = []
-        validate_cmd, validate_cwd = self._resolve_validator_probe_command()
-        validate_code, validate_out, validate_err = run_command(validate_cmd, validate_cwd)
-        checks_run.append(shell_join(validate_cmd))
-        notes.extend(
-            [f"validate.py exit code: {validate_code}"]
-            + summarize_text(validate_out or validate_err, limit=8)
-        )
-
-        spec_test_cmd, spec_test_cwd = self._resolve_spec_test_probe_command()
-        unittest_code, unittest_out, unittest_err = run_command(spec_test_cmd, spec_test_cwd)
-        checks_run.append(shell_join(spec_test_cmd))
-        notes.extend(
-            [f"spec tests exit code: {unittest_code}"]
-            + summarize_text(unittest_out or unittest_err, limit=8)
-        )
-
+        deferred_run_plan = self._deferred_run_plan()
+        notes: list[str] = [
+            f"repo gate profile: {deferred_run_plan['profile_path']}",
+            "Semantic review first: do not execute deferred run commands during spec-drift triage.",
+        ]
         context_files, unresolved_context_refs = discover_spec_context_files(self.root)
-        checks_run.append("spec context reference scan")
         if context_files:
             notes.append("spec context files: " + ", ".join(context_files))
         else:
@@ -1266,113 +2616,33 @@ class CoordinationStore:
             notes.append("unresolved spec context refs: none")
 
         evidence_summary = (
-            f"Spec drift probes completed: validate.py exit={validate_code}, "
-            f"spec tests exit={unittest_code}. These results are structural signals only "
-            "and require semantic traceability review before publishing a drift defect."
+            "Spec-drift triage is semantic-first. Review the full spec tree, parent/child layering, "
+            "and context files before publishing drift or alignment."
         )
         return {
             "checks_run": checks_run,
+            "run_results": [],
+            "failing_commands": [],
             "evidence_summary": evidence_summary,
             "notes": notes
             + [
-                "Do not classify spec-drift from validator/test output alone.",
-                "Confirm an actual semantic contradiction, omission, or weakened requirement first.",
+                "Review every required spec file and publish one progress record per file before phase finalization.",
             ],
+            "deferred_run_plan": deferred_run_plan,
         }
 
-    def _resolve_validator_probe_command(self) -> tuple[list[str], Path]:
-        documented = self._read_documented_command(
-            lambda line: "validate.py specs/" in line
-        )
-        if documented is not None:
-            return documented, self.root
-
-        specs_target = os.path.relpath(self.root / "specs", self.skill_root)
-        return [sys.executable, "scripts/validate.py", specs_target], self.skill_root
-
-    def _resolve_spec_test_probe_command(self) -> tuple[list[str], Path]:
-        documented = self._read_documented_command(
-            lambda line: line == "./scripts/test-workflow.sh contracts"
-        )
-        if documented is not None:
-            return documented, self.root
-
-        python_spec_tests = sorted((self.root / "tests" / "specs").glob("*.py"))
-        if python_spec_tests:
-            return (
-                [sys.executable, "-m", "unittest", "discover", "-s", "tests/specs", "-q"],
-                self.root,
-            )
-
-        fallback_script = self.root / "scripts" / "test-workflow.sh"
-        if fallback_script.exists():
-            return (["./scripts/test-workflow.sh", "contracts"], self.root)
-
-        return (
-            [
-                sys.executable,
-                "-c",
-                "print('No spec test workflow found; spec test probe skipped')",
-            ],
-            self.root,
-        )
-
-    def _read_documented_command(
-        self, predicate: callable
-    ) -> list[str] | None:
-        specs_readme = self.root / "specs" / "readme.md"
-        if not specs_readme.exists():
-            return None
-
-        for raw_line in specs_readme.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith("#") or line.startswith("```"):
-                continue
-            if predicate(line):
-                parsed = shlex.split(line)
-                return [os.path.expanduser(token) for token in parsed]
-        return None
-
     def _probe_src_drift(self, submission_id: int) -> dict:
+        deferred_run_plan = self._deferred_run_plan()
         checks_run: list[str] = []
-        notes: list[str] = []
-        source = "repository inventory"
-        changed_paths: list[str] = []
-
+        notes: list[str] = [
+            f"repo gate profile: {deferred_run_plan['profile_path']}",
+            "Semantic review first: read src and architecture files before any deferred run.",
+            "tests/ and scripts/ are not src-drift review targets.",
+        ]
         if submission_id > 0:
-            manifest_path = self.submissions_dir / f"submission-{submission_id:04d}.json"
-            if not manifest_path.exists():
-                raise CoordinationError(
-                    f"Missing frozen submission manifest for submission_id={submission_id}."
-                )
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            changed_paths = extract_changed_paths_from_submission(manifest)
-            checks_run.append(
-                f"frozen submission manifest: submissions/submission-{submission_id:04d}.json"
-            )
-            source = f"submission-{submission_id:04d}.json"
+            notes.append(f"evidence source: frozen submission-{submission_id:04d}.json")
         else:
-            git_code, git_out, git_err = run_command(
-                ["git", "status", "--short", "--untracked-files=all"], self.root
-            )
-            checks_run.append("git status --short --untracked-files=all (review scope only)")
-            if git_code != 0:
-                raise CoordinationError(
-                    "Unable to inspect git status for src-drift probe: "
-                    + (git_err.strip() or "unknown git error")
-                )
-            changed_paths = parse_git_status_porcelain(git_out)
-
-        buckets = detect_changed_path_classes(changed_paths)
-        notes.append(f"Evidence source: {source}")
-        notes.append(
-            "Changed files and repository inventory define review entry points only; they are not src-drift findings by themselves."
-        )
-        for bucket, paths in buckets.items():
-            if paths:
-                notes.append(f"{bucket}: {', '.join(paths)}")
-            else:
-                notes.append(f"{bucket}: none")
+            notes.append("evidence source: baseline submission_id=0")
         module_review_order = self._discover_source_component_review_order()
         if module_review_order:
             notes.append(
@@ -1386,49 +2656,48 @@ class CoordinationStore:
             notes.append("source modules/components: none discovered")
 
         evidence_summary = (
-            "Src drift probe prepared a deterministic review packet: repository delta scope, "
-            "source module inventory, and architecture/mechanism comparison anchors. Publish "
-            "src drift only after module-by-module review against L2 and component-by-component "
-            "review against key L3 mechanisms."
+            "Src-drift triage is semantic-first. Review modules against L2 architecture and key L3 mechanisms before publishing drift or alignment."
         )
         return {
             "checks_run": checks_run,
+            "run_results": [],
+            "failing_commands": [],
             "evidence_summary": evidence_summary,
             "notes": notes
             + [
-                "Do not classify src-drift from changed-file summaries, path overlap, or repository inventory alone.",
-                "Compare src modules against L2 architecture and src components against key L3 mechanisms before publishing a defect.",
+                "Publish one progress record per module x src-drift defect type before phase finalization.",
             ],
+            "deferred_run_plan": deferred_run_plan,
         }
 
     def _probe_quality(self) -> dict:
+        deferred_run_plan = self._deferred_run_plan()
         checks_run: list[str] = []
-        notes: list[str] = []
+        notes: list[str] = [
+            f"repo gate profile: {deferred_run_plan['profile_path']}",
+            "Semantic review first: inspect design, control flow, and waiting/concurrency semantics before any deferred run.",
+            "tests/ and scripts/ are not quality review targets.",
+        ]
         source_roots = self._discover_quality_source_roots()
         module_review_order = self._discover_source_component_review_order()
         architecture_files = spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md")
         key_mechanism_files = discover_l3_runtime_files(self.root)
 
         if source_roots:
-            checks_run.append("quality source root discovery")
             notes.append("Quality source roots: " + ", ".join(source_roots))
         else:
-            checks_run.append("quality source root discovery: none")
             notes.append("Quality source roots: none discovered")
 
-        checks_run.append("quality target categories")
         notes.append(
             "Quality target categories: " + ", ".join(GATE_PROFILE["quality_checklist"])
         )
 
         if architecture_files:
-            checks_run.append("quality architecture anchor discovery")
             notes.append("L2 architecture anchors: " + ", ".join(architecture_files))
         else:
             notes.append("L2 architecture anchors: none discovered")
 
         if key_mechanism_files:
-            checks_run.append("quality L3 mechanism discovery")
             notes.append("L3 mechanism anchors: " + ", ".join(key_mechanism_files))
         else:
             notes.append("L3 mechanism anchors: none discovered")
@@ -1445,19 +2714,19 @@ class CoordinationStore:
             notes.append("source modules/components: none discovered")
 
         evidence_summary = (
-            "Quality probe prepared a deterministic semantic review packet: source roots, "
-            "module/component inventory, quality target categories, and L2/L3 comparison "
-            "anchors. Publish a quality defect only after semantic review of implementation "
-            "intent, control flow, and design against those categories."
+            "Quality triage is semantic-first. Review implementation intent, control flow, and L2/L3 boundaries before publishing quality defects or alignment."
         )
         return {
             "checks_run": checks_run,
+            "run_results": [],
+            "failing_commands": [],
             "evidence_summary": evidence_summary,
             "notes": notes
             + [
                 "Do not use keyword or regex scanning as a quality probe.",
-                "Infer workaround, legacy, concurrency, deadlock, dead-wait, and blind-wait defects from code behavior and design, not from terminology alone.",
+                "Publish one progress record per module x quality defect type before phase finalization.",
             ],
+            "deferred_run_plan": deferred_run_plan,
         }
 
     def _discover_source_review_files(self) -> list[str]:
@@ -1479,9 +2748,12 @@ class CoordinationStore:
                     discovered.append(str(path))
         return discovered
 
-    def _discover_source_component_review_order(self) -> list[dict[str, object]]:
+    def _discover_source_component_review_order(
+        self, source_roots: list[str] | None = None
+    ) -> list[dict[str, object]]:
         review_order: list[dict[str, object]] = []
-        for source_root in self._discover_quality_source_roots():
+        roots = source_roots or self._discover_quality_source_roots()
+        for source_root in roots:
             root_path = self.root / source_root
             if not root_path.is_dir():
                 continue
@@ -1516,9 +2788,10 @@ class CoordinationStore:
         source_module_review_order = self._discover_source_component_review_order()
         return {
             "must_compare_module_by_module": True,
-            "must_compare_component_by_component": True,
+            "must_publish_progress_per_module_x_defect_type": True,
             "must_compare_against_l2_architecture": True,
             "must_compare_against_l3_key_mechanisms": True,
+            "required_defect_types": list(SRC_DRIFT_DEFECT_TYPES),
             "architecture_files": spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md"),
             "key_mechanism_files": discover_l3_runtime_files(self.root),
             "source_module_review_order": source_module_review_order,
@@ -1533,11 +2806,12 @@ class CoordinationStore:
                 spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md")
                 + discover_l3_runtime_files(self.root)
             ),
+            "required_progress_units": self._required_progress_units("src-drift"),
             "mandatory_checks": list(SRC_DRIFT_REVIEW_CHECKS),
             "warning": (
-                "Src drift review is not complete until the relevant src modules and components "
-                "have been compared against L2 architecture boundaries and the key mechanisms "
-                "fixed in L3. Changed paths alone are not enough."
+                "Src drift review is not complete until the relevant src modules have been "
+                "compared against L2 architecture boundaries and key L3 mechanisms, and one "
+                "progress record exists for every module x defect-type review unit."
             ),
         }
 
@@ -1546,10 +2820,11 @@ class CoordinationStore:
         return {
             "must_not_use_keyword_probe": True,
             "must_compare_module_by_module": True,
-            "must_compare_component_by_component": True,
+            "must_publish_progress_per_module_x_defect_type": True,
             "must_compare_against_l2_architecture": True,
             "must_compare_against_l3_key_mechanisms": True,
             "quality_target_categories": list(GATE_PROFILE["quality_checklist"]),
+            "required_defect_types": list(QUALITY_DEFECT_TYPES),
             "architecture_files": spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md"),
             "key_mechanism_files": discover_l3_runtime_files(self.root),
             "source_module_review_order": source_module_review_order,
@@ -1564,41 +2839,23 @@ class CoordinationStore:
                 spec_path_if_exists(self.root, "specs/L2-ARCHITECTURE.md")
                 + discover_l3_runtime_files(self.root)
             ),
+            "required_progress_units": self._required_progress_units("quality"),
             "mandatory_checks": list(QUALITY_REVIEW_CHECKS),
             "warning": (
                 "Quality review is semantic only: do not use keyword, regex, or naming scans. "
-                "Review the listed source modules/components against the quality target "
-                "categories plus L2/L3 architecture and mechanism anchors."
+                "Review the listed source modules against the quality target categories plus "
+                "L2/L3 architecture and mechanism anchors, and publish one progress record "
+                "for every module x quality-defect-type unit."
             ),
         }
 
     def _discover_quality_source_roots(self) -> list[str]:
-        candidate_roots: list[Path] = []
-        root_src = self.root / "src"
-        if root_src.is_dir():
-            candidate_roots.append(root_src)
-
-        for candidate in sorted(self.root.rglob("src")):
-            if candidate == root_src or not candidate.is_dir():
-                continue
-            try:
-                rel = candidate.relative_to(self.root)
-            except ValueError:
-                continue
-            if any(part in QUALITY_PROBE_IGNORED_PARTS for part in rel.parts):
-                continue
-            candidate_roots.append(candidate)
-
+        profile = self._load_repo_gate_profile()
         discovered: list[str] = []
-        seen: set[str] = set()
-        for candidate in sorted(candidate_roots, key=lambda path: (len(path.parts), str(path))):
-            rel = str(candidate.relative_to(self.root))
-            if rel in seen:
-                continue
-            if not self._source_root_has_supported_files(candidate):
-                continue
-            discovered.append(rel)
-            seen.add(rel)
+        for relative_root in profile["triage"]["source_roots"]:
+            root_path = self.root / relative_root
+            if self._source_root_has_supported_files(root_path):
+                discovered.append(relative_root)
         return discovered
 
     def _source_root_has_supported_files(self, source_root: Path) -> bool:
@@ -1665,49 +2922,14 @@ class CoordinationStore:
             "Review artifact must point to an existing file under the repo root or `.git/`."
         )
 
-    def _semantic_review_requirements(self, defect_class: str) -> dict:
-        if defect_class == "spec-drift":
-            contract = build_spec_drift_review_contract(self.root)
-            return {
-                "required_targets": dedupe_strings(contract.get("required_review_targets", [])),
-                "required_anchor_files": dedupe_strings(contract.get("required_anchor_files", [])),
-                "required_context_files": dedupe_strings(contract.get("context_files", [])),
-            }
-        if defect_class == "src-drift":
-            contract = self._build_src_drift_review_contract()
-            return {
-                "required_targets": dedupe_strings(
-                    [
-                        target
-                        for entry in contract.get("source_module_review_order", [])
-                        for target in entry.get("components", [])
-                    ]
-                ),
-                "required_anchor_files": dedupe_strings(
-                    contract.get("architecture_files", [])
-                    + contract.get("key_mechanism_files", [])
-                ),
-                "required_context_files": [],
-            }
-        if defect_class == "quality":
-            contract = self._build_quality_review_contract()
-            return {
-                "required_targets": dedupe_strings(
-                    [
-                        target
-                        for entry in contract.get("source_module_review_order", [])
-                        for target in entry.get("components", [])
-                    ]
-                ),
-                "required_anchor_files": dedupe_strings(
-                    contract.get("architecture_files", [])
-                    + contract.get("key_mechanism_files", [])
-                ),
-                "required_context_files": [],
-            }
-        raise CoordinationError(f"Unsupported defect class `{defect_class}`.")
-
-    def _validate_review_artifact(self, defect_class: str, artifact_path: str) -> dict:
+    def _validate_review_artifact(
+        self,
+        defect_class: str,
+        submission_id: int,
+        artifact_path: str,
+        required_units: list[dict[str, object]],
+        progress_records: dict[str, dict],
+    ) -> dict:
         resolved = self._resolve_review_artifact_path(artifact_path)
         try:
             payload = json.loads(resolved.read_text(encoding="utf-8"))
@@ -1723,6 +2945,9 @@ class CoordinationStore:
         if not summary:
             raise CoordinationError("Review artifact must include a non-empty `summary`.")
 
+        covered_progress_units = dedupe_strings(
+            [str(value) for value in payload.get("covered_progress_units", []) if value]
+        )
         reviewed_targets = dedupe_strings(
             [str(value) for value in payload.get("reviewed_targets", []) if value]
         )
@@ -1732,33 +2957,63 @@ class CoordinationStore:
         reviewed_context_files = dedupe_strings(
             [str(value) for value in payload.get("reviewed_context_files", []) if value]
         )
-        comparison_notes = payload.get("comparison_notes", [])
-        if not isinstance(comparison_notes, list) or not comparison_notes:
+        evidence_files = dedupe_strings(
+            [str(value) for value in payload.get("evidence_files", []) if value]
+        )
+        final_decision_notes = normalize_string_list(
+            payload.get("final_decision_notes"),
+            label="final decision notes",
+            required=True,
+        )
+
+        required_unit_ids = [str(unit["unit_id"]) for unit in required_units]
+        missing_covered_units = sorted(set(required_unit_ids) - set(covered_progress_units))
+        if missing_covered_units:
             raise CoordinationError(
-                "Review artifact must include non-empty `comparison_notes`."
+                "Review artifact is missing covered progress units: "
+                + ", ".join(missing_covered_units)
+                + "."
+            )
+        unexpected_covered_units = sorted(set(covered_progress_units) - set(required_unit_ids))
+        if unexpected_covered_units:
+            raise CoordinationError(
+                "Review artifact includes unknown progress units: "
+                + ", ".join(unexpected_covered_units)
+                + "."
             )
 
-        note_targets: set[str] = set()
-        for note in comparison_notes:
-            if not isinstance(note, dict):
-                raise CoordinationError("Each review comparison note must be a JSON object.")
-            target = str(note.get("target", "")).strip()
-            judgment = str(note.get("judgment", "")).strip()
-            basis = str(note.get("basis", "")).strip()
-            if not target or not judgment or not basis:
-                raise CoordinationError(
-                    "Each comparison note must include non-empty `target`, `judgment`, and `basis`."
-                )
-            note_targets.add(target)
+        aggregated_targets = dedupe_strings(
+            [str(unit["target"]) for unit in required_units]
+        )
+        aggregated_anchor_files = dedupe_strings(
+            [
+                entry
+                for record in progress_records.values()
+                for entry in record.get("reviewed_anchor_files", [])
+            ]
+        )
+        aggregated_context_files = dedupe_strings(
+            [
+                entry
+                for record in progress_records.values()
+                for entry in record.get("reviewed_context_files", [])
+            ]
+        )
+        aggregated_evidence_files = dedupe_strings(
+            [
+                entry
+                for record in progress_records.values()
+                for entry in record.get("evidence_files", [])
+            ]
+        )
 
-        requirements = self._semantic_review_requirements(defect_class)
-        missing_targets = sorted(set(requirements["required_targets"]) - set(reviewed_targets))
+        missing_targets = sorted(set(aggregated_targets) - set(reviewed_targets))
         if missing_targets:
             raise CoordinationError(
                 "Review artifact is missing reviewed targets: " + ", ".join(missing_targets) + "."
             )
         missing_anchor_files = sorted(
-            set(requirements["required_anchor_files"]) - set(reviewed_anchor_files)
+            set(aggregated_anchor_files) - set(reviewed_anchor_files)
         )
         if missing_anchor_files:
             raise CoordinationError(
@@ -1767,7 +3022,7 @@ class CoordinationStore:
                 + "."
             )
         missing_context_files = sorted(
-            set(requirements["required_context_files"]) - set(reviewed_context_files)
+            set(aggregated_context_files) - set(reviewed_context_files)
         )
         if missing_context_files:
             raise CoordinationError(
@@ -1775,11 +3030,13 @@ class CoordinationStore:
                 + ", ".join(missing_context_files)
                 + "."
             )
-        missing_notes = sorted(set(requirements["required_targets"]) - note_targets)
-        if missing_notes:
+        missing_evidence_files = sorted(
+            set(aggregated_evidence_files) - set(evidence_files)
+        )
+        if missing_evidence_files:
             raise CoordinationError(
-                "Review artifact is missing per-target comparison notes: "
-                + ", ".join(missing_notes)
+                "Review artifact is missing evidence files: "
+                + ", ".join(missing_evidence_files)
                 + "."
             )
 
@@ -1787,31 +3044,56 @@ class CoordinationStore:
             "path": str(resolved.relative_to(self.root))
             if resolved.is_relative_to(self.root)
             else str(resolved.relative_to(self.git_dir)),
+            "submission_id": submission_id,
             "summary": summary,
+            "covered_progress_units": covered_progress_units,
             "reviewed_targets": reviewed_targets,
             "reviewed_anchor_files": reviewed_anchor_files,
             "reviewed_context_files": reviewed_context_files,
-            "comparison_notes": comparison_notes,
+            "evidence_files": evidence_files,
+            "final_decision_notes": final_decision_notes,
+            "progress_record_paths": dedupe_strings(
+                [record["_path"] for record in progress_records.values()]
+            ),
         }
 
     def _triage_runner_packet(
         self, state: dict, result: str, probe: dict | None = None
     ) -> dict:
+        profile_error = None
+        try:
+            spec_files = self._discover_profile_spec_files()
+            source_files = self._discover_source_review_files()
+            black_box_tests = self._resolve_test_globs(
+                self._load_repo_gate_profile()["coverage"]["black_box"]["test_globs"]
+            )
+            white_box_tests = self._white_box_test_files()
+        except CoordinationError as exc:
+            spec_files = []
+            source_files = []
+            black_box_tests = []
+            white_box_tests = []
+            profile_error = str(exc)
         context_files, unresolved_context_refs = discover_spec_context_files(self.root)
         full_file_review_contract = {
             "must_read_full_files": True,
             "must_not_judge_from_snippets_only": True,
-            "spec_files": discover_specs_review_files(self.root),
-            "source_files": self._discover_source_review_files(),
+            "spec_files": spec_files,
+            "source_files": source_files,
+            "black_box_test_files": black_box_tests,
+            "white_box_test_files": white_box_tests,
             "context_files": context_files,
             "must_read_context_files_when_listed": True,
             "unresolved_context_refs": unresolved_context_refs,
             "warning": (
                 "Before publishing any triage defect, read the complete contents of every listed "
-                "spec file, every listed readable `src/` text file, and every listed context "
-                "file. Do not anchor on isolated text fragments, grep hits, or short snippets."
+                "spec file, every listed readable `src/` text file, the relevant test files, "
+                "and every listed context file. Do not anchor on isolated text fragments, grep "
+                "hits, or short snippets."
             ),
         }
+        if profile_error is not None:
+            full_file_review_contract["profile_error"] = profile_error
         packet = {
             "result": result,
             "actor": "triage",
@@ -1819,63 +3101,167 @@ class CoordinationStore:
             "baton_contract": self._baton_contract(state),
             "semantic_review_contract": semantic_review_contract(None),
             "full_file_review_contract": full_file_review_contract,
+            "progress_artifact_contract": {
+                "required": True,
+                "path_hint": ".git/agent-sync/gate/all-defects/progress/submission-<id>/<defect-class>/<unit>.json",
+                "required_fields": [
+                    "defect_class",
+                    "unit_id",
+                    "target",
+                    "defect_type",
+                    "decision",
+                    "evidence_summary",
+                    "evidence_files",
+                    "reviewed_anchor_files",
+                    "reviewed_context_files",
+                    "notes",
+                    "defect_ids",
+                ],
+                "allowed_decisions": sorted(PROGRESS_DECISIONS),
+            },
+            "coverage_progress_artifact_contract": {
+                "required": True,
+                "path_hint": ".git/agent-sync/gate/all-defects/coverage-progress/submission-<id>/<coverage-kind>/<unit>.json",
+                "required_fields": [
+                    "coverage_kind",
+                    "unit_id",
+                    "target",
+                    "decision",
+                    "evidence_summary",
+                    "evidence_files",
+                    "reviewed_test_files",
+                    "reviewed_source_files",
+                    "notes",
+                    "defect_ids",
+                ],
+                "allowed_decisions": sorted(PROGRESS_DECISIONS),
+            },
             "review_artifact_contract": {
                 "required": True,
-                "path_hint": ".git/agent-sync/gate/all-defects/reviews/<defect-class>-review.json",
+                "path_hint": ".git/agent-sync/gate/all-defects/reviews/<defect-class>-final.json",
                 "required_fields": [
                     "defect_class",
                     "summary",
+                    "covered_progress_units",
                     "reviewed_targets",
                     "reviewed_anchor_files",
                     "reviewed_context_files",
-                    "comparison_notes",
+                    "evidence_files",
+                    "final_decision_notes",
                 ],
-                "comparison_note_fields": ["target", "judgment", "basis"],
+            },
+            "coverage_artifact_contract": {
+                "required": True,
+                "path_hint": ".git/agent-sync/gate/all-defects/coverage/coverage-<id>.json",
+                "required_fields": [
+                    "coverage_kind",
+                    "summary",
+                    "covered_progress_units",
+                    "reviewed_targets",
+                    "reviewed_test_files",
+                    "reviewed_source_files",
+                    "evidence_files",
+                    "final_decision_notes",
+                ],
             },
             "state_version": state.get("state_version"),
+            "state_revision": state.get("state_revision"),
             "submission_id": state.get("submission_id"),
             "defect_class": None,
+            "coverage_kind": None,
             "quality_target_id": None,
             "quality_target_source": None,
             "checks_run": [],
+            "run_results": [],
+            "failing_commands": [],
             "evidence_summary": None,
             "notes": [],
+            "review_queue": [],
+            "required_progress_units": [],
+            "black_box_coverage_queue": [],
+            "white_box_coverage_queue": [],
+            "coverage_contract": None,
+            "deferred_run_plan": probe.get("deferred_run_plan") if probe else None,
             "state": state,
         }
         if result == "actionable":
-            defect_class = self._expected_triage_class(state)
-            packet.update(
-                {
-                    "semantic_review_contract": semantic_review_contract(defect_class),
-                    "spec_drift_review_contract": (
-                        build_spec_drift_review_contract(self.root)
-                        if defect_class == "spec-drift"
-                        else None
-                    ),
-                    "src_drift_review_contract": (
-                        self._build_src_drift_review_contract()
-                        if defect_class == "src-drift"
-                        else None
-                    ),
-                    "quality_review_contract": (
-                        self._build_quality_review_contract()
-                        if defect_class == "quality"
-                        else None
-                    ),
-                    "defect_class": defect_class,
-                    "quality_target_id": (
-                        state.get("quality_target_id") if defect_class == "quality" else None
-                    ),
-                    "quality_target_source": (
-                        state.get("quality_target_source") if defect_class == "quality" else None
-                    ),
-                    "checks_run": list(probe.get("checks_run", [])) if probe else [],
-                    "evidence_summary": (
-                        probe.get("evidence_summary") if probe else None
-                    ),
-                    "notes": list(probe.get("notes", [])) if probe else [],
-                }
-            )
+            if int(state.get("next_triage_class_index", 0)) < len(DEFECT_CLASSES):
+                defect_class = self._expected_triage_class(state)
+                required_progress_units = self._required_progress_units(defect_class)
+                packet.update(
+                    {
+                        "semantic_review_contract": semantic_review_contract(defect_class),
+                        "spec_drift_review_contract": (
+                            build_spec_drift_review_contract(self.root)
+                            if defect_class == "spec-drift"
+                            else None
+                        ),
+                        "src_drift_review_contract": (
+                            self._build_src_drift_review_contract()
+                            if defect_class == "src-drift"
+                            else None
+                        ),
+                        "quality_review_contract": (
+                            self._build_quality_review_contract()
+                            if defect_class == "quality"
+                            else None
+                        ),
+                        "defect_class": defect_class,
+                        "quality_target_id": (
+                            state.get("quality_target_id") if defect_class == "quality" else None
+                        ),
+                        "quality_target_source": (
+                            state.get("quality_target_source") if defect_class == "quality" else None
+                        ),
+                        "checks_run": list(probe.get("checks_run", [])) if probe else [],
+                        "run_results": list(probe.get("run_results", [])) if probe else [],
+                        "failing_commands": list(probe.get("failing_commands", []))
+                        if probe
+                        else [],
+                        "evidence_summary": (
+                            probe.get("evidence_summary") if probe else None
+                        ),
+                        "notes": list(probe.get("notes", [])) if probe else [],
+                        "review_queue": required_progress_units,
+                        "required_progress_units": required_progress_units,
+                        "deferred_run_plan": probe.get("deferred_run_plan") if probe else None,
+                    }
+                )
+            else:
+                coverage_kind = self._expected_coverage_kind(state)
+                black_box_queue = self._required_coverage_units("black-box")
+                white_box_queue = self._required_coverage_units("white-box")
+                coverage_queue = (
+                    black_box_queue if coverage_kind == "black-box" else white_box_queue
+                )
+                packet.update(
+                    {
+                        "semantic_review_contract": semantic_review_contract(coverage_kind),
+                        "coverage_kind": coverage_kind,
+                        "checks_run": list(probe.get("checks_run", [])) if probe else [],
+                        "run_results": list(probe.get("run_results", [])) if probe else [],
+                        "failing_commands": list(probe.get("failing_commands", []))
+                        if probe
+                        else [],
+                        "evidence_summary": (
+                            probe.get("evidence_summary") if probe else None
+                        ),
+                        "notes": list(probe.get("notes", [])) if probe else [],
+                        "review_queue": coverage_queue,
+                        "black_box_coverage_queue": black_box_queue,
+                        "white_box_coverage_queue": white_box_queue,
+                        "coverage_contract": {
+                            "kind": coverage_kind,
+                            "must_read_tests_first": True,
+                            "must_not_execute_deferred_run_during_audit": True,
+                            "must_keep_l1_black_box_separate_from_white_box": True,
+                            "required_progress_units": coverage_queue,
+                            "black_box_test_files": black_box_tests,
+                            "white_box_test_files": white_box_tests,
+                        },
+                        "deferred_run_plan": probe.get("deferred_run_plan") if probe else None,
+                    }
+                )
         else:
             packet["spec_drift_review_contract"] = None
             packet["src_drift_review_contract"] = None
@@ -1883,16 +3269,33 @@ class CoordinationStore:
         return packet
 
     def _fix_runner_packet(self, state: dict, result: str) -> dict:
+        triage_fallback_recommended = (
+            result == "wait"
+            and state.get("status") == "active"
+            and state.get("active_owner") == "triage"
+            and not state.get("fix_gate_open")
+            and not state.get("open_defects")
+        )
         return {
             "result": result,
             "actor": "fix",
             "blocking_contract": blocking_contract("fix"),
             "baton_contract": self._baton_contract(state),
             "state_version": state.get("state_version"),
+            "state_revision": state.get("state_revision"),
             "active_repair_plan": list(state.get("active_repair_plan", [])),
             "open_defects": list(state.get("open_defects", [])),
             "triage_status": state.get("triage_status"),
             "submission_allowed": state.get("active_owner") == "fix",
+            "triage_fallback_recommended": triage_fallback_recommended,
+            "triage_fallback_entrypoint": (
+                "python3 scripts/agent_sync.py run-triage-pass"
+                if triage_fallback_recommended
+                else None
+            ),
+            "deferred_run_plan": self._deferred_run_plan()
+            if state.get("active_owner") == "fix"
+            else None,
             "artifact_requirements": {
                 "multi_round_dir_root": "specs/build/<timestamp>/",
                 "required_files_when_repair_rounds_gt_1": [
@@ -1917,6 +3320,12 @@ class CoordinationStore:
         if index >= len(DEFECT_CLASSES):
             raise CoordinationError("Triage classification is already complete for this cycle.")
         return DEFECT_CLASSES[index]
+
+    def _expected_coverage_kind(self, state: dict) -> str:
+        index = int(state.get("coverage_kind_index", 0))
+        if index >= len(COVERAGE_KINDS):
+            raise CoordinationError("Coverage audit is already complete for this cycle.")
+        return COVERAGE_KINDS[index]
 
     def _baton_contract(self, state: dict) -> dict:
         return {
@@ -1988,6 +3397,111 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help="Optional timeout in seconds; omit to wait indefinitely.",
+    )
+
+    triage_progress_parser = subparsers.add_parser(
+        "publish-triage-progress",
+        help="Publish one minimal triage review unit record for the active defect class.",
+    )
+    triage_progress_parser.add_argument("--submission-id", required=True, type=int)
+    triage_progress_parser.add_argument(
+        "--defect-class",
+        required=True,
+        choices=DEFECT_CLASSES,
+    )
+    triage_progress_parser.add_argument("--target", required=True)
+    triage_progress_parser.add_argument("--defect-type")
+    triage_progress_parser.add_argument(
+        "--decision",
+        required=True,
+        choices=sorted(PROGRESS_DECISIONS),
+    )
+    triage_progress_parser.add_argument(
+        "--evidence-summary",
+        required=True,
+        help="Structured summary for this review unit.",
+    )
+    triage_progress_parser.add_argument(
+        "--evidence-file",
+        dest="evidence_files",
+        action="append",
+        help="Repeatable evidence entry, usually a failing command, test, or artifact path.",
+    )
+    triage_progress_parser.add_argument(
+        "--reviewed-anchor-file",
+        dest="reviewed_anchor_files",
+        action="append",
+        help="Repeatable anchor file reviewed for this unit.",
+    )
+    triage_progress_parser.add_argument(
+        "--reviewed-context-file",
+        dest="reviewed_context_files",
+        action="append",
+        help="Repeatable context file reviewed for this unit.",
+    )
+    triage_progress_parser.add_argument(
+        "--note",
+        dest="notes",
+        action="append",
+        help="Repeatable review note for this unit.",
+    )
+    triage_progress_parser.add_argument(
+        "--defect-id",
+        dest="defect_ids",
+        action="append",
+        help="Repeatable stable defect ID when this unit finds defects.",
+    )
+
+    coverage_progress_parser = subparsers.add_parser(
+        "publish-test-coverage-progress",
+        help="Publish one minimal black-box or white-box coverage review unit.",
+    )
+    coverage_progress_parser.add_argument("--submission-id", required=True, type=int)
+    coverage_progress_parser.add_argument(
+        "--coverage-kind",
+        required=True,
+        choices=COVERAGE_KINDS,
+    )
+    coverage_progress_parser.add_argument("--target", required=True)
+    coverage_progress_parser.add_argument(
+        "--decision",
+        required=True,
+        choices=sorted(PROGRESS_DECISIONS),
+    )
+    coverage_progress_parser.add_argument(
+        "--evidence-summary",
+        required=True,
+        help="Structured summary for this coverage review unit.",
+    )
+    coverage_progress_parser.add_argument(
+        "--evidence-file",
+        dest="evidence_files",
+        action="append",
+        help="Repeatable evidence entry for this coverage unit.",
+    )
+    coverage_progress_parser.add_argument(
+        "--reviewed-test-file",
+        dest="reviewed_test_files",
+        action="append",
+        help="Repeatable reviewed test file.",
+    )
+    coverage_progress_parser.add_argument(
+        "--reviewed-source-file",
+        dest="reviewed_source_files",
+        action="append",
+        help="Repeatable reviewed source file.",
+    )
+    coverage_progress_parser.add_argument(
+        "--note",
+        dest="notes",
+        action="append",
+        help="Repeatable review note for this coverage unit.",
+    )
+    coverage_progress_parser.add_argument(
+        "--defect-id",
+        dest="defect_ids",
+        action="append",
+        help="Repeatable stable defect ID when this coverage unit finds a gap.",
     )
 
     wait_parser = subparsers.add_parser(
@@ -2080,6 +3594,59 @@ def build_parser() -> argparse.ArgumentParser:
         help="JSON artifact describing semantic review coverage for this triage class.",
     )
 
+    coverage_audit_parser = subparsers.add_parser(
+        "publish-test-coverage-audit",
+        help="Publish a black-box or white-box test coverage audit batch.",
+    )
+    coverage_audit_parser.add_argument("--submission-id", required=True, type=int)
+    coverage_audit_parser.add_argument(
+        "--coverage-kind",
+        required=True,
+        choices=COVERAGE_KINDS,
+    )
+    coverage_audit_parser.add_argument(
+        "--decision", required=True, choices=["accept", "reject"]
+    )
+    coverage_audit_parser.add_argument(
+        "--defect",
+        action="append",
+        help="Repeatable coverage gap entry: ID or ID=summary.",
+    )
+    coverage_audit_parser.add_argument(
+        "--repair-logic",
+        dest="repair_logic",
+        action="append",
+        help="Repeatable KEY=VALUE repair instruction generated by triage.",
+    )
+    coverage_audit_parser.add_argument(
+        "--evidence-summary",
+        required=True,
+        help="Structured summary of the coverage audit for this kind.",
+    )
+    coverage_audit_parser.add_argument(
+        "--check-run",
+        dest="checks_run",
+        action="append",
+        help="Optional deferred run note or audit marker; not required.",
+    )
+    coverage_audit_parser.add_argument(
+        "--note",
+        dest="notes",
+        action="append",
+        help="Repeatable additional audit note.",
+    )
+    coverage_audit_parser.add_argument(
+        "--defect-evidence",
+        dest="defect_evidence",
+        action="append",
+        help="Repeatable KEY=VALUE per-defect evidence entry.",
+    )
+    coverage_audit_parser.add_argument(
+        "--review-artifact",
+        required=True,
+        help="JSON artifact describing coverage audit review coverage for this kind.",
+    )
+
     blocked_parser = subparsers.add_parser(
         "mark-blocked", help="Mark the unified coordination gate as blocked."
     )
@@ -2103,7 +3670,7 @@ def debug_command_payload(command: str, payload: dict) -> dict:
         ),
         "required_entrypoints": {
             "triage": "run-triage-pass",
-            "fix": "run-fix-pass",
+            "fix": "run-fix-pass --timeout 0",
         },
         "payload": payload,
     }
@@ -2121,7 +3688,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "state":
-            print_json(debug_command_payload("state", store.read_state()))
+            print_json(debug_command_payload("state", store.ensure_task()))
             return 0
 
         if args.command == "run-triage-pass":
@@ -2139,6 +3706,41 @@ def main(argv: list[str] | None = None) -> int:
             )
             print_json(result)
             return 0 if result["result"] != "timeout" else 2
+
+        if args.command == "publish-triage-progress":
+            print_json(
+                store.publish_triage_progress(
+                    submission_id=args.submission_id,
+                    defect_class=args.defect_class,
+                    target=args.target,
+                    defect_type=args.defect_type,
+                    decision=args.decision,
+                    evidence_summary=args.evidence_summary,
+                    evidence_files=args.evidence_files,
+                    reviewed_anchor_files=args.reviewed_anchor_files,
+                    reviewed_context_files=args.reviewed_context_files,
+                    notes=args.notes,
+                    defect_ids=args.defect_ids,
+                )
+            )
+            return 0
+
+        if args.command == "publish-test-coverage-progress":
+            print_json(
+                store.publish_test_coverage_progress(
+                    submission_id=args.submission_id,
+                    coverage_kind=args.coverage_kind,
+                    target=args.target,
+                    decision=args.decision,
+                    evidence_summary=args.evidence_summary,
+                    evidence_files=args.evidence_files,
+                    reviewed_test_files=args.reviewed_test_files,
+                    reviewed_source_files=args.reviewed_source_files,
+                    notes=args.notes,
+                    defect_ids=args.defect_ids,
+                )
+            )
+            return 0
 
         if args.command == "wait":
             verdict = store.wait_for_turn(
@@ -2172,6 +3774,25 @@ def main(argv: list[str] | None = None) -> int:
                     decision=args.decision,
                     defects=parse_defects(args.defect),
                     defect_class=args.defect_class,
+                    repair_logic=parse_key_value_pairs(
+                        args.repair_logic, "Repair logic"
+                    ),
+                    evidence_summary=args.evidence_summary,
+                    checks_run=args.checks_run,
+                    notes=args.notes,
+                    defect_evidence=parse_defect_evidence(args.defect_evidence),
+                    review_artifact=args.review_artifact,
+                )
+            )
+            return 0
+
+        if args.command == "publish-test-coverage-audit":
+            print_json(
+                store.publish_test_coverage_audit(
+                    submission_id=args.submission_id,
+                    coverage_kind=args.coverage_kind,
+                    decision=args.decision,
+                    defects=parse_defects(args.defect),
                     repair_logic=parse_key_value_pairs(
                         args.repair_logic, "Repair logic"
                     ),

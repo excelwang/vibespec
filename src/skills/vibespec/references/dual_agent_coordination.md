@@ -30,6 +30,8 @@ The shared coordination state keeps the existing gate-compatible fields such as:
 - `fix_gate_open`
 - `open_defects`
 - `active_repair_plan`
+- `state_version = 2`
+- `state_revision`
 
 In addition, vibespec baton state must expose:
 
@@ -40,11 +42,19 @@ In addition, vibespec baton state must expose:
 - `worker_actor = fix`
 - `worker_state = dormant | released | owner`
 
+And triage v3 progress state must expose through artifacts:
+
+- per-phase `review_queue`
+- per-phase `required_progress_units`
+- per-unit `publish-triage-progress` records under `.git/agent-sync/gate/<gate>/progress/`
+- per-kind `publish-test-coverage-progress` records under `.git/agent-sync/gate/<gate>/coverage-progress/`
+- a deferred terminal `run` plan that is not executed during triage
+
 Interpretation:
 
 - `active_owner` is the only side allowed to mutate shared gate state.
 - `expected_actor` remains the compatibility alias for the current baton owner.
-- `worker_state = released` means Fix may execute bounded repair work, but Triage still owns the shared state.
+- `worker_state = released` remains a compatibility state but is not used in the normal v3 review-first flow.
 - `worker_state = owner` means the baton has moved to Fix for final submission work.
 
 ## Baton Semantics In Vibespec
@@ -55,8 +65,17 @@ During `triage_turn`:
 
 - `triage` owns the baton and remains the only shared-state writer.
 - `triage` must classify in order `spec-drift -> src-drift -> quality`.
-- after each rejected class, `triage` may release bounded Fix work early by opening the Fix gate
-- early release does not transfer shared-state ownership yet
+- `spec-drift` must emit one progress record per spec file.
+- `src-drift` and `quality` must emit one progress record per module x defect type.
+- `triage` must not execute the deferred terminal `run` plan during these three classes
+
+After the three defect classes are complete:
+
+- `triage` enters the required coverage-audit suffix
+- `black-box` coverage is reviewed first against `L1` contract tests
+- `white-box` coverage is reviewed second against supplemental implementation/quality tests
+- each coverage kind emits one progress record per required coverage unit
+- only after both coverage kinds are finalized may the baton move to Fix
 
 ### Fix-Owned State
 
@@ -79,9 +98,17 @@ After Triage finishes the full class scan and defects remain:
 Normal gate entry must still use the existing blocking runner commands:
 
 - `python3 scripts/agent_sync.py run-triage-pass`
-- `python3 scripts/agent_sync.py run-fix-pass`
+- `python3 scripts/agent_sync.py run-fix-pass --timeout 0`
 
 `state` and `wait` remain debug-only helpers.
+
+Special `fix gate` fallback:
+
+- if a `fix gate` session enters through `run-fix-pass --timeout 0` and returns `triage_fallback_recommended=true`, do not leave the main session self-blocked indefinitely
+- keep the main session role-bound to `fix`
+- use the canonical `subagent-baton` protocol to spawn exactly one triage-role subagent
+- that subagent is the only side allowed to run `run-triage-pass` during the fallback
+- when triage releases repair work or reaches terminal state, return control to the main `fix gate` session
 
 ## Worker Iterations
 
@@ -89,17 +116,29 @@ When Fix is released:
 
 - treat each Fix wake-up as one bounded worker iteration
 - stay inside the latest released repair plan
-- do not publish a submission until Triage has completed the full classification cycle and the baton has actually moved to Fix
+- fix released scope now includes test supplementation items before any deferred terminal run
+- do not publish a submission until Triage has completed the full classification cycle, the coverage-audit suffix, and the baton has actually moved to Fix
+
+When Fix has no released work:
+
+- do not treat indefinite local blocking as progress
+- escalate by activating exactly one triage subagent through `subagent-baton`
+- keep shared-state ownership semantics unchanged while triage runs
+- resume fix execution only after triage has produced released repair scope or terminal state
 
 When Triage owns the baton:
 
 - classify exactly the next required defect class
+- publish progress after every required review unit, not just once per phase
+- after defect classes finish, publish coverage progress after every required black-box and white-box coverage unit
 - publish one class report at a time
 - update shared state before deciding whether Fix stays released or becomes the active owner
 
 ## Vibespec-Specific Constraints
 
 - Triage reports must persist `checks_run`, `evidence_summary`, semantic review coverage, and per-defect `repair_logic` for rejects.
+- Triage phase finalization is invalid until the phase-final review artifact covers every required progress unit.
+- Coverage-audit finalization is invalid until the phase-final coverage artifact covers every required coverage progress unit.
 - Fix submissions must answer every open defect.
 - Multi-round Fix work still requires `specs/build/<timestamp>/todo.md` and `auto-decisions.md`.
-- Probe packets remain structured review inputs only; they do not classify defects by themselves.
+- Runner packets remain structured review inputs only; they do not classify defects by themselves and do not authorize triage to execute terminal runs.

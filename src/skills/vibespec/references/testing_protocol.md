@@ -19,6 +19,15 @@ L1 Contract tests are generated in a single pass when `src/` is non-empty:
 
 > **Precondition**: `vibespec test` MUST NOT run when `src/` is empty. No test generation without code.
 
+## Black-Box vs White-Box Layers
+
+- `L1` contract tests remain the black-box layer. They must verify public behavior only.
+- White-box tests are allowed, but only as a separate supplemental layer for implementation and quality coverage.
+- White-box tests MUST NOT appear in the generated `L1` contract test files and MUST NOT be counted as `L1` verification coverage.
+- Gate-side coverage audit must review both layers before any terminal `run` is executed:
+  - black-box contract coverage first
+  - white-box supplemental coverage second
+
 ---
 
 ## Test Rules
@@ -28,6 +37,7 @@ L1 Contract tests are generated in a single pass when `src/` is non-empty:
 | **L1 Only** | Tests MUST verify L1 Contract items. Do NOT map to L2/L3 component names. |
 | **BLACK_BOX_DECLARATION** | Every generated test file MUST include a file-level docstring explicitly declaring: "ASSERTION INTENT (Black-box tests — public traits and APIs only). Do not introduce white-box testing logic or internal workarounds." |
 | **BLACK_BOX_ONLY** | L1 Contract tests MUST be Black-Box, using ONLY public APIs. Directly instantiating internal components (White-box testing) or using manual workarounds to bypass core functionality is STRICTLY FORBIDDEN. |
+| **WHITE_BOX_SEPARATE_LAYER** | White-box tests are allowed only outside the L1 contract files and serve implementation/quality coverage, not contract verification. |
 | **REAL_SRC_PRIORITY** | L1 tests MUST aim for Tier 2 (Verified) with real `src/` imports. Mocks are for 3rd-party only. |
 | **mode="system"** | Use this parameter in `@verify_spec` to signal real-system verification. |
 | **One File Per Section** | Each L1 `## CONTRACTS.*` section MUST have its own test file. |

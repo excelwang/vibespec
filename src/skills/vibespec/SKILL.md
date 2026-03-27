@@ -56,26 +56,48 @@ Manage the refinement of raw thoughts into traceable specifications.
 - Load `references/dual_agent_coordination.md` as the vibespec-specific adapter on top of the canonical baton protocol.
 - Load `references/gate_workflows.md` for the active actor phase.
 - Treat the gate as coordinator + one worker, not as two peer sessions. Keep exactly one shared-state owner at a time.
-- Start immediately from the blocking runner commands. Do not preflight with `state` or `wait` during the normal gate flow:
-  - `python3 scripts/agent_sync.py run-triage-pass`
-  - `python3 scripts/agent_sync.py run-fix-pass`
-- Let the script block the session until the actor becomes actionable or the gate becomes terminal.
+- The repo must provide `specs/gate-profile.json`. `triage` v3 no longer falls back to weak documented-command probing when that file is missing or incomplete.
+- Start normal triage entry from the blocking runner command `python3 scripts/agent_sync.py run-triage-pass`.
+- Start normal fix entry from the non-blocking check `python3 scripts/agent_sync.py run-fix-pass --timeout 0`, then follow the packet:
+  - if `result=actionable`, continue fix work
+  - if `result=wait` and `triage_fallback_recommended=true`, spawn one triage subagent
+  - otherwise rerun the blocking fix entrypoint only when the workflow actually wants to wait
 - If `state` or `wait` is called anyway, treat their output as a warning that they are debug-only and not authorization to bypass blocking.
 - A `vibespec fix gate` session is role-bound to `fix`; it must not switch into triage, run `run-triage-pass`, or call `publish-triage`.
 - A `vibespec triage gate` session is role-bound to `triage`; it must not switch into fix, run `run-fix-pass`, or call `publish-submission` except as directed by the workflow.
-- Under `vibespec triage gate`, treat probe output as a structured review packet only; it defines what to read and compare, but it does not classify defects for you.
-- Under `vibespec triage gate`, fully read every `specs/` file and every listed readable text file under `src/` before publishing any defect.
+- Under `vibespec fix gate`, if `run-fix-pass` does not yield a repair packet and would otherwise only self-block, do not keep the main session parked indefinitely.
+- In that no-packet case, keep the local session role-bound to `fix`, and use the installed `subagent-baton` protocol to spawn exactly one triage-role subagent that runs `run-triage-pass`.
+- The spawned subagent owns the triage work; the local `fix gate` session remains coordinator/fix-side dormant until triage releases repair work, reaches terminal gate state, or returns a blocker that must be handled locally.
+- The local `fix gate` session still must not run `run-triage-pass` itself; only the spawned triage subagent may do that fallback triage work.
+- Under `vibespec triage gate`, treat the runner packet as a structured review packet only; it defines what to read and compare, but it does not classify defects for you.
+- Under `vibespec triage gate`, fully read every required `specs/`, `src/`, and context file before publishing any defect.
+- Under `vibespec triage gate`, do not execute terminal test/run commands during `spec-drift`, `src-drift`, or `quality`.
 - Under `vibespec triage gate`, when the active class is `spec-drift`, compare the reviewed layer against its parent layer item by item in the runner-provided order before accepting semantic alignment.
 - Under `vibespec triage gate`, when the active class is `src-drift`, compare `src` module by module against `L2` and component by component against key `L3` mechanisms before accepting semantic alignment.
 - Under `vibespec triage gate`, when the active class is `quality`, do not use keyword/regex matching; infer workaround, legacy, concurrency, and waiting defects from the source design and control flow.
-- Under `vibespec triage gate`, do not publish `accept` or `reject` until you have written a semantic review artifact covering the required targets and comparison notes for that class.
+- Under `vibespec triage gate`, after the three defect classes are complete, run a required coverage-audit suffix before any final run:
+  - black-box contract coverage first
+  - white-box supplemental coverage second
+- Under `vibespec triage gate`, black-box coverage must stay aligned to `L1` public contracts and public APIs only.
+- Under `vibespec triage gate`, white-box coverage must stay outside the L1 contract test files.
+- Under `vibespec triage gate`, publish progress continuously:
+  - `spec-drift`: one `publish-triage-progress` per spec file
+  - `src-drift`: one `publish-triage-progress` per module x defect type
+  - `quality`: one `publish-triage-progress` per module x defect type
+- Under `vibespec triage gate`, during coverage audit publish:
+  - `publish-test-coverage-progress` for each black-box or white-box coverage unit
+  - `publish-test-coverage-audit` after the current coverage kind has full progress coverage
+- Under `vibespec triage gate`, do not publish `accept` or `reject` until every required progress unit exists and the phase-final artifact references full progress coverage for that class or coverage kind.
 - Under `vibespec triage gate`, publish a defect only after the full-file read confirms a semantic inconsistency or real quality issue.
 - Use low-level mutating commands only after reasoning over the runner output:
+  - `python3 scripts/agent_sync.py publish-triage-progress ...`
   - `python3 scripts/agent_sync.py publish-triage ...`
+  - `python3 scripts/agent_sync.py publish-test-coverage-progress ...`
+  - `python3 scripts/agent_sync.py publish-test-coverage-audit ...`
   - `python3 scripts/agent_sync.py publish-submission ...`
 - `triage` is responsible for detecting all defect classes in priority order `spec-drift -> src-drift -> quality`, generating the frozen repair plan, and owning shared-state updates while it still owns the baton.
-- `triage` may release fix early after each classified defect class without giving up shared-state ownership yet.
-- `fix` is responsible for executing only the latest triage-generated repair plan, staying within bounded released scope, and waits on the fix gate when no released work exists.
+- `triage` must complete coverage audit before releasing fix.
+- `fix` is responsible for executing only the latest triage-generated repair plan, first supplementing black-box and white-box tests, then using the deferred run plan as the terminal trigger.
 - Default to short lock claims, frozen submissions, non-terminal wait states, and manual recovery unless the user specifies takeover policy.
 - Keep manual review workflows outside the gate: `vibespec review [SPEC_ID]`, `vibespec bug`, `vibespec test`, and `vibespec distill` are standalone human-reviewed flows.
 
