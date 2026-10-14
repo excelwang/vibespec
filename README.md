@@ -8,14 +8,9 @@ This project is self-hosting: the [specs/](specs/) directory defines vibespec's 
 
 ## Quick Start
 
-Run these from the repository root:
+tell your agent (Codex / OpenCode / Claude) to install vibespec skill from https://github.com/excelwang/vibespec
 
-```bash
-python3 src/skills/vibespec/scripts/validate.py specs/
-python3 -m unittest discover tests/specs
-```
-
-The validator reports structural errors as failures. It may also print traceability and coverage guidance for leaf L1 contracts that still need stronger verification.
+tell your agent:  vibespec my idea into layered specs.
 
 ## Skill Workflows
 
